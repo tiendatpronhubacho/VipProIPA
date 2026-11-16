@@ -14,6 +14,9 @@ if [[ -z "$APP_PATH" ]]; then
 fi
 
 # Compile the asset catalog with Apple's iOS asset compiler; do not ship the raw .xcassets folder.
+# actool expects the output directory to exist before compilation.
+mkdir -p "$TMP/compiled-assets"
+
 xcrun actool "$ROOT/Resources/Assets.xcassets" \
   --compile "$TMP/compiled-assets" \
   --platform iphoneos \
