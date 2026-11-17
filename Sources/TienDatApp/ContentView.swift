@@ -25,11 +25,8 @@ struct ContentView: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 18) {
-                    brandHeader
-                    devicePanel
+                    patchOptions
                     gameLaunchPanel
-                    footerStatus
-                    developerCredits
                 }
                 .padding(.horizontal, 18)
                 .padding(.top, 18)
@@ -96,25 +93,34 @@ struct ContentView: View {
         .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(AppTheme.accent.opacity(0.38), lineWidth: 1))
     }
 
+    private var patchOptions: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                panelTitle("PATCH OPTIONS", icon: "bolt.fill")
+                Spacer()
+                Text("SELECT TO ENABLE")
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.45))
+            }
+
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                patchCard(name: "Aim Drag", target: "FREE FIRE • NORMAL", package: "Aim Drag.3105", color: AppTheme.accent, state: $aimDragEnabled)
+                patchCard(name: "Aim Body", target: "FREE FIRE • NORMAL", package: "Aim Body.3105", color: AppTheme.accent, state: $aimBodyPackageEnabled)
+            }
+
+        }
+    }
+
+    private func patchCard(name: String, target: String, package: String, color: Color, state: Binding<Bool>) -> some View {
+        PatchOptionCard(name: name, target: target, color: color, isEnabled: state, isBusy: patchOperationBusy) {
+            togglePatch(packageFilename: package, state: state)
+        }
+    }
+
     private var gameLaunchPanel: some View {
         VStack(alignment: .leading, spacing: 12) {
-            panelTitle("LAUNCH GAME", icon: "arrow.up.forward.app.fill")
-            HStack(spacing: 12) {
-                launchButton(title: "FF NORMAL", subtitle: "Free Fire Normal", color: AppTheme.accent, scheme: "freefireth")
-                lockedLaunchButton(title: "FF MAX", subtitle: "Locked • Coming Soon", color: AppTheme.secondaryAccent)
-            }
-            Button {
-                showCleaner = true
-            } label: {
-                Label("Clean Cache & Temp", systemImage: "trash.slash.fill")
-                    .font(.system(size: 13, weight: .black, design: .rounded))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity, minHeight: 52)
-                    .background(Color.black.opacity(0.40), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(AppTheme.accent.opacity(0.52), lineWidth: 1))
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Open cache and temporary files cleaner")
+            panelTitle("FREE FIRE VN MỚI UPDATE", icon: "arrow.up.forward.app.fill")
+            launchButton(title: "FREE FIRE VN MỚI UPDATE", subtitle: "Free Fire Việt Nam", color: AppTheme.accent, scheme: "freefireth")
         }
     }
 
@@ -231,13 +237,8 @@ struct ContentView: View {
     }
 
     private func syncPatchStates() {
-        aimDragEnabled = isPatchActive("OGIOS File (6).3105")
-        aimNeckEnabled = isPatchActive("OGIOS File (7).3105")
-        hspeitoffEnabled = isPatchActive("OGIOS File (8).3105")
-        hyperBalamagicaEnabled = isPatchActive("OGIOS File (10).3105")
-        aimBodyPackageEnabled = isPatchActive("OGIOS File (12).3105")
-        aimChestPackageEnabled = isPatchActive("OGIOS File (2).3105")
-        magicEnabled = isPatchActive("OGIOS File (14).3105")
+        aimDragEnabled = isPatchActive("Aim Drag.3105")
+        aimBodyPackageEnabled = isPatchActive("Aim Body.3105")
     }
 
     private func isPatchActive(_ packageFilename: String) -> Bool {
@@ -253,13 +254,8 @@ struct ContentView: View {
 
     private func setPatchState(for packageFilename: String, enabled: Bool) {
         switch packageFilename {
-        case "OGIOS File (6).3105": aimDragEnabled = enabled
-        case "OGIOS File (7).3105": aimNeckEnabled = enabled
-        case "OGIOS File (8).3105": hspeitoffEnabled = enabled
-        case "OGIOS File (10).3105": hyperBalamagicaEnabled = enabled
-        case "OGIOS File (12).3105": aimBodyPackageEnabled = enabled
-        case "OGIOS File (2).3105": aimChestPackageEnabled = enabled
-        case "OGIOS File (14).3105": magicEnabled = enabled
+        case "Aim Drag.3105": aimDragEnabled = enabled
+        case "Aim Body.3105": aimBodyPackageEnabled = enabled
         default: break
         }
     }
