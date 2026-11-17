@@ -17,6 +17,7 @@ struct ContentView: View {
     @State private var aimBodyPackageEnabled = false
     @State private var aimChestPackageEnabled = false
     @State private var magicEnabled = false
+    @State private var showLaunchFailure = false
 
     var body: some View {
         ZStack {
@@ -42,6 +43,11 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showCleaner) {
             CleanerView()
+        }
+        .alert("Không mở được Free Fire VN", isPresented: $showLaunchFailure) {
+            Button("Đóng", role: .cancel) { }
+        } message: {
+            Text("iOS không nhận được yêu cầu mở bằng freefireth://. Hãy kiểm tra ứng dụng Free Fire VN và URL scheme được nhà phát hành hỗ trợ.")
         }
         .sheet(item: $patchStore.passwordRequest, onDismiss: patchStore.cancelUnlock) { _ in
             PatchUnlockPrompt(store: patchStore)
@@ -344,9 +350,17 @@ struct ContentView: View {
     }
 
     private func openGame(scheme: String) {
-        guard let url = URL(string: "\(scheme)://") else { return }
+        guard let url = URL(string: "\(scheme)://") else {
+            showLaunchFailure = true
+            return
+        }
+        // iOS does not provide a public API to launch another app by bundle ID.
+        // Use the target app's registered URL scheme instead.
         UIApplication.shared.open(url, options: [:]) { success in
             log("launch: \(scheme) success=\(success)")
+            DispatchQueue.main.async {
+                self.showLaunchFailure = !success
+            }
         }
     }
 }

@@ -6,5 +6,9 @@
 	<string>App3012</string>
 	<key>UILaunchScreen</key>
 	<dict/>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>freefireth</string>
+	</array>
 </dict>
 </plist>
