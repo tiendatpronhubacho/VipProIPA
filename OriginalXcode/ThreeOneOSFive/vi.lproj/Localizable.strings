@@ -518,3 +518,12 @@
 "browser.authorized_import_result" = "Đã nhập %lld tệp; %lld tệp thất bại. Bản sao được lưu trong TienDat Documents/Authorized Imports.";
 "browser.container_access_unavailable" = "Bản build này không có quyền duyệt dữ liệu ứng dụng khác. Hãy dùng nút tài liệu để nhập tệp bạn chọn hoặc mở không gian làm việc TienDat.";
 "cleaner.access_unavailable" = "Không thể dọn dữ liệu ứng dụng khác vì bản build này không được cấp quyền truy cập container của chúng.";
+
+/* Patch transaction safety messages */
+"patch.error.private_password" = "Hãy đặt mật khẩu trước khi tạo patch riêng tư.";
+"patch.error.private_operation" = "Thao tác patch riêng tư thất bại. Chi tiết bundle và đường dẫn được giữ ẩn.";
+"patch.error.target_occupied" = "Đường dẫn %@ đã được một dự án patch khác áp dụng. Hãy khôi phục patch đó trước khi áp dụng patch này.";
+"patch.error.already_applied" = "Patch này đang hoạt động. Hãy đặt lại theo gói hoặc khôi phục file gốc trước khi Apply lại.";
+"patch.error.restore_targets_changed" = "Các file sau đã thay đổi sau khi Apply và cần xác nhận trước khi khôi phục:\n%@";
+"patch.error.active_delete" = "Patch này vẫn đang hoạt động. Hãy khôi phục file gốc trước khi xóa gói.";
+"patch.error.reset" = "Không thể đặt lại file theo trạng thái của gói. Mọi thay đổi dở dang đã được rollback.";

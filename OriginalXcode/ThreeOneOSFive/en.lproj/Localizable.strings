@@ -504,3 +504,12 @@
 "browser.authorized_import_result" = "Imported %lld file(s); %lld failed. Files were copied into TienDat Documents/Authorized Imports.";
 "browser.container_access_unavailable" = "Cross-app app-data browsing is unavailable in this build. Use the document button to import files you choose, or open the TienDat workspace.";
 "cleaner.access_unavailable" = "Cleaning other apps is unavailable because this build has no authorized access to their containers.";
+
+/* Patch transaction safety messages */
+"patch.error.private_password" = "Set a password before creating a private patch.";
+"patch.error.private_operation" = "The private patch operation failed. Protected bundle and path details were hidden.";
+"patch.error.target_occupied" = "The target %@ is already patched by another project. Restore that patch before applying this one.";
+"patch.error.already_applied" = "This patch is already active. Reset it or restore the originals before applying it again.";
+"patch.error.restore_targets_changed" = "These files changed after apply and require confirmation before restoration:\n%@";
+"patch.error.active_delete" = "This patch is still active. Restore its original files before deleting the package.";
+"patch.error.reset" = "The files could not be reset to the applied package state. Any partial writes were rolled back.";
