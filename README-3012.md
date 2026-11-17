@@ -16,3 +16,16 @@ To remain within the normal iOS app sandbox, cross-app container activation, oth
 6. Export the resulting unsigned IPA artifact and sign it with a certificate/profile you are authorized to use.
 
 The 3012 IPA's embedded CLI text confirms `xtool build` is routed through a configured SSH VPS or exported Actions ZIP. The iPhone is the control/import interface; the build is not a native on-device Xcode compile. Configure the build backend in 3012 before starting.
+
+
+## 3105 source integration
+
+The SwiftPM target now includes the 3105 2.0 repository, patch-workspace, file-browser,
+cleaner, and wallpaper source updates, plus the 3105 documentation and localized strings.
+The VIP-specific launch screen, license activation flow, and safe-build `KernelExploit`
+stub are retained. The VIP home screen and its existing patch controls are intentionally
+preserved rather than replaced by the upstream 3105 tab interface.
+
+The integration is source-level only. It has not been compiled or device-tested here.
+Privileged exploit-backed features remain disabled in this SwiftPM safe build; this merge
+does not add kernel exploit or sandbox-escape binaries.

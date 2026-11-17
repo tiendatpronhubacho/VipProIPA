@@ -1,6 +1,5 @@
 import SwiftUI
 
-import TienDatObjC
 struct CleanerView: View {
     @Environment(\.appLanguage) private var language
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize

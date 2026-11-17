@@ -6,6 +6,8 @@ struct ThreeOneOSFiveApp: App {
     @StateObject private var appState = AppState()
     @StateObject private var licenseManager = LicenseManager()
     @StateObject private var patchDraftCoordinator = PatchDraftCoordinator()
+    @StateObject private var patchStore = PatchProjectStore()
+    @StateObject private var repositoryStore = PackageRepositoryStore()
     @StateObject private var fileOperationCoordinator = FileOperationCoordinator();
     @AppStorage(AppLanguage.storageKey) private var languageCode = AppLanguage.english.rawValue
     @State private var updateOffer: AppUpdateChecker.Offer?
@@ -39,6 +41,8 @@ struct ThreeOneOSFiveApp: App {
             }
                 .environmentObject(appState)
                 .environmentObject(patchDraftCoordinator)
+                .environmentObject(patchStore)
+                .environmentObject(repositoryStore)
                 .environmentObject(fileOperationCoordinator)
                 .environment(\.appLanguage, language)
                 .environment(\.locale, language.locale)

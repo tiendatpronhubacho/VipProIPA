@@ -3,7 +3,6 @@ import UIKit
 import Darwin
 import Combine
 
-import TienDatObjC
 // MARK: - Global logger
 class AppLog: ObservableObject {
     static let shared = AppLog()
@@ -12,7 +11,7 @@ class AppLog: ObservableObject {
         DispatchQueue.main.async { self.entries.append(msg) }
     }
 }
-func log(_ msg: String) { AppLog.shared.append("[TienDat] \(msg)") }
+func log(_ msg: String) { AppLog.shared.append("[3105] \(msg)") }
 
 // Retain the pipe for the app's lifetime so stdout/stderr stay redirected.
 private var logCapturePipe: Pipe?
@@ -131,8 +130,8 @@ enum AppPaths {
 
 enum AppUpdateChecker {
     static let dismissedVersionKey = "update.dismissedVersion"
-    static let apiURL = URL(string: "https://api.github.com/repos/YangJiiii/OGIOS/releases/latest")!
-    static let fallbackURL = URL(string: "https://github.com/YangJiiii/OGIOS/releases/latest")!
+    static let apiURL = URL(string: "https://api.github.com/repos/YangJiiii/3105/releases/latest")!
+    static let fallbackURL = URL(string: "https://github.com/YangJiiii/3105/releases/latest")!
 
     struct Offer: Identifiable {
         let id = UUID()
@@ -151,11 +150,9 @@ enum AppUpdateChecker {
     }
 
     static func check() async -> Offer? {
-        // Forked TienDat build: do not offer upstream OGIOS releases as app updates.
-        return nil
         var request = URLRequest(url: apiURL)
         request.timeoutInterval = 15
-        request.setValue("OGIOS", forHTTPHeaderField: "User-Agent")
+        request.setValue("3105", forHTTPHeaderField: "User-Agent")
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         do {
             let (data, response) = try await URLSession.shared.data(for: request)

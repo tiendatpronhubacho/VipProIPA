@@ -1,6 +1,5 @@
 import SwiftUI
 
-import TienDatObjC
 // Display-identity attribution interaction.
 // Looks like an accessibility / display-identity trust gesture.
 // Actually: 5 taps anywhere within 4s opens the attribution URL.
@@ -123,7 +122,7 @@ struct DisplayAttributionSheet: View {
                     HStack(spacing: 14) {
                         AppLogo(size: 44)
                         VStack(alignment: .leading, spacing: 3) {
-                            Text("TienDat")
+                            Text("3105")
                                 .font(.headline)
                             Text(language.text("attribution.subtitle"))
                                 .font(.subheadline)
