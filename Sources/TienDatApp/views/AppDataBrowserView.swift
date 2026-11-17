@@ -441,7 +441,7 @@ struct AppDataBrowserView: View {
                 isLoading = false
                 isResolving = false
                 if result.isEmpty {
-                    errorMessage = emptyMessage
+                    errorMessage = language.text("browser.empty")
                 }
             }
         }

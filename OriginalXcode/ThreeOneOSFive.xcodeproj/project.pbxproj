@@ -69,6 +69,7 @@
 
 		3105PATCH01 /* Aim Drag.3105 in Resources */ = {isa = PBXBuildFile; fileRef = 3105PATCH11; };
 		3105PATCH02 /* Aim Body.3105 in Resources */ = {isa = PBXBuildFile; fileRef = 3105PATCH12; };
+		3105META02 /* FileBrowserMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3105META01; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -145,6 +146,7 @@
 
 		3105PATCH11 /* Aim Drag.3105 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "ThreeOneOSFive/Patches/Aim Drag.3105"; sourceTree = "<group>"; };
 		3105PATCH12 /* Aim Body.3105 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "ThreeOneOSFive/Patches/Aim Body.3105"; sourceTree = "<group>"; };
+		3105META01 /* FileBrowserMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileBrowserMetadata.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -228,6 +230,7 @@
 			children = (
 				3105A099 /* Localization.swift */,
 				3105A104 /* ContainerStore.swift */,
+				3105META01 /* FileBrowserMetadata.swift */,
 				3105A108 /* ContainerIdentityResolver.swift */,
 				3105A109 /* ContainerBrowserLogic.swift */,
 				3105A110 /* FileReplacementService.swift */,
@@ -344,6 +347,7 @@
 				3105A226,
 				3105A227,
 				3105A233,
+				3105META02,
 				3105A234,
 				3105A235,
 				3105A236,
