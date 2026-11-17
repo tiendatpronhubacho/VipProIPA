@@ -90,26 +90,46 @@ enum ContainerStore {
         "com.apple.compass", "com.apple.Magnifier", "com.apple.DocumentsApp"
     ]
 
-    static func resolveAppContainerPath(bundleID: String) -> String? {
+    enum AppContainerResolution {
+        case resolved(String)
+        case targetNotFound(String)
+        case accessUnavailable(String)
+    }
+
+    /// Resolve only through an explicitly available, authorized bridge.
+    /// A missing bridge means lack of access, not proof that the app is absent.
+    static func resolveAppContainer(bundleID: String) -> AppContainerResolution {
         guard (try? PatchPathValidator.canonicalBundleIdentifier(bundleID)) == bundleID else {
-            return nil
+            return .targetNotFound("Invalid bundle identifier")
         }
-        // The shipping bridge is deliberately unavailable in a standard iOS
-        // sandbox. Fail closed before invoking any private MCM entry point.
         guard MCMBridgeAvailable() else {
-            log("patch: cross-app container resolution unavailable for \(bundleID): standard iOS sandbox has no authorized container capability")
-            return nil
+            let detail = "This build has no authorized cross-app container capability"
+            log("patch: container access unavailable for \(bundleID): \(detail)")
+            return .accessUnavailable(detail)
         }
 
         var lookupError: NSString?
         if let path = MCMActivateContainerPath(2, bundleID, false, &lookupError),
            isApplicationContainerPath(path) {
             log("patch: authorized MCM resolution succeeded for \(bundleID)")
-            return path
+            return .resolved(path)
         }
+
         let detail = lookupError.map { String($0) } ?? "MCM returned no container path"
+        let normalized = detail.lowercased()
+        let confirmsMissing = [
+            "application not found", "app not found", "container not found",
+            "no such container", "application is not installed", "bundle not installed"
+        ].contains { normalized.contains($0) }
         log("patch: authorized MCM resolution failed for \(bundleID), detail=\(detail)")
-        return nil
+        return confirmsMissing ? .targetNotFound(detail) : .accessUnavailable(detail)
+    }
+
+    static func resolveAppContainerPath(bundleID: String) -> String? {
+        guard case let .resolved(path) = resolveAppContainer(bundleID: bundleID) else {
+            return nil
+        }
+        return path
     }
 
     static func resolveAppContainerPathByMetadataScan(bundleID: String) -> String? {

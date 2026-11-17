@@ -436,6 +436,15 @@ struct CleanerView: View {
             return
         }
 #endif
+        guard MCMBridgeAvailable() else {
+            records = []
+            selectedBundleIDs.removeAll()
+            scannedAppCount = 0
+            isScanning = false
+            activeAlert = .result(message: language.text("cleaner.access_unavailable"))
+            log("cleaner: cross-app scan skipped; no authorized container capability")
+            return
+        }
         let requestID = UUID()
         scanID = requestID
         isScanning = true
@@ -551,6 +560,10 @@ struct CleanerView: View {
 
     private func cleanSelectedApps() {
         guard !isBusy else { return }
+        guard MCMBridgeAvailable() else {
+            activeAlert = .result(message: language.text("cleaner.access_unavailable"))
+            return
+        }
         let selectedRecords = records.filter { selectedBundleIDs.contains($0.id) }
         guard !selectedRecords.isEmpty else { return }
         isCleaning = true

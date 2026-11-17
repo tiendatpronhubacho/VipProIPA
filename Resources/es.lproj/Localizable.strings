@@ -27,3 +27,9 @@
 "browser.workspace" = "Espacio de trabajo";
 "cleaner.title" = "Limpiador";
 "settings" = "Ajustes";
+
+
+"browser.authorized_import" = "Importar archivos autorizados";
+"browser.authorized_import_result" = "Se importaron %lld archivo(s); %lld fallaron. Los archivos se copiaron en TienDat Documents/Authorized Imports.";
+"browser.container_access_unavailable" = "La exploración de datos de otras apps no está disponible en esta compilación. Usa el botón de documentos para importar archivos elegidos o abre el espacio de trabajo de TienDat.";
+"cleaner.access_unavailable" = "La limpieza de otras apps no está disponible porque esta compilación no tiene acceso autorizado a sus contenedores.";

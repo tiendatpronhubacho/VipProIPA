@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 
 struct AppDataBrowserView: View {
     @Environment(\.appLanguage) private var language
@@ -13,6 +14,8 @@ struct AppDataBrowserView: View {
     @State private var errorMessage: String?
     @State private var hasLoaded = false
     @State private var workspaceURL: URL?
+    @State private var showAuthorizedDocumentPicker = false
+    @State private var importNotice: String?
     @Binding private var tabSession: FilesTabSession
     let onOpenSettings: () -> Void
     let onOpenLogs: () -> Void
@@ -61,6 +64,12 @@ struct AppDataBrowserView: View {
                     FilesTabToolbarButton(session: $tabSession)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
+                    Button { showAuthorizedDocumentPicker = true } label: {
+                        Image(systemName: "doc.badge.plus")
+                    }
+                    .accessibilityLabel(language.text("browser.authorized_import"))
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Button { reload() } label: {
                         if isResolving {
                             ProgressView()
@@ -86,6 +95,42 @@ struct AppDataBrowserView: View {
                     hasLoaded = true
                     reload()
                 }
+            }
+            .sheet(isPresented: $showAuthorizedDocumentPicker) {
+                FileDocumentPicker(
+                    allowedContentTypes: [.data],
+                    copiesSelectedDocument: true,
+                    allowsMultipleSelection: true,
+                    onSelection: { result in
+                        showAuthorizedDocumentPicker = false
+                        switch result {
+                        case .success(let urls):
+                            do {
+                                let outcome = try AuthorizedDocumentImportService.importDocuments(urls)
+                                let imported = outcome.importedURLs.count
+                                let failed = outcome.failedNames.count
+                                importNotice = language.text(
+                                    "browser.authorized_import_result",
+                                    Int64(imported),
+                                    Int64(failed)
+                                )
+                            } catch {
+                                importNotice = error.localizedDescription
+                            }
+                        case .failure(let error):
+                            importNotice = error.localizedDescription
+                        }
+                    },
+                    onCancel: { showAuthorizedDocumentPicker = false }
+                )
+            }
+            .alert(language.text("browser.authorized_import"), isPresented: Binding(
+                get: { importNotice != nil },
+                set: { if !$0 { importNotice = nil } }
+            )) {
+                Button(language.text("common.ok"), role: .cancel) { importNotice = nil }
+            } message: {
+                Text(importNotice ?? "")
             }
             .navigationDestination(for: FileBrowserDestination.self) { destination in
                 if destination.startPath == destination.containerPath {
@@ -285,7 +330,17 @@ struct AppDataBrowserView: View {
         isLoading = true
         isResolving = true
         errorMessage = nil
-        let emptyMessage = language.text("browser.empty")
+        guard MCMBridgeAvailable() else {
+            // Do not enumerate private app-container registries or filesystem
+            // roots in a standard sandbox. The app's own Documents workspace
+            // and files explicitly imported through Document Picker remain usable.
+            apps = []
+            isLoading = false
+            isResolving = false
+            errorMessage = language.text("browser.container_access_unavailable")
+            log("browser: cross-app discovery skipped; no authorized container capability")
+            return
+        }
         DispatchQueue.global(qos: .userInitiated).async {
             let bundleMetadata = ContainerStore.applicationBundleMetadataCatalog()
             let apiApps = ContainerStore.applyingBundleMetadata(

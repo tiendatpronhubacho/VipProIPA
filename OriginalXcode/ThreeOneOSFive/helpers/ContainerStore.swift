@@ -25,11 +25,40 @@ struct FileEntry: Identifiable, Hashable {
     let path: String
     let isDirectory: Bool
     let size: Int64
+    let modifiedAt: Date?
+    let childCount: Int?
 
     var id: String { path }
     var sizeText: String {
-        if isDirectory { return "—" }
+        guard size >= 0 else { return "—" }
         return ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
+    }
+
+    init(
+        name: String,
+        path: String,
+        isDirectory: Bool,
+        size: Int64,
+        modifiedAt: Date? = nil,
+        childCount: Int? = nil
+    ) {
+        self.name = name
+        self.path = path
+        self.isDirectory = isDirectory
+        self.size = size
+        self.modifiedAt = modifiedAt
+        self.childCount = childCount
+    }
+
+    func withDirectorySummary(_ summary: FileBrowserDirectorySummary?) -> FileEntry {
+        FileEntry(
+            name: name,
+            path: path,
+            isDirectory: isDirectory,
+            size: summary?.byteCount ?? -2,
+            modifiedAt: modifiedAt,
+            childCount: summary?.childCount
+        )
     }
 }
 
@@ -61,26 +90,46 @@ enum ContainerStore {
         "com.apple.compass", "com.apple.Magnifier", "com.apple.DocumentsApp"
     ]
 
-    static func resolveAppContainerPath(bundleID: String) -> String? {
+    enum AppContainerResolution {
+        case resolved(String)
+        case targetNotFound(String)
+        case accessUnavailable(String)
+    }
+
+    /// Resolve only through an explicitly available, authorized bridge.
+    /// A missing bridge means lack of access, not proof that the app is absent.
+    static func resolveAppContainer(bundleID: String) -> AppContainerResolution {
         guard (try? PatchPathValidator.canonicalBundleIdentifier(bundleID)) == bundleID else {
-            return nil
+            return .targetNotFound("Invalid bundle identifier")
         }
-        // The shipping bridge is deliberately unavailable in a standard iOS
-        // sandbox. Fail closed before invoking any private MCM entry point.
         guard MCMBridgeAvailable() else {
-            log("patch: cross-app container resolution unavailable for \(bundleID): standard iOS sandbox has no authorized container capability")
-            return nil
+            let detail = "This build has no authorized cross-app container capability"
+            log("patch: container access unavailable for \(bundleID): \(detail)")
+            return .accessUnavailable(detail)
         }
 
         var lookupError: NSString?
         if let path = MCMActivateContainerPath(2, bundleID, false, &lookupError),
            isApplicationContainerPath(path) {
             log("patch: authorized MCM resolution succeeded for \(bundleID)")
-            return path
+            return .resolved(path)
         }
+
         let detail = lookupError.map { String($0) } ?? "MCM returned no container path"
+        let normalized = detail.lowercased()
+        let confirmsMissing = [
+            "application not found", "app not found", "container not found",
+            "no such container", "application is not installed", "bundle not installed"
+        ].contains { normalized.contains($0) }
         log("patch: authorized MCM resolution failed for \(bundleID), detail=\(detail)")
-        return nil
+        return confirmsMissing ? .targetNotFound(detail) : .accessUnavailable(detail)
+    }
+
+    static func resolveAppContainerPath(bundleID: String) -> String? {
+        guard case let .resolved(path) = resolveAppContainer(bundleID: bundleID) else {
+            return nil
+        }
+        return path
     }
 
     static func resolveAppContainerPathByMetadataScan(bundleID: String) -> String? {
@@ -693,8 +742,19 @@ enum ContainerStore {
             let full = (path as NSString).appendingPathComponent(item)
             var isDir: ObjCBool = false
             guard fm.fileExists(atPath: full, isDirectory: &isDir) else { continue }
-            let size = isDir.boolValue ? 0 : ((try? fm.attributesOfItem(atPath: full)[.size] as? Int64) ?? 0)
-            entries.append(FileEntry(name: item, path: full, isDirectory: isDir.boolValue, size: size))
+            let attributes = try? fm.attributesOfItem(atPath: full)
+            let size = isDir.boolValue
+                ? -1
+                : (attributes?[.size] as? NSNumber)?.int64Value ?? 0
+            entries.append(
+                FileEntry(
+                    name: item,
+                    path: full,
+                    isDirectory: isDir.boolValue,
+                    size: size,
+                    modifiedAt: attributes?[.modificationDate] as? Date
+                )
+            )
         }
         return entries.sorted {
             if $0.isDirectory != $1.isDirectory { return $0.isDirectory }

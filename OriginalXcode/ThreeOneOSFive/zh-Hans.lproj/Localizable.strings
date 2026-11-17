@@ -513,3 +513,8 @@
 "wallpaper.error.unknown" = "发生意外错误。请查看会话日志了解详情。";
 
 "patch.error.container_access_unavailable" = "此标准 iOS 版本未获准访问其他应用（%@）的数据。请使用 iOS 支持的共享/文稿选择器流程，或使用具有适当 entitlement 的应用版本。未更改任何文件。";
+
+"browser.authorized_import" = "导入已授权文件";
+"browser.authorized_import_result" = "已导入 %lld 个文件；%lld 个失败。文件副本已保存到 TienDat Documents/Authorized Imports。";
+"browser.container_access_unavailable" = "此构建版本无法浏览其他应用的数据。请使用文档按钮导入您选择的文件，或打开 TienDat 工作区。";
+"cleaner.access_unavailable" = "此构建版本未获授权访问其他应用的容器，因此无法清理其他应用。";

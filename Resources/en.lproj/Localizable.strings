@@ -669,3 +669,9 @@
 "wallpaper.package_files" = "%lld files";
 
 "patch.error.container_access_unavailable" = "Cross-app data access for %@ is not authorized in this standard iOS build. Open the app through a supported sharing or document-picker workflow, or use a properly entitled app build. No files were changed.";
+
+
+"browser.authorized_import" = "Import authorized files";
+"browser.authorized_import_result" = "Imported %lld file(s); %lld failed. Files were copied into TienDat Documents/Authorized Imports.";
+"browser.container_access_unavailable" = "Cross-app app-data browsing is unavailable in this build. Use the document button to import files you choose, or open the TienDat workspace.";
+"cleaner.access_unavailable" = "Cleaning other apps is unavailable because this build has no authorized access to their containers.";

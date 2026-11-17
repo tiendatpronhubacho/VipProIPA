@@ -17,11 +17,49 @@ enum DevicePatchService {
         }
     }
 
-    static func restore(receipt: PatchTransactionReceipt) throws {
+    static func inspectRestore(receipt: PatchTransactionReceipt) throws -> PatchRestoreInspection {
+        let bundleIDs = try PatchTransaction.requiredBundleIdentifiers(for: receipt)
+        return try withResolvedContainers(bundleIDs: bundleIDs) { roots in
+            try PatchTransaction.inspectRestore(
+                receipt: receipt,
+                containerResolver: { bundleID in
+                    guard let root = roots[bundleID] else {
+                        throw PatchPackageError.targetAppUnavailable(bundleID)
+                    }
+                    return root
+                }
+            )
+        }
+    }
+
+    static func restore(
+        receipt: PatchTransactionReceipt,
+        allowChangedTargets: Bool = false
+    ) throws {
         let bundleIDs = try PatchTransaction.requiredBundleIdentifiers(for: receipt)
         try withResolvedContainers(bundleIDs: bundleIDs) { roots in
             try PatchTransaction.restore(
                 receipt: receipt,
+                allowChangedTargets: allowChangedTargets,
+                containerResolver: { bundleID in
+                    guard let root = roots[bundleID] else {
+                        throw PatchPackageError.targetAppUnavailable(bundleID)
+                    }
+                    return root
+                }
+            )
+        }
+    }
+
+    static func resetToAppliedState(
+        receipt: PatchTransactionReceipt,
+        project: PatchProject
+    ) throws {
+        let bundleIDs = try PatchTransaction.requiredBundleIdentifiers(for: receipt)
+        try withResolvedContainers(bundleIDs: bundleIDs) { roots in
+            try PatchTransaction.resetToAppliedState(
+                receipt: receipt,
+                fallbackProject: project,
                 containerResolver: { bundleID in
                     guard let root = roots[bundleID] else {
                         throw PatchPackageError.targetAppUnavailable(bundleID)
@@ -48,16 +86,22 @@ enum DevicePatchService {
         var roots: [String: URL] = [:]
 
         for bundleID in bundleIDs {
-            guard MCMBridgeAvailable() else {
-                log("patch: cannot access \(bundleID): this standard iOS build has no entitlement or user-granted access to another app's container")
+            switch ContainerStore.resolveAppContainer(bundleID: bundleID) {
+            case .resolved(let path):
+                guard ContainerStore.isApplicationContainerPath(path) else {
+                    log("patch: resolved path failed application-container validation for \(bundleID)")
+                    throw PatchPackageError.containerAccessUnavailable(bundleID)
+                }
+                roots[bundleID] = PatchPathValidator.canonicalFileURL(
+                    URL(fileURLWithPath: path, isDirectory: true)
+                )
+            case .targetNotFound(let detail):
+                log("patch: target app/container confirmed missing for \(bundleID): \(detail)")
+                throw PatchPackageError.targetAppUnavailable(bundleID)
+            case .accessUnavailable(let detail):
+                log("patch: container access unavailable for \(bundleID): \(detail)")
                 throw PatchPackageError.containerAccessUnavailable(bundleID)
             }
-            guard let path = ContainerStore.resolveAppContainerPath(bundleID: bundleID),
-                  ContainerStore.isApplicationContainerPath(path) else {
-                log("patch: target container unavailable for \(bundleID); authorized container resolution failed; no files were changed")
-                throw PatchPackageError.targetAppUnavailable(bundleID)
-            }
-            roots[bundleID] = PatchPathValidator.canonicalFileURL(URL(fileURLWithPath: path, isDirectory: true))
         }
         return try operation(roots)
     }

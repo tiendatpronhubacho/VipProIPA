@@ -86,16 +86,22 @@ enum DevicePatchService {
         var roots: [String: URL] = [:]
 
         for bundleID in bundleIDs {
-            guard MCMBridgeAvailable() else {
-                log("patch: cannot access \(bundleID): this standard iOS build has no entitlement or user-granted access to another app's container")
+            switch ContainerStore.resolveAppContainer(bundleID: bundleID) {
+            case .resolved(let path):
+                guard ContainerStore.isApplicationContainerPath(path) else {
+                    log("patch: resolved path failed application-container validation for \(bundleID)")
+                    throw PatchPackageError.containerAccessUnavailable(bundleID)
+                }
+                roots[bundleID] = PatchPathValidator.canonicalFileURL(
+                    URL(fileURLWithPath: path, isDirectory: true)
+                )
+            case .targetNotFound(let detail):
+                log("patch: target app/container confirmed missing for \(bundleID): \(detail)")
+                throw PatchPackageError.targetAppUnavailable(bundleID)
+            case .accessUnavailable(let detail):
+                log("patch: container access unavailable for \(bundleID): \(detail)")
                 throw PatchPackageError.containerAccessUnavailable(bundleID)
             }
-            guard let path = ContainerStore.resolveAppContainerPath(bundleID: bundleID),
-                  ContainerStore.isApplicationContainerPath(path) else {
-                log("patch: target container unavailable for \(bundleID); authorized container resolution failed; no files were changed")
-                throw PatchPackageError.targetAppUnavailable(bundleID)
-            }
-            roots[bundleID] = PatchPathValidator.canonicalFileURL(URL(fileURLWithPath: path, isDirectory: true))
         }
         return try operation(roots)
     }
