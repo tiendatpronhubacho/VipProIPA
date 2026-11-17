@@ -1,33 +1,32 @@
 workflows:
-  xtool-build:
-    name: Build TienDat IPA
+  tiendat-unsigned-ipa:
+    name: TienDat unsigned IPA
     instance_type: mac_mini_m2
-    max_build_duration: 30
+    max_build_duration: 60
     scripts:
-      - name: Install xtool
+      - name: Build iOS app without code signing
         script: |
-          brew install xtool-org/tap/xtool
-      - name: Build IPA
+          set -euo pipefail
+          xcodebuild -version
+          xcodebuild \
+            -project OriginalXcode/ThreeOneOSFive.xcodeproj \
+            -scheme OGIOS \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$CM_BUILD_DIR/TienDatDerivedData" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY='' \
+            build
+      - name: Package unsigned IPA
         script: |
-          xtool dev build --ipa
-      - name: Compile assets and normalize IPA resources
-        script: |
-          IPA_PATH="$(find . -type f -name '*.ipa' -print -quit)"
-          if [ -z "$IPA_PATH" ]; then
-            echo "ERROR: No IPA was produced by xtool."
-            exit 1
-          fi
-          chmod +x Scripts/fix-ipa-resources.sh
-          Scripts/fix-ipa-resources.sh "$IPA_PATH"
-      - name: Verify IPA artifact
-        script: |
-          IPA_PATH="$(find . -type f -name '*.ipa' -print -quit)"
-          if [ -z "$IPA_PATH" ]; then
-            echo "ERROR: No IPA was produced by xtool."
-            exit 1
-          fi
-          echo "IPA produced: $IPA_PATH"
-          unzip -t "$IPA_PATH"
+          set -euo pipefail
+          APP_PATH="$CM_BUILD_DIR/TienDatDerivedData/Build/Products/Release-iphoneos/OGIOS.app"
+          test -d "$APP_PATH"
+          mkdir -p "$CM_BUILD_DIR/ipa/Payload"
+          cp -R "$APP_PATH" "$CM_BUILD_DIR/ipa/Payload/OGIOS.app"
+          (cd "$CM_BUILD_DIR/ipa" && /usr/bin/zip -qry "$CM_BUILD_DIR/TienDat-unsigned.ipa" Payload)
+          test -s "$CM_BUILD_DIR/TienDat-unsigned.ipa"
     artifacts:
-      - "**/*.ipa"
-      - .build/release/**
+      - $CM_BUILD_DIR/TienDat-unsigned.ipa
