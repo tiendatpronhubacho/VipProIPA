@@ -86,9 +86,11 @@ enum ContainerStore {
     }
 
     static func resolveAppContainerPathByMetadataScan(bundleID: String) -> String? {
-        // iOS < 26: kernel R/W is enough, no need to require full sandbox escape
-        if KernelExploit.requiresSandboxEscape, !KernelExploit.hasSandboxAccess() {
-            log("patch: metadata scan skipped — sandbox access not active")
+        // This fallback reads outside the app's ordinary container. Only run it
+        // after a real, independently established access capability; OS-version
+        // compatibility or a disabled exploit flag is not proof of permission.
+        guard KernelExploit.hasSandboxAccess() else {
+            log("patch: metadata scan skipped — this build has no sandbox access")
             return nil
         }
         let dirs = enumerateDirectories(path: appDataRoot)

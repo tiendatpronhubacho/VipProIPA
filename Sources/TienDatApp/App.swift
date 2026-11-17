@@ -81,14 +81,18 @@ class AppState: ObservableObject {
     @Published var unsupportedMessage: String? = nil
     @Published var kernelExploitRunning = false
 
+    /// This build intentionally ships without kernel exploit or sandbox escape.
+    /// OS-version compatibility must never be presented as runtime access.
     var kernelExploitApplicable: Bool { false }
-    var isSupported: Bool { true }
+    var isSupported: Bool { false }
+    var supportStatusLabel: String { "LIMITED — SANDBOX ACCESS DISABLED" }
 
     func detectSupport() {
         // The TienDat build keeps ordinary app features available but never
-        // attempts kernel exploitation or sandbox escape.
+        // does not attempt kernel exploitation or sandbox escape. The patch
+        // workflow therefore cannot claim target-container access is available.
         exploitStatus = .notStarted
-        unsupportedMessage = nil
+        unsupportedMessage = "This safe build has no sandbox access. App-container patching is unavailable."
         kernelExploitRunning = false
     }
 

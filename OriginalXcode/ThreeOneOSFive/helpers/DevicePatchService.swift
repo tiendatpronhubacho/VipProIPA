@@ -50,6 +50,7 @@ enum DevicePatchService {
         for bundleID in bundleIDs {
             guard let path = ContainerStore.resolveAppContainerPath(bundleID: bundleID),
                   ContainerStore.isApplicationContainerPath(path) else {
+                log("patch: target container unavailable for \(bundleID); MCM resolution failed and sandbox metadata scan is disabled without verified access")
                 throw PatchPackageError.targetAppUnavailable(bundleID)
             }
             roots[bundleID] = PatchPathValidator.canonicalFileURL(URL(fileURLWithPath: path, isDirectory: true))

@@ -63,3 +63,12 @@ All notable user-facing changes are documented in this file.
 - Verified iOS 26.0–26.6.1.
 - Verified iOS 27 beta 1–4 builds listed in the app.
 - Unlisted iOS 27 builds remain disabled until explicitly verified.
+
+
+## Safe-build capability correction (2026-11-17)
+
+- Corrected the device UI so OS version ranges are not reported as actual patch/container support.
+- Settings and onboarding now disclose that this build has no kernel exploit or sandbox access.
+- Disabled the raw app-container metadata filesystem scan unless sandbox access is independently established.
+- Kept the kernel exploit stub disabled; no exploit, privilege escalation, or sandbox bypass was added.
+- Mirrored the changes in both `Sources/TienDatApp` and `OriginalXcode/ThreeOneOSFive`.

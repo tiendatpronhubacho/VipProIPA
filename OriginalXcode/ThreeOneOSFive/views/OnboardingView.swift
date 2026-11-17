@@ -199,21 +199,17 @@ struct OnboardingView: View {
                     .padding(.horizontal, 22)
             }
             VStack(alignment: .leading, spacing: 10) {
-                Label("Standard iOS app mode", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-                Text("Kernel exploit, sandbox escape, and system-level patching are disabled in this TienDat build. Features that require elevated access may be unavailable.")
+                Label("LIMITED — SANDBOX ACCESS DISABLED", systemImage: "exclamationmark.triangle.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.orange)
+                Text("This build does not run a kernel exploit and cannot access other apps' containers. Listed iOS versions must not be interpreted as proof that patching Free Fire VN is available.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .padding(14)
-            .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .padding(.horizontal, 20)
-            Text(language.text("onboarding.versions_footer", AppInfo.osVersion, AppInfo.osBuild))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 24)
-            Spacer(minLength: 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
+            .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
         }
     }
 

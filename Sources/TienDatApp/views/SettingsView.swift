@@ -80,26 +80,16 @@ struct SettingsView: View {
                     HStack {
                         Text(language.text("settings.current_version"))
                         Spacer()
-                        Text(language.text(appState.isSupported ? "settings.supported" : "settings.unsupported"))
-                        .foregroundStyle(appState.isSupported ? Color.green : Color.red)
+                        Text("LIMITED")
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.orange)
                     }
-                    LabeledContent("iOS 17", value: ExploitSupportPolicy.verifiedIOS17Range)
-                    LabeledContent("iOS 18", value: ExploitSupportPolicy.verifiedIOS18Range)
-                    LabeledContent("iOS 26", value: ExploitSupportPolicy.verifiedIOS26Range)
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("iOS 27.0")
-                            .font(.body)
-                        ForEach(ExploitSupportPolicy.verifiedIOS27Builds, id: \.build) { version in
-                            Text(versionLabel(version))
-                            .font(.caption.monospaced())
-                            .foregroundStyle(.secondary)
-                        }
-                    }
-                    .padding(.vertical, 2)
+                    LabeledContent("iOS", value: "\(AppInfo.osVersion) (\(AppInfo.osBuild))")
+                    Text("This build does not include kernel exploit or sandbox access. OS version compatibility does not mean app-container access is available. Patch operations that require another app's container will fail until an authorized access method is provided.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 } header: {
-                    Text(language.text("settings.verified_versions"))
-                } footer: {
-                    Text(language.text("settings.supported_versions_footer"))
+                    Text("Patch capability")
                 }
 
                 Section(language.text("settings.social_media")) {

@@ -40,10 +40,11 @@ struct SettingsView: View {
                     HStack {
                         Text(language.text("settings.current_version"))
                         Spacer()
-                        Text(language.text(appState.isSupported ? "settings.supported" : "settings.unsupported"))
-                        .foregroundStyle(appState.isSupported ? Color.green : Color.red)
+                        Text("LIMITED")
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.orange)
                     }
-                    Text("System-level exploit and sandbox-escape features are disabled in this TienDat build.")
+                    Text("System-level exploit and sandbox-escape features are disabled in this TienDat build. App-container patching is unavailable unless the app receives authorized access through a supported mechanism.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 } header: {

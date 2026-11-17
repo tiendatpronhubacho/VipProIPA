@@ -1,5 +1,7 @@
 import Foundation
 
+/// Historical OS/build compatibility data only. This safe build contains no
+/// exploit implementation; these values must never authorize container access.
 enum ExploitSupportPolicy {
     static let verifiedIOS17Range = "17.0–17.7.x"
     static let verifiedIOS18Range = "18.0–18.7.1"
@@ -35,16 +37,9 @@ enum ExploitSupportPolicy {
     }
 
     static func isSupported(major: Int, minor: Int, patch: Int, build: String) -> Bool {
-        if supportsKernelExploit(major: major, minor: minor, patch: patch) {
-            return true
-        }
-
-        if major == 26 {
-            guard minor >= 0, patch >= 0 else { return false }
-            return minor < 6 || (minor == 6 && patch <= 1)
-        }
-
-        guard major == 27, minor == 0, patch == 0 else { return false }
-        return iOS27BetaNumber(for: build) != nil
+        // Deliberately false: this build has no runtime sandbox capability.
+        // Keep the signature for callers, but do not conflate version ranges
+        // with a functioning exploit or authorized container access.
+        false
     }
 }
