@@ -102,7 +102,7 @@
 	<string>16.0</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
-		<string>freefireth</string>
+		<string>freefirevn</string>\n\t\t<string>freefire</string>
 	</array>
 </dict>
 </plist>

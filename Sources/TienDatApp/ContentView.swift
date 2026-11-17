@@ -47,7 +47,7 @@ struct ContentView: View {
         .alert("Không mở được Free Fire VN", isPresented: $showLaunchFailure) {
             Button("Đóng", role: .cancel) { }
         } message: {
-            Text("iOS không nhận được yêu cầu mở bằng freefireth://. Hãy kiểm tra ứng dụng Free Fire VN và URL scheme được nhà phát hành hỗ trợ.")
+            Text("iOS không nhận được yêu cầu mở bằng freefirevn:// hoặc freefire://. Hãy kiểm tra Free Fire VN đã được cài đặt.")
         }
         .sheet(item: $patchStore.passwordRequest, onDismiss: patchStore.cancelUnlock) { _ in
             PatchUnlockPrompt(store: patchStore)
@@ -145,7 +145,7 @@ struct ContentView: View {
     private var gameLaunchPanel: some View {
         VStack(alignment: .leading, spacing: 12) {
             panelTitle("FREE FIRE VN MỚI UPDATE", icon: "arrow.up.forward.app.fill")
-            launchButton(title: "FREE FIRE VN MỚI UPDATE", subtitle: "Free Fire Việt Nam", color: AppTheme.accent, scheme: "freefireth")
+            launchButton(title: "FREE FIRE VN MỚI UPDATE", subtitle: "Free Fire Việt Nam", color: AppTheme.accent, scheme: "freefirevn")
         }
     }
 
@@ -350,16 +350,28 @@ struct ContentView: View {
     }
 
     private func openGame(scheme: String) {
-        guard let url = URL(string: "\(scheme)://") else {
+        // Free Fire VN's Info.plist registers freefirevn and freefire.
+        // Try the VN-specific scheme first, then the general Free Fire scheme.
+        let schemes = scheme == "freefirevn" ? ["freefirevn", "freefire"] : [scheme]
+        tryOpenGame(schemes: schemes)
+    }
+
+    private func tryOpenGame(schemes: [String]) {
+        guard let scheme = schemes.first, let url = URL(string: "\(scheme)://") else {
             showLaunchFailure = true
             return
         }
-        // iOS does not provide a public API to launch another app by bundle ID.
-        // Use the target app's registered URL scheme instead.
+
         UIApplication.shared.open(url, options: [:]) { success in
             log("launch: \(scheme) success=\(success)")
             DispatchQueue.main.async {
-                self.showLaunchFailure = !success
+                if success {
+                    self.showLaunchFailure = false
+                } else if schemes.count > 1 {
+                    self.tryOpenGame(schemes: Array(schemes.dropFirst()))
+                } else {
+                    self.showLaunchFailure = true
+                }
             }
         }
     }
