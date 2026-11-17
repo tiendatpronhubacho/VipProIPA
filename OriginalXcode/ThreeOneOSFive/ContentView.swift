@@ -25,7 +25,10 @@ struct ContentView: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 18) {
+                    brandHeader
+                    devicePanel
                     patchOptions
+                    patchStatusPanel
                     gameLaunchPanel
                 }
                 .padding(.horizontal, 18)
@@ -109,6 +112,22 @@ struct ContentView: View {
             }
 
         }
+    }
+
+    private var patchStatusPanel: some View {
+        HStack(spacing: 9) {
+            Circle()
+                .fill(patchMessage.hasPrefix("ERROR") || patchMessage.hasPrefix("FAILED") ? AppTheme.accent : .green)
+                .frame(width: 8, height: 8)
+            Text(patchMessage)
+                .font(.system(size: 10, weight: .black, design: .rounded))
+                .tracking(0.7)
+                .foregroundStyle(.white.opacity(0.72))
+                .lineLimit(2)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
     }
 
     private func patchCard(name: String, target: String, package: String, color: Color, state: Binding<Bool>) -> some View {
