@@ -8,8 +8,19 @@ workflows:
         script: |
           set -euo pipefail
           xcodebuild -version
+          # The ZIP/repository contains a top-level VipProIPA directory.
+          # Support both repository-root and VipProIPA-root build configurations.
+          if [ -d "$CM_BUILD_DIR/VipProIPA/OriginalXcode/ThreeOneOSFive.xcodeproj" ]; then
+            PROJECT_PATH="$CM_BUILD_DIR/VipProIPA/OriginalXcode/ThreeOneOSFive.xcodeproj"
+          elif [ -d "$CM_BUILD_DIR/OriginalXcode/ThreeOneOSFive.xcodeproj" ]; then
+            PROJECT_PATH="$CM_BUILD_DIR/OriginalXcode/ThreeOneOSFive.xcodeproj"
+          else
+            echo "ERROR: ThreeOneOSFive.xcodeproj not found under CM_BUILD_DIR=$CM_BUILD_DIR"
+            find "$CM_BUILD_DIR" -maxdepth 5 -name ThreeOneOSFive.xcodeproj -print
+            exit 1
+          fi
           xcodebuild \
-            -project OriginalXcode/ThreeOneOSFive.xcodeproj \
+            -project "$PROJECT_PATH" \
             -scheme OGIOS \
             -configuration Release \
             -sdk iphoneos \
