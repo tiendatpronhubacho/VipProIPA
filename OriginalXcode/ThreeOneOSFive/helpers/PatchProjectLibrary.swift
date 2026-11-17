@@ -74,7 +74,54 @@ enum PatchProjectLibrary {
         }
     }
 
+    /// Copies the bundled starter patches into the user's patch library once.
+    /// The UI looks up packages in PatchProjectLibrary.load(), which only scans
+    /// Application Support; resources in the app bundle are not visible there
+    /// until they are imported.
+    private static func installBundledPackages(fileManager: FileManager) {
+        guard let root = try? packageRootURL(fileManager: fileManager) else {
+            log("patch: unable to create package library for bundled patches")
+            return
+        }
+
+        let bundledNames = ["Aim Drag", "Aim Body"]
+        for name in bundledNames {
+            let resourceURL = Bundle.main.url(forResource: name, withExtension: "3105")
+                ?? Bundle.main.url(forResource: name, withExtension: "3105", subdirectory: "Patches")
+            guard let resourceURL,
+                  let data = try? Data(contentsOf: resourceURL),
+                  let summary = try? PatchPackageCodec.inspect(data) else {
+                log("patch: bundled package missing or invalid: \\(name).3105")
+                continue
+            }
+
+            // Do not overwrite a user's imported or edited copy of this package.
+            let alreadyInstalled = (try? fileManager.contentsOfDirectory(
+                at: root,
+                includingPropertiesForKeys: nil,
+                options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants]
+            ))?.contains(where: { url in
+                guard url.pathExtension.lowercased() == "3105",
+                      let existingData = try? readPackage(at: url),
+                      let existingSummary = try? PatchPackageCodec.inspect(existingData) else {
+                    return false
+                }
+                return existingSummary.packageID == summary.packageID
+            }) ?? false
+
+            guard !alreadyInstalled else { continue }
+            let destination = root.appendingPathComponent("\\(name).3105", isDirectory: false)
+            do {
+                try data.write(to: destination, options: .atomic)
+                log("patch: installed bundled package \\(name).3105")
+            } catch {
+                log("patch: failed to install bundled package \\(name).3105: \\(error)")
+            }
+        }
+    }
+
     static func load(fileManager: FileManager = .default) -> [PatchLibraryItem] {
+        installBundledPackages(fileManager: fileManager)
         guard let root = try? packageRootURL(fileManager: fileManager),
               let urls = try? fileManager.contentsOfDirectory(
                 at: root,
