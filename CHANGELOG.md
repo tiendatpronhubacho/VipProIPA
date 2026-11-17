@@ -72,3 +72,9 @@ All notable user-facing changes are documented in this file.
 - Disabled the raw app-container metadata filesystem scan unless sandbox access is independently established.
 - Kept the kernel exploit stub disabled; no exploit, privilege escalation, or sandbox bypass was added.
 - Mirrored the changes in both `Sources/TienDatApp` and `OriginalXcode/ThreeOneOSFive`.
+
+## Build fix v3 — Objective-C linker symbol
+
+- Fixed a duplicate `PBXBuildFile` object identifier in `OriginalXcode/ThreeOneOSFive.xcodeproj/project.pbxproj`.
+- `AppIconHelper.m` and `FileBrowserMetadata.swift` now have distinct build-file identifiers and each appears exactly once in the OGIOS Compile Sources phase.
+- This ensures the Objective-C implementation of `installedAppInfo()` is compiled and can satisfy the Swift reference that previously failed at link time as `_installedAppInfo`.
