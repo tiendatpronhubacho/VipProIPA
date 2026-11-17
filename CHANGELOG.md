@@ -1,5 +1,14 @@
 # Changelog
 
+## Access-status UI correction (2026-11-17)
+
+- Home patch cards now stay disabled when `AppState.isSupported` is false.
+- The home status explains that iOS sandbox access is unavailable instead of allowing a tap that can only fail.
+- Added a second guard before patch operations and kept both Xcode and Swift Package source trees synchronized.
+- This is a fail-closed UI correction; it does not grant access to another app's private container.
+- Swift parser checks passed for both updated `ContentView.swift` files. A full Xcode build still requires macOS/Xcode.
+
+
 All notable user-facing changes are documented in this file.
 
 ## [1.0.1] - 2026-08-15

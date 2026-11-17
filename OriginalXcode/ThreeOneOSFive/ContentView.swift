@@ -9,7 +9,7 @@ struct ContentView: View {
     @State private var showCleaner = false
     @StateObject private var patchStore = PatchProjectStore()
     @State private var patchOperationBusy = false
-    @State private var patchMessage = "READY — SELECT A PATCH"
+    @State private var patchMessage = "BLOCKED — iOS SANDBOX ACCESS IS NOT AVAILABLE"
     @State private var aimDragEnabled = false
     @State private var aimNeckEnabled = false
     @State private var hspeitoffEnabled = false
@@ -52,11 +52,14 @@ struct ContentView: View {
         .sheet(item: $patchStore.passwordRequest, onDismiss: patchStore.cancelUnlock) { _ in
             PatchUnlockPrompt(store: patchStore)
         }
-        .onAppear { syncPatchStates() }
+        .onAppear {
+            syncPatchStates()
+            patchMessage = appState.isSupported ? "READY — SELECT A PATCH" : "BLOCKED — iOS SANDBOX ACCESS IS NOT AVAILABLE"
+        }
         .onChange(of: scenePhase) { phase in
             guard phase == .active, !patchOperationBusy else { return }
             syncPatchStates()
-            patchMessage = "READY — SELECT A PATCH"
+            patchMessage = appState.isSupported ? "READY — SELECT A PATCH" : "BLOCKED — iOS SANDBOX ACCESS IS NOT AVAILABLE"
         }
     }
 
@@ -107,7 +110,7 @@ struct ContentView: View {
             HStack {
                 panelTitle("PATCH OPTIONS", icon: "bolt.fill")
                 Spacer()
-                Text("SELECT TO ENABLE")
+                Text(appState.isSupported ? "SELECT TO ENABLE" : "ACCESS UNAVAILABLE")
                     .font(.system(size: 9, weight: .bold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.45))
             }
@@ -123,7 +126,7 @@ struct ContentView: View {
     private var patchStatusPanel: some View {
         HStack(spacing: 9) {
             Circle()
-                .fill(patchMessage.hasPrefix("ERROR") || patchMessage.hasPrefix("FAILED") ? AppTheme.accent : .green)
+                .fill(patchMessage.hasPrefix("ERROR") || patchMessage.hasPrefix("FAILED") || patchMessage.hasPrefix("BLOCKED") ? AppTheme.accent : .green)
                 .frame(width: 8, height: 8)
             Text(patchMessage)
                 .font(.system(size: 10, weight: .black, design: .rounded))
@@ -137,7 +140,7 @@ struct ContentView: View {
     }
 
     private func patchCard(name: String, target: String, package: String, color: Color, state: Binding<Bool>) -> some View {
-        PatchOptionCard(name: name, target: target, color: color, isEnabled: state, isBusy: patchOperationBusy) {
+        PatchOptionCard(name: name, target: target, color: color, isEnabled: state, isBusy: patchOperationBusy, isAvailable: appState.isSupported) {
             togglePatch(packageFilename: package, state: state)
         }
     }
@@ -286,6 +289,10 @@ struct ContentView: View {
     }
 
     private func togglePatch(packageFilename: String, state: Binding<Bool>) {
+        guard appState.isSupported else {
+            patchMessage = "BLOCKED — iOS SANDBOX ACCESS IS NOT AVAILABLE"
+            return
+        }
         guard !patchOperationBusy else { return }
         guard let item = patchStore.items.first(where: { $0.packageURL.lastPathComponent.caseInsensitiveCompare(packageFilename) == .orderedSame }) else {
             patchMessage = "ERROR — PACKAGE NOT FOUND"
@@ -383,6 +390,7 @@ private struct PatchOptionCard: View {
     let color: Color
     @Binding var isEnabled: Bool
     let isBusy: Bool
+    let isAvailable: Bool
     let action: () -> Void
 
     var body: some View {
@@ -406,7 +414,7 @@ private struct PatchOptionCard: View {
                     .foregroundStyle(color)
                 HStack(spacing: 7) {
                     Circle().fill(isEnabled ? Color.green : Color.white.opacity(0.25)).frame(width: 8, height: 8)
-                    Text(isEnabled ? "PATCH ACTIVE" : "ACTIVATE PATCH")
+                    Text(isEnabled ? "PATCH ACTIVE" : (isAvailable ? "ACTIVATE PATCH" : "UNAVAILABLE — SANDBOX ACCESS"))
                         .font(.system(size: 9, weight: .black, design: .rounded))
                         .tracking(0.8)
                         .foregroundStyle(.white.opacity(0.65))
@@ -419,8 +427,8 @@ private struct PatchOptionCard: View {
             .shadow(color: isEnabled ? color.opacity(0.20) : .clear, radius: 12)
         }
         .buttonStyle(.plain)
-        .disabled(isBusy)
-        .opacity(isBusy ? 0.55 : 1)
+        .disabled(isBusy || !isAvailable)
+        .opacity((isBusy || !isAvailable) ? 0.55 : 1)
         .accessibilityLabel("\(name), \(target), \(isEnabled ? "On" : "Off")")
     }
 }
