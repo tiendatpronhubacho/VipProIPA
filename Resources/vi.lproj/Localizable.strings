@@ -667,3 +667,5 @@
 "settings.developer_mode_footer" = "Chế độ nhà phát triển thêm mục Tệp vào thanh điều hướng chính. Tệp có thể duyệt và chỉnh sửa container ứng dụng.";
 "wallpaper.package_details" = "Chi tiết gói";
 "wallpaper.package_files" = "%lld tệp";
+
+"patch.error.container_access_unavailable" = "Bản iOS tiêu chuẩn này không được cấp quyền truy cập dữ liệu của ứng dụng khác (%@). Hãy dùng quy trình chia sẻ/bộ chọn tệp được iOS hỗ trợ hoặc bản ứng dụng có entitlement phù hợp. Không có tệp nào bị thay đổi.";

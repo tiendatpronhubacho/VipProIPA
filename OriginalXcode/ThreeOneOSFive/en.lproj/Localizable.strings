@@ -497,3 +497,5 @@
 "wallpaper.title" = "Wallpaper Lab";
 "wallpaper.try_again" = "Check Again";
 "wallpaper.uuid_dynamic" = "Resolves com.apple.PosterBoard dynamically";
+
+"patch.error.container_access_unavailable" = "Cross-app data access for %@ is not authorized in this standard iOS build. Open the app through a supported sharing or document-picker workflow, or use a properly entitled app build. No files were changed.";

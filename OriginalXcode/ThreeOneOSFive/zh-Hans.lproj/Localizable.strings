@@ -511,3 +511,5 @@
 "wallpaper.error.install" = "安装失败，本次尝试添加的描述符已回滚。";
 "wallpaper.error.restore" = "TienDat 无法安全移除此安装中的全部描述符。";
 "wallpaper.error.unknown" = "发生意外错误。请查看会话日志了解详情。";
+
+"patch.error.container_access_unavailable" = "此标准 iOS 版本未获准访问其他应用（%@）的数据。请使用 iOS 支持的共享/文稿选择器流程，或使用具有适当 entitlement 的应用版本。未更改任何文件。";

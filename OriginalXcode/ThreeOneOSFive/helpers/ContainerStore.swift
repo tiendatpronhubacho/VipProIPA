@@ -65,23 +65,21 @@ enum ContainerStore {
         guard (try? PatchPathValidator.canonicalBundleIdentifier(bundleID)) == bundleID else {
             return nil
         }
+        // The shipping bridge is deliberately unavailable in a standard iOS
+        // sandbox. Fail closed before invoking any private MCM entry point.
+        guard MCMBridgeAvailable() else {
+            log("patch: cross-app container resolution unavailable for \(bundleID): standard iOS sandbox has no authorized container capability")
+            return nil
+        }
+
         var lookupError: NSString?
         if let path = MCMActivateContainerPath(2, bundleID, false, &lookupError),
            isApplicationContainerPath(path) {
-            log("patch: MHA-C2 resolved \(bundleID)")
+            log("patch: authorized MCM resolution succeeded for \(bundleID)")
             return path
         }
-        let detail = lookupError.map(String.init) ?? "unavailable"
-        log("patch: MHA-C2 could not resolve \(bundleID), detail=\(detail)")
-
-        // Fallback for iOS builds where MCM refuses to hand out sandbox
-        // tokens (e.g. iOS 18.1.x): scan the app-data root with the inode
-        // walk and read each container's MCM metadata plist directly. The
-        // raw reads only succeed when the sandbox escape is active.
-        if let scanned = resolveAppContainerPathByMetadataScan(bundleID: bundleID) {
-            log("patch: filesystem metadata scan resolved \(bundleID)")
-            return scanned
-        }
+        let detail = lookupError.map { String($0) } ?? "MCM returned no container path"
+        log("patch: authorized MCM resolution failed for \(bundleID), detail=\(detail)")
         return nil
     }
 

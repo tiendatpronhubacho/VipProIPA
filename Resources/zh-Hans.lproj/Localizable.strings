@@ -667,3 +667,5 @@
 "settings.developer_mode_footer" = "开发者模式会在主导航中添加“文件”。“文件”可以浏览和修改应用容器。";
 "wallpaper.package_details" = "软件包详情";
 "wallpaper.package_files" = "%lld 个文件";
+
+"patch.error.container_access_unavailable" = "此标准 iOS 版本未获准访问其他应用（%@）的数据。请使用 iOS 支持的共享/文稿选择器流程，或使用具有适当 entitlement 的应用版本。未更改任何文件。";

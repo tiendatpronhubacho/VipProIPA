@@ -667,3 +667,5 @@
 "settings.developer_mode_footer" = "Developer Mode adds Files to the main navigation. Files can browse and modify application containers.";
 "wallpaper.package_details" = "Package Details";
 "wallpaper.package_files" = "%lld files";
+
+"patch.error.container_access_unavailable" = "Cross-app data access for %@ is not authorized in this standard iOS build. Open the app through a supported sharing or document-picker workflow, or use a properly entitled app build. No files were changed.";
