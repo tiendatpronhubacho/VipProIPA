@@ -37,7 +37,7 @@ final class PatchProjectStore: ObservableObject {
     private var pendingUnlock: PendingUnlock?
 
     init() {
-        // Tự động copy các file .3105 từ Bundle ra thư mục Documents
+        // 1. Cơ chế 1: Copy từ Bundle (nếu Xcode có nhét file vào)
         let fm = FileManager.default
         if let docDir = fm.urls(for: .documentDirectory, in: .userDomainMask).first {
             let destDir = docDir.appendingPathComponent("Patches")
@@ -59,6 +59,56 @@ final class PatchProjectStore: ObservableObject {
 
         PatchProjectLibrary.installBundledPackagesIfNeeded()
         reload()
+        
+        // 2. Cơ chế 2: Tự động tải từ Github (Dự phòng nếu Bundle trống)
+        Task {
+            await downloadPatchesIfNeeded()
+        }
+    }
+    
+    private func downloadPatchesIfNeeded() async {
+        let fm = FileManager.default
+        guard let docDir = fm.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
+        let destDir = docDir.appendingPathComponent("Patches")
+        
+        if !fm.fileExists(atPath: destDir.path) {
+            try? fm.createDirectory(at: destDir, withIntermediateDirectories: true)
+        }
+        
+        // Link Github của bạn
+        let baseURL = "https://raw.githubusercontent.com/tiendatpronhubacho/VipProIPA/main/Patches/"
+        
+        let filenames = [
+            "OGIOS File (1).3105", "OGIOS File (2).3105", "OGIOS File (3).3105",
+            "OGIOS File (4).3105", "OGIOS File (5).3105", "OGIOS File (6).3105",
+            "OGIOS File (7).3105", "OGIOS File (8).3105", "OGIOS File (9).3105",
+            "OGIOS File (10).3105", "OGIOS File (11).3105", "OGIOS File (12).3105",
+            "OGIOS File (13).3105", "OGIOS File (14).3105"
+        ]
+        
+        var downloadedAny = false
+        for filename in filenames {
+            let dest = destDir.appendingPathComponent(filename)
+            if !fm.fileExists(atPath: dest.path) {
+                // Thay khoảng trắng bằng %20 để tải qua URL
+                let encodedName = filename.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? filename
+                if let url = URL(string: baseURL + encodedName) {
+                    do {
+                        let (data, _) = try await URLSession.shared.data(from: url)
+                        try data.write(to: dest)
+                        print("Downloaded: \(filename)")
+                        downloadedAny = true
+                    } catch {
+                        print("Failed to download \(filename): \(error)")
+                    }
+                }
+            }
+        }
+        
+        // Nếu có tải file mới thì reload lại UI
+        if downloadedAny {
+            self.reload()
+        }
     }
 
     func reload() {
