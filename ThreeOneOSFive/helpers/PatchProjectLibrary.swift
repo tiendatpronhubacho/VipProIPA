@@ -53,11 +53,8 @@ enum PatchProjectLibrary {
             return
         }
 
-        // Xcode may flatten folder references into the app bundle. Resolve both
-        // the intended Patches subdirectory and the flattened bundle root so
-        // standalone builds remain self-contained across packaging layouts.
-        let nestedURLs = bundle.urls(forResourcesWithExtension: "OGIOS", subdirectory: "Patches") ?? []
-        let flattenedURLs = bundle.urls(forResourcesWithExtension: "OGIOS", subdirectory: nil) ?? []
+        let nestedURLs = bundle.urls(forResourcesWithExtension: "3105", subdirectory: "Patches") ?? []
+        let flattenedURLs = bundle.urls(forResourcesWithExtension: "3105", subdirectory: nil) ?? []
         var seen = Set<String>()
         let bundledURLs = (nestedURLs + flattenedURLs).filter { seen.insert($0.standardizedFileURL.path).inserted }
 
@@ -83,7 +80,8 @@ enum PatchProjectLibrary {
               ) else { return [] }
 
         var byID: [UUID: PatchLibraryItem] = [:]
-        for url in urls where url.pathExtension.lowercased() == "OGIOS" {
+        // ĐỔI ĐUÔI TÌM KIẾM THÀNH 3105
+        for url in urls where url.pathExtension.lowercased() == "3105" {
             do {
                 let data = try readPackage(at: url)
                 let summary = try PatchPackageCodec.inspect(data)
@@ -91,8 +89,6 @@ enum PatchProjectLibrary {
                 if let contentKey = try PatchKeyStore.load(for: summary) {
                     decoded = try PatchPackageCodec.decode(data, contentKey: contentKey)
                 } else if summary.isPasswordProtected {
-                    // Only the app's renamed bundled resources use the internal
-                    // key; imported packages remain locked for the user.
                     guard url.deletingPathExtension().lastPathComponent.hasPrefix("OGIOS File (") else {
                         decoded = nil
                         continue
@@ -155,10 +151,11 @@ enum PatchProjectLibrary {
         } else {
             let root = try packageRootURL(fileManager: fileManager)
             let baseName = sanitizedFilename(projectName)
-            var candidate = root.appendingPathComponent(baseName).appendingPathExtension("OGIOS")
+            // ĐỔI ĐUÔI LƯU THÀNH 3105
+            var candidate = root.appendingPathComponent(baseName).appendingPathExtension("3105")
             var suffix = 2
             while fileManager.fileExists(atPath: candidate.path) {
-                candidate = root.appendingPathComponent("\(baseName)-\(suffix)").appendingPathExtension("OGIOS")
+                candidate = root.appendingPathComponent("\(baseName)-\(suffix)").appendingPathExtension("3105")
                 suffix += 1
             }
             destination = candidate

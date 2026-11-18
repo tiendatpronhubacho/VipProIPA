@@ -37,45 +37,20 @@ final class PatchProjectStore: ObservableObject {
     private var pendingUnlock: PendingUnlock?
 
     init() {
-        // 1. Cơ chế 1: Copy từ Bundle (nếu Xcode có nhét file vào)
-        let fm = FileManager.default
-        if let docDir = fm.urls(for: .documentDirectory, in: .userDomainMask).first {
-            let destDir = docDir.appendingPathComponent("Patches")
-            
-            if !fm.fileExists(atPath: destDir.path) {
-                try? fm.createDirectory(at: destDir, withIntermediateDirectories: true)
-            }
-            
-            if let bundleURL = Bundle.main.resourceURL?.appendingPathComponent("Patches"),
-               let files = try? fm.contentsOfDirectory(at: bundleURL, includingPropertiesForKeys: nil) {
-                for file in files where file.pathExtension == "3105" {
-                    let dest = destDir.appendingPathComponent(file.lastPathComponent)
-                    if !fm.fileExists(atPath: dest.path) {
-                        try? fm.copyItem(at: file, to: dest)
-                    }
-                }
-            }
-        }
-
         PatchProjectLibrary.installBundledPackagesIfNeeded()
         reload()
         
-        // 2. Cơ chế 2: Tự động tải từ Github (Dự phòng nếu Bundle trống)
         Task {
-            await downloadPatchesIfNeeded()
+            await downloadPatchesFromGithub()
         }
     }
     
-    private func downloadPatchesIfNeeded() async {
+    private func downloadPatchesFromGithub() async {
         let fm = FileManager.default
-        guard let docDir = fm.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
-        let destDir = docDir.appendingPathComponent("Patches")
         
-        if !fm.fileExists(atPath: destDir.path) {
-            try? fm.createDirectory(at: destDir, withIntermediateDirectories: true)
-        }
+        // Lấy đúng thư mục lưu file
+        guard let rootURL = try? PatchProjectLibrary.packageRootURL() else { return }
         
-        // Link Github của bạn
         let baseURL = "https://raw.githubusercontent.com/tiendatpronhubacho/VipProIPA/main/Patches/"
         
         let filenames = [
@@ -87,10 +62,12 @@ final class PatchProjectStore: ObservableObject {
         ]
         
         var downloadedAny = false
+        
         for filename in filenames {
-            let dest = destDir.appendingPathComponent(filename)
+            // Lưu thẳng với tên file .3105 vào thư mục PatchProjects
+            let dest = rootURL.appendingPathComponent(filename)
+            
             if !fm.fileExists(atPath: dest.path) {
-                // Thay khoảng trắng bằng %20 để tải qua URL
                 let encodedName = filename.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? filename
                 if let url = URL(string: baseURL + encodedName) {
                     do {
@@ -105,7 +82,6 @@ final class PatchProjectStore: ObservableObject {
             }
         }
         
-        // Nếu có tải file mới thì reload lại UI
         if downloadedAny {
             self.reload()
         }
@@ -401,8 +377,6 @@ final class PatchProjectStore: ObservableObject {
 
     private func failUnlock(_ error: PatchPackageError) {
         isBusy = false
-        // Keep the password sheet open so the user can retry.
-        // Presenting an alert while dismissing the sheet swallows the message.
         if case .invalidPasswordOrCorruptedPackage = error {
             unlockErrorKey = "patch.error.wrong_password"
         } else {
