@@ -5,7 +5,7 @@ echo "=== Bắt đầu build OGIOS unsigned ==="
 
 # 1. Build app bằng xcodebuild
 xcodebuild -project ThreeOneOSFive.xcodeproj \
-           -scheme OGIOS \
+           -scheme TienDat \
            -configuration Release \
            -sdk iphoneos \
            -derivedDataPath ./build \
