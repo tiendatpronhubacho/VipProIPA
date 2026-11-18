@@ -48,23 +48,21 @@ final class PatchProjectStore: ObservableObject {
     private func downloadPatchesFromGithub() async {
         let fm = FileManager.default
         
-        // Lấy đúng thư mục lưu file
         guard let rootURL = try? PatchProjectLibrary.packageRootURL() else { return }
         
         let baseURL = "https://raw.githubusercontent.com/tiendatpronhubacho/VipProIPA/main/Patches/"
         
         let filenames = [
-            "OGIOS File (1).3105", "OGIOS File (2).3105", "OGIOS File (3).3105",
-            "OGIOS File (4).3105", "OGIOS File (5).3105", "OGIOS File (6).3105",
-            "OGIOS File (7).3105", "OGIOS File (8).3105", "OGIOS File (9).3105",
-            "OGIOS File (10).3105", "OGIOS File (11).3105", "OGIOS File (12).3105",
-            "OGIOS File (13).3105", "OGIOS File (14).3105"
+            "Aim Drag.3105", "Aim Neck.3105", "Aim Body.3105",
+            "Nhẹ Tâm.3105", "Aim Chest.3105", "Aim R8.3105",
+            "Aim Magic.3105", "Neck+Anten.3105", "Nhẹ + Anten.3105",
+            "Mod Sonic Dimitri.3105", "Mod Thỏ Dimitri.3105", "Mod Roblox Dimitri.3105",
+            "Mod Báo Hồng Dimitri.3105", "Mod Baki Alock.3105"
         ]
         
         var downloadedAny = false
         
         for filename in filenames {
-            // Lưu thẳng với tên file .3105 vào thư mục PatchProjects
             let dest = rootURL.appendingPathComponent(filename)
             
             if !fm.fileExists(atPath: dest.path) {
@@ -91,6 +89,9 @@ final class PatchProjectStore: ObservableObject {
         items = PatchProjectLibrary.load()
     }
 
+    // Các hàm bên dưới giữ nguyên như file cũ của bạn.
+    // ... (Copy từ hàm create(project:password:) trở xuống của file cũ)
+    
     func create(project: PatchProject, password: String?) {
         runOperation(successMessageKey: "patch.created_message") {
             let encoded = try PatchPackageCodec.encodeNew(project: project, password: password)

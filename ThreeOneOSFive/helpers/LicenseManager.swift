@@ -4,7 +4,7 @@ import Security
 
 @MainActor
 final class LicenseManager: ObservableObject {
-    static let accessKey = "OGIOS"
+    static let accessKey = "TienDat"
 
     @Published private(set) var expirationDate: Date?
     @Published private(set) var isActive = false
@@ -13,7 +13,8 @@ final class LicenseManager: ObservableObject {
     @Published private(set) var contactOwner: String?
     @Published var rememberKey = true
 
-    private let service = "com.OGIOS.external-ios.activation"
+    // Đã đổi service để không trùng với app cũ
+    private let service = "com.tiendat.external-ios.activation"
     private let keyAccount = "license-key"
     private var lastAttemptAt: Date?
 
@@ -25,7 +26,7 @@ final class LicenseManager: ObservableObject {
 
     func beginLaunchSession() {
         isActive = hasRememberedKey
-        message = isActive ? "Ready to use" : "Key required — enter your access key"
+        message = isActive ? "Ready to use" : "Key required -- enter your access key"
     }
 
     func activate(key: String) {
@@ -57,7 +58,7 @@ final class LicenseManager: ObservableObject {
 
     func refresh() {
         isActive = hasRememberedKey
-        message = isActive ? "Ready to use" : "Key required — enter your access key"
+        message = isActive ? "Ready to use" : "Key required -- enter your access key"
     }
 
     func deactivate() {

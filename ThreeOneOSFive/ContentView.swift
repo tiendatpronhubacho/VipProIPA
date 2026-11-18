@@ -9,14 +9,23 @@ struct ContentView: View {
     @State private var showCleaner = false
     @StateObject private var patchStore = PatchProjectStore()
     @State private var patchOperationBusy = false
-    @State private var patchMessage = "READY — SELECT A PATCH"
-    @State private var aimDragEnabled = false
-    @State private var aimNeckEnabled = false
-    @State private var hspeitoffEnabled = false
-    @State private var hyperBalamagicaEnabled = false
-    @State private var aimBodyPackageEnabled = false
-    @State private var aimChestPackageEnabled = false
-    @State private var magicEnabled = false
+    @State private var patchMessage = "READY -- SELECT A PATCH"
+
+    // 14 State độc lập cho 14 chức năng
+    @State private var p1 = false // Aim Drag
+    @State private var p2 = false // Aim Neck
+    @State private var p3 = false // Aim Body
+    @State private var p4 = false // Nhẹ Tâm
+    @State private var p5 = false // Aim Chest
+    @State private var p6 = false // Aim R8
+    @State private var p7 = false // Aim Magic
+    @State private var p8 = false // Neck+Anten
+    @State private var p9 = false // Nhẹ + Anten
+    @State private var p10 = false // Mod Sonic Dimitri
+    @State private var p11 = false // Mod Thỏ Dimitri
+    @State private var p12 = false // Mod Roblox Dimitri
+    @State private var p13 = false // Mod Báo Hồng Dimitri
+    @State private var p14 = false // Mod Baki Alock
 
     var body: some View {
         ZStack {
@@ -51,14 +60,14 @@ struct ContentView: View {
         .onChange(of: scenePhase) { phase in
             guard phase == .active, !patchOperationBusy else { return }
             syncPatchStates()
-            patchMessage = "READY — SELECT A PATCH"
+            patchMessage = "READY -- SELECT A PATCH"
         }
     }
 
     private var brandHeader: some View {
         HStack(spacing: 14) {
             VStack(alignment: .leading, spacing: 3) {
-                Text("OGIOS")
+                Text("TIENDAT")
                     .font(.system(size: 25, weight: .black, design: .rounded))
                     .tracking(3)
                     .foregroundStyle(.white)
@@ -108,13 +117,20 @@ struct ContentView: View {
             }
 
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
-                patchCard(name: "Aim Drag", target: "FREE FIRE • NORMAL", package: "OGIOS File (6).3105", color: AppTheme.accent, state: $aimDragEnabled)
-                patchCard(name: "Aim Neck", target: "FREE FIRE • NORMAL", package: "OGIOS File (7).3105", color: AppTheme.secondaryAccent, state: $aimNeckEnabled)
-                patchCard(name: "Antenna", target: "FREE FIRE • NORMAL", package: "OGIOS File (8).3105", color: AppTheme.secondaryAccent, state: $hspeitoffEnabled)
-                patchCard(name: "144 FPS", target: "FREE FIRE • NORMAL", package: "OGIOS File (10).3105", color: AppTheme.secondaryAccent, state: $hyperBalamagicaEnabled)
-                patchCard(name: "Aim Body", target: "FREE FIRE • NORMAL", package: "OGIOS File (12).3105", color: AppTheme.accent, state: $aimBodyPackageEnabled)
-                patchCard(name: "Aim Chest", target: "FREE FIRE • NORMAL", package: "OGIOS File (2).3105", color: AppTheme.secondaryAccent, state: $aimChestPackageEnabled)
-                patchCard(name: "Magic", target: "FREE FIRE • NORMAL", package: "OGIOS File (14).3105", color: AppTheme.accent, state: $magicEnabled)
+                patchCard(name: "Aim Drag", target: "FREE FIRE • VN", package: "Aim Drag.3105", color: AppTheme.accent, state: $p1)
+                patchCard(name: "Aim Neck", target: "FREE FIRE • VN", package: "Aim Neck.3105", color: AppTheme.secondaryAccent, state: $p2)
+                patchCard(name: "Aim Body", target: "FREE FIRE • VN", package: "Aim Body.3105", color: AppTheme.accent, state: $p3)
+                patchCard(name: "Nhẹ Tâm", target: "FREE FIRE • VN", package: "Nhẹ Tâm.3105", color: AppTheme.secondaryAccent, state: $p4)
+                patchCard(name: "Aim Chest", target: "FREE FIRE • VN", package: "Aim Chest.3105", color: AppTheme.accent, state: $p5)
+                patchCard(name: "Aim R8", target: "FREE FIRE • VN", package: "Aim R8.3105", color: AppTheme.secondaryAccent, state: $p6)
+                patchCard(name: "Aim Magic", target: "FREE FIRE • VN", package: "Aim Magic.3105", color: AppTheme.accent, state: $p7)
+                patchCard(name: "Neck+Anten", target: "FREE FIRE • VN", package: "Neck+Anten.3105", color: AppTheme.secondaryAccent, state: $p8)
+                patchCard(name: "Nhẹ + Anten", target: "FREE FIRE • VN", package: "Nhẹ + Anten.3105", color: AppTheme.accent, state: $p9)
+                patchCard(name: "Mod Sonic", target: "FREE FIRE • DIMITRI", package: "Mod Sonic Dimitri.3105", color: AppTheme.secondaryAccent, state: $p10)
+                patchCard(name: "Mod Thỏ", target: "FREE FIRE • DIMITRI", package: "Mod Thỏ Dimitri.3105", color: AppTheme.accent, state: $p11)
+                patchCard(name: "Mod Roblox", target: "FREE FIRE • DIMITRI", package: "Mod Roblox Dimitri.3105", color: AppTheme.secondaryAccent, state: $p12)
+                patchCard(name: "Mod Báo Hồng", target: "FREE FIRE • DIMITRI", package: "Mod Báo Hồng Dimitri.3105", color: AppTheme.accent, state: $p13)
+                patchCard(name: "Mod Baki", target: "FREE FIRE • ALOCK", package: "Mod Baki Alock.3105", color: AppTheme.secondaryAccent, state: $p14)
             }
 
             HStack(spacing: 8) {
@@ -141,7 +157,7 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 12) {
             panelTitle("LAUNCH GAME", icon: "arrow.up.forward.app.fill")
             HStack(spacing: 12) {
-                launchButton(title: "FF VN", subtitle: "Free Fire VN", color: AppTheme.accent, scheme: "freefirevn://")
+                launchButton(title: "FF VN", subtitle: "Free Fire VN", color: AppTheme.accent, scheme: "freefirevn")
                 lockedLaunchButton(title: "FF MAX", subtitle: "Locked • Coming Soon", color: AppTheme.secondaryAccent)
             }
             Button {
@@ -208,7 +224,7 @@ struct ContentView: View {
                 .tracking(1.2)
                 .foregroundStyle(.white.opacity(0.72))
             Spacer()
-            Text("OGIOS • PRONTO")
+            Text("TIENDAT • PRONTO")
                 .font(.system(size: 9, weight: .bold, design: .rounded))
                 .foregroundStyle(AppTheme.accent.opacity(0.8))
         }
@@ -220,7 +236,7 @@ struct ContentView: View {
 
     private var developerCredits: some View {
         VStack(spacing: 10) {
-            Text("Developed by OGIOS")
+            Text("Developed by TienDat")
                 .font(.system(size: 11, weight: .bold, design: .rounded))
                 .foregroundStyle(.white.opacity(0.72))
                 .multilineTextAlignment(.center)
@@ -272,13 +288,20 @@ struct ContentView: View {
     }
 
     private func syncPatchStates() {
-        aimDragEnabled = isPatchActive("OGIOS File (6).3105")
-        aimNeckEnabled = isPatchActive("OGIOS File (7).3105")
-        hspeitoffEnabled = isPatchActive("OGIOS File (8).3105")
-        hyperBalamagicaEnabled = isPatchActive("OGIOS File (10).3105")
-        aimBodyPackageEnabled = isPatchActive("OGIOS File (12).3105")
-        aimChestPackageEnabled = isPatchActive("OGIOS File (2).3105")
-        magicEnabled = isPatchActive("OGIOS File (14).3105")
+        p1 = isPatchActive("Aim Drag.3105")
+        p2 = isPatchActive("Aim Neck.3105")
+        p3 = isPatchActive("Aim Body.3105")
+        p4 = isPatchActive("Nhẹ Tâm.3105")
+        p5 = isPatchActive("Aim Chest.3105")
+        p6 = isPatchActive("Aim R8.3105")
+        p7 = isPatchActive("Aim Magic.3105")
+        p8 = isPatchActive("Neck+Anten.3105")
+        p9 = isPatchActive("Nhẹ + Anten.3105")
+        p10 = isPatchActive("Mod Sonic Dimitri.3105")
+        p11 = isPatchActive("Mod Thỏ Dimitri.3105")
+        p12 = isPatchActive("Mod Roblox Dimitri.3105")
+        p13 = isPatchActive("Mod Báo Hồng Dimitri.3105")
+        p14 = isPatchActive("Mod Baki Alock.3105")
     }
 
     private func isPatchActive(_ packageFilename: String) -> Bool {
@@ -294,13 +317,20 @@ struct ContentView: View {
 
     private func setPatchState(for packageFilename: String, enabled: Bool) {
         switch packageFilename {
-        case "OGIOS File (6).3105": aimDragEnabled = enabled
-        case "OGIOS File (7).3105": aimNeckEnabled = enabled
-        case "OGIOS File (8).3105": hspeitoffEnabled = enabled
-        case "OGIOS File (10).3105": hyperBalamagicaEnabled = enabled
-        case "OGIOS File (12).3105": aimBodyPackageEnabled = enabled
-        case "OGIOS File (2).3105": aimChestPackageEnabled = enabled
-        case "OGIOS File (14).3105": magicEnabled = enabled
+        case "Aim Drag.3105": p1 = enabled
+        case "Aim Neck.3105": p2 = enabled
+        case "Aim Body.3105": p3 = enabled
+        case "Nhẹ Tâm.3105": p4 = enabled
+        case "Aim Chest.3105": p5 = enabled
+        case "Aim R8.3105": p6 = enabled
+        case "Aim Magic.3105": p7 = enabled
+        case "Neck+Anten.3105": p8 = enabled
+        case "Nhẹ + Anten.3105": p9 = enabled
+        case "Mod Sonic Dimitri.3105": p10 = enabled
+        case "Mod Thỏ Dimitri.3105": p11 = enabled
+        case "Mod Roblox Dimitri.3105": p12 = enabled
+        case "Mod Báo Hồng Dimitri.3105": p13 = enabled
+        case "Mod Baki Alock.3105": p14 = enabled
         default: break
         }
     }
@@ -308,14 +338,14 @@ struct ContentView: View {
     private func togglePatch(packageFilename: String, state: Binding<Bool>) {
         guard !patchOperationBusy else { return }
         guard let item = patchStore.items.first(where: { $0.packageURL.lastPathComponent.caseInsensitiveCompare(packageFilename) == .orderedSame }) else {
-            patchMessage = "ERROR — PACKAGE NOT FOUND"
+            patchMessage = "ERROR -- PACKAGE NOT FOUND"
             log("patch: package not found: \(packageFilename)")
             return
         }
 
         let wasEnabled = state.wrappedValue
         patchOperationBusy = true
-        patchMessage = "PROCESSING — \(packageFilename)"
+        patchMessage = "PROCESSING -- \(packageFilename)"
         let project = item.project
         let projectID = item.id
 
@@ -324,10 +354,10 @@ struct ContentView: View {
             do {
                 if wasEnabled {
                     guard let receipt = DevicePatchService.latestReceipt(projectID: projectID) else {
-                        result = .unavailable("NO ACTIVE RECEIPT — NOTHING TO RESTORE")
+                        result = .unavailable("NO ACTIVE RECEIPT -- NOTHING TO RESTORE")
                         DispatchQueue.main.async {
                             self.setPatchState(for: packageFilename, enabled: false)
-                            self.patchMessage = "OFF — NO ACTIVE PATCH FOUND"
+                            self.patchMessage = "OFF -- NO ACTIVE PATCH FOUND"
                             self.patchOperationBusy = false
                         }
                         return
@@ -336,10 +366,10 @@ struct ContentView: View {
                     result = .restored
                 } else {
                     guard let project else {
-                        result = .unavailable("PASSWORD REQUIRED — UNLOCK PACKAGE")
+                        result = .unavailable("PASSWORD REQUIRED -- UNLOCK PACKAGE")
                         DispatchQueue.main.async {
                             self.patchStore.requestUnlock(for: item)
-                            self.patchMessage = "PASSWORD REQUIRED — ENTER PACKAGE PASSWORD"
+                            self.patchMessage = "PASSWORD REQUIRED -- ENTER PACKAGE PASSWORD"
                             self.patchOperationBusy = false
                         }
                         return
@@ -348,18 +378,18 @@ struct ContentView: View {
                     result = .applied
                 }
             } catch {
-                result = .unavailable("FAILED — \(String(describing: error))")
+                result = .unavailable("FAILED -- \(String(describing: error))")
             }
 
             DispatchQueue.main.async {
                 switch result {
                 case .applied:
                     self.setPatchState(for: packageFilename, enabled: true)
-                    self.patchMessage = "Inject Successful — \(packageFilename)"
+                    self.patchMessage = "Inject Successful -- \(packageFilename)"
                     PatchAudioFeedback.bypassActivated()
                 case .restored:
                     self.setPatchState(for: packageFilename, enabled: false)
-                    self.patchMessage = "Restore Successful — \(packageFilename)"
+                    self.patchMessage = "Restore Successful -- \(packageFilename)"
                     PatchAudioFeedback.originalRestored()
                 case .unavailable(let message):
                     self.patchMessage = message
@@ -468,7 +498,7 @@ private struct PatchUnlockPrompt: View {
                             .foregroundStyle(.red)
                     }
                 } footer: {
-                    Text("Enter the password once to unlock this OGIOS package on this device.")
+                    Text("Enter the password once to unlock this TienDat package on this device.")
                 }
             }
             .navigationTitle("Unlock package")

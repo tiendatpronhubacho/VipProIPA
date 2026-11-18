@@ -19,17 +19,18 @@ struct LicenseActivationView: View {
                         VStack(spacing: 0) {
                             Spacer(minLength: 42)
 
-                            Text("OGIOS")
+                            // Đã đổi tên thành TIENDAT
+                            Text("TIENDAT")
                                 .font(.system(size: 30, weight: .black, design: .rounded))
                                 .tracking(1.4)
                                 .foregroundStyle(.white)
 
-                            Text("Version: 1.1.0")
+                            Text("Version: 1.1.1")
                                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                                 .foregroundStyle(.white.opacity(0.55))
                                 .padding(.top, 5)
 
-                            Text("Package: OGIOS")
+                            Text("Package: TienDat")
                                 .font(.system(size: 12, weight: .bold, design: .rounded))
                                 .foregroundStyle(AppTheme.secondaryAccent.opacity(0.9))
                                 .padding(.top, 8)
@@ -45,7 +46,7 @@ struct LicenseActivationView: View {
                                     Spacer()
                                 }
 
-                                Text("Enter your OGIOS license key to continue")
+                                Text("Enter your TienDat license key to continue")
                                     .font(.system(size: 13, weight: .medium, design: .rounded))
                                     .foregroundStyle(.white.opacity(0.68))
                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -95,16 +96,16 @@ struct LicenseActivationView: View {
                                         .background(Color.gray.opacity(0.20), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                                 }
 
-                                if let contactOwner = manager.contactOwner,
-                                   let contactURL = ownerURL(from: contactOwner) {
-                                    Button("Contact Owner…") {
-                                        UIApplication.shared.open(contactURL)
+                                // Nút liên hệ (Đổi thành Zalo)
+                                Button("Contact Admin (Zalo)") {
+                                    if let url = URL(string: "https://zalo.me/0986321175") {
+                                        UIApplication.shared.open(url)
                                     }
-                                    .font(.system(size: 13, weight: .bold, design: .rounded))
-                                    .foregroundStyle(AppTheme.secondaryAccent)
-                                    .buttonStyle(.plain)
-                                    .transition(.opacity.combined(with: .move(edge: .bottom)))
                                 }
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .foregroundStyle(AppTheme.secondaryAccent)
+                                .buttonStyle(.plain)
+                                .transition(.opacity.combined(with: .move(edge: .bottom)))
                             }
                             .padding(20)
                             .background(.ultraThinMaterial.opacity(0.72), in: RoundedRectangle(cornerRadius: 25, style: .continuous))
@@ -133,16 +134,5 @@ struct LicenseActivationView: View {
     private func activate() {
         keyFocused = false
         manager.activate(key: key)
-    }
-
-    private func ownerURL(from value: String) -> URL? {
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.hasPrefix("http://") || trimmed.hasPrefix("https://") {
-            return URL(string: trimmed)
-        }
-        if trimmed.hasPrefix("@") {
-            return URL(string: "https://t.me/" + String(trimmed.dropFirst()))
-        }
-        return URL(string: "https://t.me/" + trimmed)
     }
 }

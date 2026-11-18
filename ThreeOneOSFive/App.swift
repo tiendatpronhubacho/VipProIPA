@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 
 @main
-struct ThreeOneOSFiveApp: App {
+struct TienDatApp: App {
     @StateObject private var appState = AppState()
     @StateObject private var licenseManager = LicenseManager()
     @StateObject private var patchDraftCoordinator = PatchDraftCoordinator()
@@ -13,7 +13,7 @@ struct ThreeOneOSFiveApp: App {
 
     init() {
         setupLogCapture()
-        log("app: OGIOS launching — iOS \(AppInfo.osVersion) (\(AppInfo.osBuild)) \(AppInfo.machineName)")
+        log("app: TIENDAT launching -- iOS \(AppInfo.osVersion) (\(AppInfo.osBuild)) \(AppInfo.machineName)")
     }
 
     private var language: AppLanguage {
@@ -165,13 +165,13 @@ class AppState: ObservableObject {
                 if ok {
                     self.exploitStatus = .success(method: "kexploit")
                     if KernelExploit.requiresSandboxEscape {
-                        log("app: kernel exploit success — sandbox access verified")
+                        log("app: kernel exploit success -- sandbox access verified")
                     } else {
-                        log("app: kernel exploit success — kernel access active")
+                        log("app: kernel exploit success -- kernel access active")
                     }
                 } else {
                     self.exploitStatus = .failed(method: "kexploit", code: -1)
-                    log("app: kernel exploit failed — relaunch the app before retrying")
+                    log("app: kernel exploit failed -- relaunch the app before retrying")
                 }
             }
         }

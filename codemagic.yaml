@@ -84,7 +84,7 @@ workflows:
           /* End PBXBuildFile section */
           
           /* Begin PBXFileReference section */
-          		3105A010 /* OGIOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "OGIOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+          		3105A010 /* TienDat.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "TienDat.app"; sourceTree = BUILT_PRODUCTS_DIR; };
           		3105A020 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
           		3105A021 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
           		3105A023 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -207,7 +207,7 @@ workflows:
           		3105A402 /* Products */ = {
           			isa = PBXGroup;
           			children = (
-          				3105A010 /* OGIOS.app */,
+          				3105A010 /* TienDat.app */,
           			);
           			name = Products;
           			sourceTree = "<group>";
@@ -241,6 +241,7 @@ workflows:
           				3105E101 /* CleanerView.swift */,
           				3105F106 /* WallpaperLabView.swift */,
           				3105F108 /* OnboardingView.swift */,
+          				3105K101 /* LicenseActivationView.swift */,
           			);
           			path = views;
           			sourceTree = "<group>";
@@ -276,7 +277,6 @@ workflows:
           				3105F104 /* WallpaperInstaller.swift */,
           				3105F105 /* WallpaperLabService.swift */,
           				3105K100 /* LicenseManager.swift */,
-          				3105K101 /* LicenseActivationView.swift */,
           				3105A106 /* AppIconHelper.m */,
           				3105A107 /* AppIconHelper.h */,
           				3105A202 /* KernelExploit.swift */,
@@ -315,7 +315,7 @@ workflows:
           /* End PBXGroup section */
           
           /* Begin PBXNativeTarget section */
-          		3105A500 /* OGIOS */ = {
+          		3105A500 /* TienDat */ = {
           			isa = PBXNativeTarget;
           			buildConfigurationList = 3105A600;
           			buildPhases = (
@@ -327,8 +327,8 @@ workflows:
           			);
           			dependencies = (
           			);
-          			name = OGIOS;
-          			productName = OGIOS;
+          			name = TienDat;
+          			productName = TienDat;
           			productReference = 3105A010;
           			productType = "com.apple.product-type.application";
           		};
@@ -461,7 +461,7 @@ workflows:
           				GCC_C_LANGUAGE_STANDARD = gnu17;
           				GENERATE_INFOPLIST_FILE = YES;
           				INFOPLIST_FILE = ThreeOneOSFive/Info.plist;
-          				INFOPLIST_KEY_CFBundleDisplayName = "OGIOS";
+          				INFOPLIST_KEY_CFBundleDisplayName = "TienDat";
           				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
           				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
           				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -474,8 +474,8 @@ workflows:
           				);
           				MARKETING_VERSION = 1.1.1;
           				OTHER_LDFLAGS = "-lz";
-          				PRODUCT_BUNDLE_IDENTIFIER = "com.apple.mobile.MobileHouseArrest";
-          				PRODUCT_NAME = OGIOS;
+          				PRODUCT_BUNDLE_IDENTIFIER = "com.tiendat.ogios";
+          				PRODUCT_NAME = TienDat;
           				SWIFT_EMIT_LOC_STRINGS = YES;
           				SWIFT_OBJC_BRIDGING_HEADER = "ThreeOneOSFive/ThreeOneOSFive-Bridging-Header.h";
           				SWIFT_VERSION = 5.0;
@@ -495,7 +495,7 @@ workflows:
           				GCC_C_LANGUAGE_STANDARD = gnu17;
           				GENERATE_INFOPLIST_FILE = YES;
           				INFOPLIST_FILE = ThreeOneOSFive/Info.plist;
-          				INFOPLIST_KEY_CFBundleDisplayName = "OGIOS";
+          				INFOPLIST_KEY_CFBundleDisplayName = "TienDat";
           				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
           				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
           				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -508,8 +508,8 @@ workflows:
           				);
           				MARKETING_VERSION = 1.1.1;
           				OTHER_LDFLAGS = "-lz";
-          				PRODUCT_BUNDLE_IDENTIFIER = "com.apple.mobile.MobileHouseArrest";
-          				PRODUCT_NAME = OGIOS;
+          				PRODUCT_BUNDLE_IDENTIFIER = "com.tiendat.ogios";
+          				PRODUCT_NAME = TienDat;
           				SWIFT_EMIT_LOC_STRINGS = YES;
           				SWIFT_OBJC_BRIDGING_HEADER = "ThreeOneOSFive/ThreeOneOSFive-Bridging-Header.h";
           				SWIFT_VERSION = 5.0;
@@ -637,7 +637,7 @@ workflows:
           /* End XCBuildConfiguration section */
           
           /* Begin XCConfigurationList section */
-          		3105A600 /* Build configuration list for PBXNativeTarget "OGIOS" */ = {
+          		3105A600 /* Build configuration list for PBXNativeTarget "TienDat" */ = {
           			isa = XCConfigurationList;
           			buildConfigurations = (
           				3105A601 /* Debug */,
@@ -663,88 +663,6 @@ workflows:
           os.makedirs("ThreeOneOSFive.xcodeproj", exist_ok=True)
           with open("ThreeOneOSFive.xcodeproj/project.pbxproj", "w") as f:
               f.write(content)
-          '
-          
-      - name: Inject Patch Resources Properly
-        script: |
-          python3 -c '
-          import os
-          import glob
-          import uuid
-          
-          pbxproj_path = "ThreeOneOSFive.xcodeproj/project.pbxproj"
-          patches_dir = "ThreeOneOSFive/Patches"
-          
-          if not os.path.exists(patches_dir):
-              print("Patches dir not found")
-              exit(0)
-          
-          patch_files = sorted(glob.glob(f"{patches_dir}/*.3105"))
-          if not patch_files:
-              print("No patch files")
-              exit(0)
-          
-          with open(pbxproj_path, "r") as f:
-              lines = f.readlines()
-          
-          # Generate IDs
-          build_ids = {os.path.basename(p): uuid.uuid4().hex[:24].upper() for p in patch_files}
-          file_ref_ids = {os.path.basename(p): uuid.uuid4().hex[:24].upper() for p in patch_files}
-          
-          build_entries = []
-          ref_entries = []
-          res_entries = []
-          
-          for p in patch_files:
-              name = os.path.basename(p)
-              b_id = build_ids[name]
-              f_id = file_ref_ids[name]
-              build_entries.append(f"\t\t{b_id} /* {name} in Resources */ = {{isa = PBXBuildFile; fileRef = {f_id}; }};\n")
-              ref_entries.append(f"\t\t{f_id} /* {name} */ = {{isa = PBXFileReference; lastKnownFileType = file; path = \"{patches_dir}/{name}\"; sourceTree = \"<group>\"; }};\n")
-              res_entries.append(f"\t\t\t\t{b_id},\n")
-          
-          # Inject into sections
-          out = []
-          in_build = False
-          in_ref = False
-          in_res = False
-          
-          for line in lines:
-              if "/* Begin PBXBuildFile section */" in line:
-                  in_build = True
-                  out.append(line)
-                  for e in build_entries: out.append(e)
-                  continue
-              if "/* End PBXBuildFile section */" in line:
-                  in_build = False
-              
-              if "/* Begin PBXFileReference section */" in line:
-                  in_ref = True
-                  out.append(line)
-                  for e in ref_entries: out.append(e)
-                  continue
-              if "/* End PBXFileReference section */" in line:
-                  in_ref = False
-                  
-              if "isa = PBXResourcesBuildPhase;" in line:
-                  in_res = True
-                  out.append(line)
-                  continue
-                  
-              if in_res and "files = (" in line:
-                  out.append(line)
-                  for e in res_entries: out.append(e)
-                  continue
-                  
-              if in_res and ");" in line:
-                  in_res = False
-                  
-              out.append(line)
-              
-          with open(pbxproj_path, "w") as f:
-              f.writelines(out)
-              
-          print("Successfully injected patch resources.")
           '
           
       - name: Build App
