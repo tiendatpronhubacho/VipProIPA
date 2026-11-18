@@ -1,42 +1,40 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")" && pwd)"
-BUILD_DIR="$ROOT/build"
-ARCHIVE="$BUILD_DIR/HYperRegedit-original-identity.xcarchive"
-IPA="$BUILD_DIR/HYper-Regedit-Key-Enabled-unsigned.ipa"
+echo "=== Building unsigned IPA ==="
 
-rm -rf "$BUILD_DIR"
-mkdir -p "$BUILD_DIR"
-command -v xcodebuild >/dev/null || { echo 'xcodebuild is required on macOS' >&2; exit 127; }
+# 1. Chạy lệnh build (Archive)
+xcodebuild -project ThreeOneOSFive.xcodeproj \
+           -scheme TienDat \
+           -configuration Release \
+           -sdk iphoneos \
+           -derivedDataPath ./build \
+           CODE_SIGN_IDENTITY="" \
+           CODE_SIGNING_REQUIRED=NO \
+           CODE_SIGNING_ALLOWED=NO \
+           build
 
-xcodebuild \
-  -project "$ROOT/ThreeOneOSFive.xcodeproj" \
-  -scheme OGIOS \
-  -configuration Release \
-  -sdk iphoneos \
-  -archivePath "$ARCHIVE" \
-  CODE_SIGNING_ALLOWED=NO \
-  CODE_SIGNING_REQUIRED=NO \
-  CODE_SIGN_IDENTITY='' \
-  archive
+# 2. Tìm file .app vừa build xong
+echo "Finding .app file..."
+APP_PATH=$(find ./build/Build/Products/Release-iphoneos -name "*.app" -maxdepth 1 | head -n 1)
 
-APP="$ARCHIVE/Products/Applications/OGIOS.app"
-test -d "$APP"
-PATCH_DIR="$APP/Patches"
-mkdir -p "$PATCH_DIR"
-for package in "$APP"/*.3105; do
-  [ -e "$package" ] || continue
-  mv "$package" "$PATCH_DIR/"
-done
+if [ -z "$APP_PATH" ]; then
+    echo "Error: Could not find the built .app file!"
+    exit 1
+fi
 
-/usr/libexec/PlistBuddy -c "Set :CFBundleExecutable OGIOS" "$APP/Info.plist" || true
-/usr/libexec/PlistBuddy -c "Set :CFBundlePackageType APPL" "$APP/Info.plist" || true
-mkdir -p "$BUILD_DIR/Payload"
-cp -R "$APP" "$BUILD_DIR/Payload/"
-(
-  cd "$BUILD_DIR"
-  /usr/bin/zip -qry "$IPA" Payload
-  rm -rf Payload
-)
-echo "$IPA"
+echo "Found app at: $APP_PATH"
+
+# 3. Tạo thư mục Payload và copy .app vào
+rm -rf Payload
+mkdir -p Payload
+cp -R "$APP_PATH" Payload/
+
+# 4. Nén thành file IPA
+IPA_NAME="TienDat-unsigned.ipa"
+echo "Zipping to $IPA_NAME..."
+rm -f "$IPA_NAME"
+zip -r "$IPA_NAME" Payload > /dev/null
+rm -rf Payload
+
+echo "=== Build Successful: $IPA_NAME ==="
