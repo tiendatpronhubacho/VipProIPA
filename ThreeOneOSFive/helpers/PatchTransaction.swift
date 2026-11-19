@@ -20,15 +20,9 @@ enum PatchTransaction {
         let records: [Record]
     }
 
-    static func apply(
-        project: PatchProject,
-        backupRoot: URL,
-        containerResolver: (String) throws -> URL,
-        fileManager: FileManager = .default
-    ) throws -> PatchTransactionReceipt {
+    static func apply(project: PatchProject, backupRoot: URL, containerResolver: (String) throws -> URL, fileManager: FileManager = .default) throws -> PatchTransactionReceipt {
         var roots: [String: URL] = [:]
         var resolvedRules: [(PatchRule, URL)] = []
-        
         for rule in project.rules {
             let root = PatchPathValidator.canonicalFileURL(try containerResolver(rule.bundleID))
             let target = try PatchPathValidator.resolveContainedTargetURL(relativePath: rule.relativePath, containerRoot: root)
@@ -44,50 +38,25 @@ enum PatchTransaction {
         for (rule, target) in resolvedRules {
             let existed = fileManager.fileExists(atPath: target.path)
             let backupFilename = existed ? "\(rule.id.uuidString).bak" : nil
-            
-            // Tạo thư mục cha nếu chưa có
-            let parentDir = target.deletingLastPathComponent()
-            if !fileManager.fileExists(atPath: parentDir.path) {
-                try? fileManager.createDirectory(at: parentDir, withIntermediateDirectories: true)
-            }
-            
-            // Backup file gốc
-            if let bf = backupFilename {
-                try? fileManager.copyItem(at: target, to: transDir.appendingPathComponent(bf))
-            }
-            
-            // Ghi file mod
+            if let bf = backupFilename { try? fileManager.copyItem(at: target, to: transDir.appendingPathComponent(bf)) }
+            try? fileManager.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
             try? rule.replacementData.write(to: target)
-            
-            records.append(Record(
-                bundleID: rule.bundleID,
-                relativePath: rule.relativePath,
-                originalExisted: existed,
-                backupFilename: backupFilename
-            ))
+            records.append(Record(bundleID: rule.bundleID, relativePath: rule.relativePath, originalExisted: existed, backupFilename: backupFilename))
         }
         
         let journal = Journal(transactionID: transactionID, projectID: project.id, records: records)
         let journalURL = transDir.appendingPathComponent("journal.plist")
         try? PropertyListEncoder().encode(journal).write(to: journalURL)
-        
         return PatchTransactionReceipt(id: transactionID, projectID: project.id, journalURL: journalURL)
     }
 
-    static func restore(
-        receipt: PatchTransactionReceipt,
-        containerResolver: (String) throws -> URL,
-        fileManager: FileManager = .default
-    ) throws {
+    static func restore(receipt: PatchTransactionReceipt, containerResolver: (String) throws -> URL, fileManager: FileManager = .default) throws {
         guard let data = try? Data(contentsOf: receipt.journalURL),
-              let journal = try? PropertyListDecoder().decode(Journal.self, from: data) else {
-            return // Không có file backup thì bỏ qua, không báo lỗi
-        }
+              let journal = try? PropertyListDecoder().decode(Journal.self, from: data) else { return }
         
         for record in journal.records {
             let root = PatchPathValidator.canonicalFileURL(try containerResolver(record.bundleID))
             let target = try PatchPathValidator.resolveContainedTargetURL(relativePath: record.relativePath, containerRoot: root)
-            
             if record.originalExisted, let bf = record.backupFilename {
                 let backupFile = receipt.journalURL.deletingLastPathComponent().appendingPathComponent(bf)
                 if fileManager.fileExists(atPath: backupFile.path) {
@@ -115,9 +84,7 @@ enum PatchTransaction {
 
     static func requiredBundleIdentifiers(for receipt: PatchTransactionReceipt) throws -> [String] {
         guard let data = try? Data(contentsOf: receipt.journalURL),
-              let journal = try? PropertyListDecoder().decode(Journal.self, from: data) else {
-            return []
-        }
+              let journal = try? PropertyListDecoder().decode(Journal.self, from: data) else { return [] }
         return Array(Set(journal.records.map { $0.bundleID }))
     }
 }

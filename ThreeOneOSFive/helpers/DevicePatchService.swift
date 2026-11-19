@@ -42,9 +42,7 @@ enum DevicePatchService {
 
     private static func fixBundleID(_ bundleID: String) -> String {
         let lower = bundleID.lowercased()
-        if lower.contains("ffvn") || lower.contains("freefire") || lower.contains("garena") {
-            return "com.garena.ffvn"
-        }
+        if lower.contains("ffvn") || lower.contains("freefire") || lower.contains("garena") { return "com.garena.ffvn" }
         return bundleID
     }
 
@@ -54,40 +52,17 @@ enum DevicePatchService {
     ) throws -> T {
         var roots: [String: URL] = [:]
         var grants: [Int64] = []
-        defer {
-            for grant in grants { SandboxAccess.release(grant) }
-        }
+        defer { for grant in grants { SandboxAccess.release(grant) } }
 
         for bundleID in bundleIDs {
             var path = ContainerStore.resolveAppContainerPath(bundleID: bundleID)
-            
-            if path == nil && bundleID.contains("garena") {
-                if let foundPath = findGameFolderByKeyword(keyword: "garena") { path = foundPath }
-                else if let foundPath = findGameFolderByKeyword(keyword: "ffvn") { path = foundPath }
-            }
-
             guard let validPath = path, ContainerStore.isApplicationContainerPath(validPath) else {
                 throw PatchPackageError.targetAppUnavailable(bundleID)
             }
-            
             let grant = ContainerStore.grantContainerAccess(validPath)
             if grant >= 0 { grants.append(grant) }
-            
             roots[bundleID] = PatchPathValidator.canonicalFileURL(URL(fileURLWithPath: validPath, isDirectory: true))
         }
         return try operation(roots)
-    }
-    
-    private static func findGameFolderByKeyword(keyword: String) -> String? {
-        let dirs = ContainerStore.enumerateDirectories(path: ContainerStore.appDataRoot)
-        for dir in dirs {
-            let metadataPath = (dir as NSString).appendingPathComponent(".com.apple.mobile_container_manager.metadata.plist")
-            if let data = try? Data(contentsOf: URL(fileURLWithPath: metadataPath)),
-               let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any],
-               let id = plist["MCMMetadataIdentifier"] as? String {
-                if id.lowercased().contains(keyword) { return dir }
-            }
-        }
-        return nil
     }
 }
