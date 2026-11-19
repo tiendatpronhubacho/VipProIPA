@@ -147,7 +147,6 @@ struct HomeView: View {
         }
         .padding(16)
         .background(Color.black.opacity(0.65), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        // VIỀN MỎNG ĐI (0.5)
         .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(AppTheme.accent.opacity(0.4), lineWidth: 0.5))
     }
 
@@ -166,7 +165,6 @@ struct HomeView: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity, minHeight: 52)
                     .background(Color.black.opacity(0.65), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    // VIỀN MỎNG ĐI (0.5)
                     .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(AppTheme.accent.opacity(0.5), lineWidth: 0.5))
             }
             .buttonStyle(.plain)
@@ -401,7 +399,7 @@ struct FeaturesView: View {
         .buttonStyle(.plain)
     }
 
-    // Hàng Patch (Thay thế cho Card)
+    // Hàng Patch (Đã thay Toggle bằng Button)
     private func patchRow(name: String, target: String, package: String, state: Binding<Bool>) -> some View {
         HStack(spacing: 12) {
             // Icon
@@ -423,20 +421,32 @@ struct FeaturesView: View {
             
             Spacer()
             
-            // Toggle
-            Toggle("", isOn: state)
-                .labelsHidden()
-                .tint(AppTheme.accent)
-                .onChange(of: state.wrappedValue) { newValue in
-                    // Gọi hàm xử lý patch
-                    togglePatch(packageFilename: package, state: state)
+            // Nút bấm giả lập Toggle
+            Button {
+                guard !patchOperationBusy else { return }
+                let newValue = !state.wrappedValue
+                state.wrappedValue = newValue
+                togglePatch(packageFilename: package, state: state, isEnabling: newValue)
+            } label: {
+                ZStack {
+                    Capsule()
+                        .fill(state.wrappedValue ? AppTheme.accent : Color.white.opacity(0.15))
+                        .frame(width: 50, height: 30)
+                    
+                    Circle()
+                        .fill(Color.white)
+                        .frame(width: 24, height: 24)
+                        .offset(x: state.wrappedValue ? 10 : -10)
+                        .shadow(radius: 2)
                 }
+            }
+            .buttonStyle(.plain)
+            .disabled(patchOperationBusy)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .background(Color.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(AppTheme.accent.opacity(0.3), lineWidth: 0.5))
-        .disabled(patchOperationBusy)
         .opacity(patchOperationBusy ? 0.5 : 1)
     }
 
@@ -475,14 +485,14 @@ struct FeaturesView: View {
         }
     }
 
-    private func togglePatch(packageFilename: String, state: Binding<Bool>) {
+    private func togglePatch(packageFilename: String, state: Binding<Bool>, isEnabling: Bool) {
         guard !patchOperationBusy else { return }
         guard let item = patchStore.items.first(where: { $0.packageURL.lastPathComponent.caseInsensitiveCompare(packageFilename) == .orderedSame }) else {
             patchMessage = "ERROR -- PACKAGE NOT FOUND"
+            state.wrappedValue = !isEnabling // Revert
             return
         }
 
-        let wasEnabled = state.wrappedValue
         patchOperationBusy = true
         patchMessage = "PROCESSING -- \(packageFilename)"
         let project = item.project
@@ -490,10 +500,10 @@ struct FeaturesView: View {
 
         DispatchQueue.global(qos: .userInitiated).async {
             var resultMessage = ""
-            var isApplied = false
             
             do {
-                if wasEnabled {
+                if !isEnabling {
+                    // Đang tắt (Restore)
                     guard let receipt = DevicePatchService.latestReceipt(projectID: projectID) else {
                         DispatchQueue.main.async {
                             self.setPatchState(for: packageFilename, enabled: false)
@@ -504,29 +514,33 @@ struct FeaturesView: View {
                     }
                     try DevicePatchService.restore(receipt: receipt)
                     resultMessage = "Restore Successful -- \(packageFilename)"
-                    isApplied = false
                 } else {
+                    // Đang bật (Apply)
                     guard let project else {
                         DispatchQueue.main.async {
                             self.patchStore.requestUnlock(for: item)
                             self.patchMessage = "PASSWORD REQUIRED -- ENTER PACKAGE PASSWORD"
+                            // Revert lại trạng thái UI nếu cần mật khẩu
+                            self.setPatchState(for: packageFilename, enabled: false)
                             self.patchOperationBusy = false
                         }
                         return
                     }
                     _ = try DevicePatchService.apply(project: project)
                     resultMessage = "Inject Successful -- \(packageFilename)"
-                    isApplied = true
                 }
             } catch {
                 resultMessage = "FAILED -- \(String(describing: error))"
+                // Nếu lỗi, hoàn tác lại trạng thái
+                DispatchQueue.main.async {
+                    self.setPatchState(for: packageFilename, enabled: !isEnabling)
+                }
             }
 
             DispatchQueue.main.async {
                 if resultMessage.contains("Successful") {
-                    state.wrappedValue = isApplied
                     self.patchMessage = resultMessage
-                    if isApplied { PatchAudioFeedback.bypassActivated() } else { PatchAudioFeedback.originalRestored() }
+                    if isEnabling { PatchAudioFeedback.bypassActivated() } else { PatchAudioFeedback.originalRestored() }
                 } else {
                     self.patchMessage = resultMessage
                 }
