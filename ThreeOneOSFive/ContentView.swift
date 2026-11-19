@@ -5,10 +5,9 @@ import AVFoundation
 // MARK: - CẤU HÌNH TABBAR CHO MỌI IOS (CHỐNG LỖI XÁM)
 func configureTabBarAppearance() {
     let appearance = UITabBarAppearance()
-    appearance.configureWithOpaqueBackground() // Bắt buộc nền đục
-    appearance.backgroundColor = UIColor.black // Nền đen tuyền
+    appearance.configureWithOpaqueBackground()
+    appearance.backgroundColor = UIColor.black
     
-    // Cấu hình màu icon khi chưa chọn (Xám) và khi chọn (Đỏ)
     let itemAppearance = UITabBarItemAppearance()
     itemAppearance.normal.iconColor = UIColor.white.withAlphaComponent(0.5)
     itemAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor.white.withAlphaComponent(0.5)]
@@ -25,7 +24,7 @@ func configureTabBarAppearance() {
     }
 }
 
-// MARK: - HÀM LOAD ẢNH TRỰC TIẾP TỪ PROJECT
+// MARK: - HÀM LOAD ẢNH
 func loadImageFromBundle(named name: String) -> Image {
     if let url = Bundle.main.url(forResource: name, withExtension: "jpg"),
        let uiImage = UIImage(contentsOfFile: url.path) {
@@ -71,11 +70,9 @@ struct ContentView: View {
         }
         .accentColor(AppTheme.accent)
         .preferredColorScheme(.dark)
-        // Vẫn giữ toolbarBackground để SwiftUI không can thiệp
         .toolbarBackground(.visible, for: .tabBar)
         .toolbarBackground(Color.black, for: .tabBar)
         .onAppear {
-            // Gọi cấu hình UIKit ngay khi view xuất hiện
             configureTabBarAppearance()
         }
         .sheet(item: $patchStore.passwordRequest, onDismiss: patchStore.cancelUnlock) { _ in
@@ -92,10 +89,9 @@ struct HomeView: View {
 
     var body: some View {
         ZStack {
-            // 1. Nền đen dự phòng
             Color.black.ignoresSafeArea()
             
-            // 2. Ảnh nền
+            // Background Image
             GeometryReader { proxy in
                 loadImageFromBundle(named: "background_home")
                     .resizable()
@@ -105,10 +101,9 @@ struct HomeView: View {
             }
             .ignoresSafeArea()
             
-            // 3. Lớp phủ đen
-            Color.black.opacity(0.65).ignoresSafeArea()
+            // Lớp phủ đen giảm xuống 0.3 để ảnh sáng rõ
+            Color.black.opacity(0.3).ignoresSafeArea()
 
-            // 4. Nội dung
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 18) {
                     brandHeader
@@ -152,7 +147,8 @@ struct HomeView: View {
         }
         .padding(16)
         .background(Color.black.opacity(0.65), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(AppTheme.accent.opacity(0.38), lineWidth: 1))
+        // VIỀN MỎNG ĐI (0.5)
+        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(AppTheme.accent.opacity(0.4), lineWidth: 0.5))
     }
 
     private var gameLaunchPanel: some View {
@@ -170,7 +166,8 @@ struct HomeView: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity, minHeight: 52)
                     .background(Color.black.opacity(0.65), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(AppTheme.accent.opacity(0.52), lineWidth: 1))
+                    // VIỀN MỎNG ĐI (0.5)
+                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(AppTheme.accent.opacity(0.5), lineWidth: 0.5))
             }
             .buttonStyle(.plain)
         }
@@ -191,7 +188,7 @@ struct HomeView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 13)
         .background(Color.black.opacity(0.65), in: Capsule())
-        .overlay(Capsule().stroke(AppTheme.accent.opacity(0.2), lineWidth: 1))
+        .overlay(Capsule().stroke(AppTheme.accent.opacity(0.3), lineWidth: 0.5))
     }
 
     private var developerCredits: some View {
@@ -223,7 +220,7 @@ struct HomeView: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 9)
                 .background(AppTheme.accent.opacity(0.18), in: Capsule())
-                .overlay(Capsule().stroke(AppTheme.accent.opacity(0.42), lineWidth: 1))
+                .overlay(Capsule().stroke(AppTheme.accent.opacity(0.42), lineWidth: 0.5))
         }
         .buttonStyle(.plain)
     }
@@ -261,7 +258,7 @@ struct HomeView: View {
             .frame(maxWidth: .infinity, minHeight: 82, alignment: .leading)
             .padding(.horizontal, 14)
             .background(Color.black.opacity(0.65), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(color.opacity(0.38), lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(color.opacity(0.4), lineWidth: 0.5))
         }
         .buttonStyle(.plain)
     }
@@ -281,7 +278,7 @@ struct HomeView: View {
         .frame(maxWidth: .infinity, minHeight: 82, alignment: .leading)
         .padding(.horizontal, 14)
         .background(Color.black.opacity(0.45), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(color.opacity(0.24), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(color.opacity(0.3), lineWidth: 0.5))
         .opacity(0.72)
     }
 
@@ -299,6 +296,7 @@ struct FeaturesView: View {
     @ObservedObject var patchStore: PatchProjectStore
     @State private var patchOperationBusy = false
     @State private var patchMessage = "READY -- SELECT A PATCH"
+    @State private var selectedMenu = 0 // 0: AIM, 1: MOD
 
     @State private var p1 = false; @State private var p2 = false; @State private var p3 = false
     @State private var p4 = false; @State private var p5 = false; @State private var p6 = false
@@ -308,10 +306,8 @@ struct FeaturesView: View {
 
     var body: some View {
         ZStack {
-            // 1. Nền đen dự phòng
             Color.black.ignoresSafeArea()
             
-            // 2. Ảnh nền
             GeometryReader { proxy in
                 loadImageFromBundle(named: "background_features")
                     .resizable()
@@ -320,53 +316,61 @@ struct FeaturesView: View {
                     .clipped()
             }
             .ignoresSafeArea()
-            
-            // 3. Lớp phủ đen
-            Color.black.opacity(0.75).ignoresSafeArea()
+            .overlay(Color.black.opacity(0.65))
 
-            // 4. Nội dung
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        panelTitle("PATCH OPTIONS", icon: "bolt.fill")
-                        Spacer()
-                        Text("SELECT TO ENABLE")
-                            .font(.system(size: 9, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.6))
-                    }
-                    .padding(.top, 18)
-
-                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
-                        patchCard(name: "Aim Drag", target: "FREE FIRE • VN", package: "Aim Drag.3105", color: AppTheme.accent, state: $p1)
-                        patchCard(name: "Aim Neck", target: "FREE FIRE • VN", package: "Aim Neck.3105", color: AppTheme.secondaryAccent, state: $p2)
-                        patchCard(name: "Aim Body", target: "FREE FIRE • VN", package: "Aim Body.3105", color: AppTheme.accent, state: $p3)
-                        patchCard(name: "Nhe Tam", target: "FREE FIRE • VN", package: "Nhe Tam.3105", color: AppTheme.secondaryAccent, state: $p4)
-                        patchCard(name: "Aim Chest", target: "FREE FIRE • VN", package: "Aim Chest.3105", color: AppTheme.accent, state: $p5)
-                        patchCard(name: "Aim R8", target: "FREE FIRE • VN", package: "Aim R8.3105", color: AppTheme.secondaryAccent, state: $p6)
-                        patchCard(name: "Aim Magic", target: "FREE FIRE • VN", package: "Aim Magic.3105", color: AppTheme.accent, state: $p7)
-                        patchCard(name: "Neck Anten", target: "FREE FIRE • VN", package: "Neck Anten.3105", color: AppTheme.secondaryAccent, state: $p8)
-                        patchCard(name: "Nhe Anten", target: "FREE FIRE • VN", package: "Nhe Anten.3105", color: AppTheme.accent, state: $p9)
-                        patchCard(name: "Mod Sonic", target: "FREE FIRE • DIMITRI", package: "Mod Sonic Dimitri.3105", color: AppTheme.secondaryAccent, state: $p10)
-                        patchCard(name: "Mod Thỏ", target: "FREE FIRE • DIMITRI", package: "Mod Thỏ Dimitri.3105", color: AppTheme.accent, state: $p11)
-                        patchCard(name: "Mod Roblox", target: "FREE FIRE • DIMITRI", package: "Mod Roblox Dimitri.3105", color: AppTheme.secondaryAccent, state: $p12)
-                        patchCard(name: "Mod Báo Hồng", target: "FREE FIRE • DIMITRI", package: "Mod Báo Hồng Dimitri.3105", color: AppTheme.accent, state: $p13)
-                        patchCard(name: "Mod Baki", target: "FREE FIRE • ALOCK", package: "Mod Baki Alock.3105", color: AppTheme.secondaryAccent, state: $p14)
-                    }
-
-                    HStack(spacing: 8) {
-                        Circle().fill(patchMessage.localizedCaseInsensitiveContains("successful") ? .green : AppTheme.accent).frame(width: 7, height: 7)
-                        Text(patchOperationBusy ? "PROCESSING PATCH…" : patchMessage)
-                            .font(.system(size: 10, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.8))
-                            .lineLimit(2)
-                        Spacer()
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-                    .background(Color.black.opacity(0.65), in: Capsule())
+            VStack(spacing: 16) {
+                // Custom Tab Bar (AIM / MOD)
+                HStack(spacing: 0) {
+                    menuTabButton(title: "AIM", icon: "scope", index: 0)
+                    menuTabButton(title: "MOD", icon: "cube.box.fill", index: 1)
                 }
+                .padding(4)
+                .background(Color.black.opacity(0.6), in: Capsule())
+                .overlay(Capsule().stroke(AppTheme.accent.opacity(0.5), lineWidth: 0.5))
                 .padding(.horizontal, 18)
-                .padding(.bottom, 28)
+                .padding(.top, 18)
+
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 10) {
+                        if selectedMenu == 0 {
+                            // TAB AIM
+                            patchRow(name: "Aim Drag", target: "FREE FIRE • VN", package: "Aim Drag.3105", state: $p1)
+                            patchRow(name: "Aim Neck", target: "FREE FIRE • VN", package: "Aim Neck.3105", state: $p2)
+                            patchRow(name: "Aim Body", target: "FREE FIRE • VN", package: "Aim Body.3105", state: $p3)
+                            patchRow(name: "Nhe Tam", target: "FREE FIRE • VN", package: "Nhe Tam.3105", state: $p4)
+                            patchRow(name: "Aim Chest", target: "FREE FIRE • VN", package: "Aim Chest.3105", state: $p5)
+                            patchRow(name: "Aim R8", target: "FREE FIRE • VN", package: "Aim R8.3105", state: $p6)
+                            patchRow(name: "Aim Magic", target: "FREE FIRE • VN", package: "Aim Magic.3105", state: $p7)
+                            patchRow(name: "Neck Anten", target: "FREE FIRE • VN", package: "Neck Anten.3105", state: $p8)
+                            patchRow(name: "Nhe Anten", target: "FREE FIRE • VN", package: "Nhe Anten.3105", state: $p9)
+                        } else {
+                            // TAB MOD
+                            patchRow(name: "Mod Sonic", target: "FREE FIRE • DIMITRI", package: "Mod Sonic Dimitri.3105", state: $p10)
+                            patchRow(name: "Mod Thỏ", target: "FREE FIRE • DIMITRI", package: "Mod Thỏ Dimitri.3105", state: $p11)
+                            patchRow(name: "Mod Roblox", target: "FREE FIRE • DIMITRI", package: "Mod Roblox Dimitri.3105", state: $p12)
+                            patchRow(name: "Mod Báo Hồng", target: "FREE FIRE • DIMITRI", package: "Mod Báo Hồng Dimitri.3105", state: $p13)
+                            patchRow(name: "Mod Baki", target: "FREE FIRE • ALOCK", package: "Mod Baki Alock.3105", state: $p14)
+                        }
+                    }
+                    .padding(.horizontal, 18)
+                    .padding(.bottom, 20)
+                }
+
+                // Thanh trạng thái dưới cùng
+                HStack(spacing: 8) {
+                    Circle().fill(patchMessage.localizedCaseInsensitiveContains("successful") ? .green : AppTheme.accent).frame(width: 7, height: 7)
+                    Text(patchOperationBusy ? "PROCESSING PATCH…" : patchMessage)
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.8))
+                        .lineLimit(2)
+                    Spacer()
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background(Color.black.opacity(0.7), in: Capsule())
+                .overlay(Capsule().stroke(AppTheme.accent.opacity(0.4), lineWidth: 0.5))
+                .padding(.horizontal, 18)
+                .padding(.bottom, 8)
             }
         }
         .onAppear { syncPatchStates() }
@@ -377,17 +381,63 @@ struct FeaturesView: View {
         }
     }
 
-    private func panelTitle(_ title: String, icon: String) -> some View {
-        Label(title, systemImage: icon)
-            .font(.system(size: 12, weight: .black, design: .rounded))
-            .tracking(1.4)
-            .foregroundStyle(AppTheme.accent)
+    // Nút chuyển Tab (AIM/MOD)
+    private func menuTabButton(title: String, icon: String, index: Int) -> some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                selectedMenu = index
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                Text(title)
+            }
+            .font(.system(size: 14, weight: .black, design: .rounded))
+            .foregroundStyle(selectedMenu == index ? .white : .white.opacity(0.5))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .background(selectedMenu == index ? AppTheme.accent.opacity(0.8) : Color.clear, in: Capsule())
+        }
+        .buttonStyle(.plain)
     }
 
-    private func patchCard(name: String, target: String, package: String, color: Color, state: Binding<Bool>) -> some View {
-        PatchOptionCard(name: name, target: target, color: color, isEnabled: state, isBusy: patchOperationBusy) {
-            togglePatch(packageFilename: package, state: state)
+    // Hàng Patch (Thay thế cho Card)
+    private func patchRow(name: String, target: String, package: String, state: Binding<Bool>) -> some View {
+        HStack(spacing: 12) {
+            // Icon
+            Image(systemName: "scope")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(AppTheme.accent)
+                .frame(width: 40, height: 40)
+                .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            
+            // Text Info
+            VStack(alignment: .leading, spacing: 4) {
+                Text(name)
+                    .font(.system(size: 16, weight: .black, design: .rounded))
+                    .foregroundStyle(.white)
+                Text(target)
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundStyle(AppTheme.secondaryAccent)
+            }
+            
+            Spacer()
+            
+            // Toggle
+            Toggle("", isOn: state)
+                .labelsHidden()
+                .tint(AppTheme.accent)
+                .onChange(of: state.wrappedValue) { newValue in
+                    // Gọi hàm xử lý patch
+                    togglePatch(packageFilename: package, state: state)
+                }
         }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(Color.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(AppTheme.accent.opacity(0.3), lineWidth: 0.5))
+        .disabled(patchOperationBusy)
+        .opacity(patchOperationBusy ? 0.5 : 1)
     }
 
     private func syncPatchStates() {
@@ -525,53 +575,6 @@ private struct GridOverlay: View {
             }
             context.stroke(path, with: .color(AppTheme.accent.opacity(0.055)), lineWidth: 1)
         }
-    }
-}
-
-struct PatchOptionCard: View {
-    let name: String
-    let target: String
-    let color: Color
-    @Binding var isEnabled: Bool
-    let isBusy: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            VStack(alignment: .leading, spacing: 11) {
-                HStack {
-                    Image(systemName: "bolt.fill").font(.system(size: 16, weight: .black)).foregroundStyle(color)
-                    Spacer()
-                    Text(isEnabled ? "ON" : "OFF")
-                        .font(.system(size: 11, weight: .black, design: .rounded))
-                        .foregroundStyle(isEnabled ? .green : .white.opacity(0.58))
-                }
-                Text(name)
-                    .font(.system(size: 17, weight: .black, design: .rounded))
-                    .foregroundStyle(.white)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.78)
-                Text(target)
-                    .font(.system(size: 10, weight: .black, design: .rounded))
-                    .tracking(1.3)
-                    .foregroundStyle(color)
-                HStack(spacing: 7) {
-                    Circle().fill(isEnabled ? Color.green : Color.white.opacity(0.25)).frame(width: 8, height: 8)
-                    Text(isEnabled ? "PATCH ACTIVE" : "ACTIVATE PATCH")
-                        .font(.system(size: 9, weight: .black, design: .rounded))
-                        .tracking(0.8)
-                        .foregroundStyle(.white.opacity(0.65))
-                }
-            }
-            .frame(maxWidth: .infinity, minHeight: 142, alignment: .leading)
-            .padding(14)
-            .background(Color.black.opacity(0.75), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(isEnabled ? color.opacity(0.85) : color.opacity(0.28), lineWidth: isEnabled ? 1.5 : 1))
-            .shadow(color: isEnabled ? color.opacity(0.20) : .clear, radius: 12)
-        }
-        .buttonStyle(.plain)
-        .disabled(isBusy)
-        .opacity(isBusy ? 0.55 : 1)
     }
 }
 
