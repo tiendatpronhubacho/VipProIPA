@@ -14,7 +14,7 @@ final class LicenseManager: ObservableObject {
     @Published var rememberKey = true
 
     // Đã đổi service để không trùng với app cũ
-    private let service = "com.tiendat.external-ios.activation"
+    private let service = "com.tiendat.develop.activation"
     private let keyAccount = "license-key"
     private var lastAttemptAt: Date?
 
