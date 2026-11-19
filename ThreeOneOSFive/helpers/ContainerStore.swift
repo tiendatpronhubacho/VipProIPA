@@ -33,19 +33,20 @@ struct FileEntry: Identifiable, Hashable {
     }
 }
 
-// MARK: - Store
-
 enum ContainerStore {
     static let appDataRoot = "/var/mobile/Containers/Data/Application"
     static let systemDataRoot = "/var/mobile/Containers/Data/System"
+    
     private static var shouldUseBadQuery: Bool {
         ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 26
     }
+    
     private static let applicationBundleRoots: [(path: String, nested: Bool)] = [
         ("/var/containers/Bundle/Application", true),
         ("/Applications", false),
         ("/System/Applications", false)
     ]
+    
     static let researchAppIdentifiers = [
         "com.apple.mobilesafari", "com.apple.mobilenotes", "com.apple.Maps",
         "com.apple.facetime", "com.apple.iBooks", "com.apple.podcasts",
@@ -66,27 +67,25 @@ enum ContainerStore {
             return nil
         }
         
-        // 1. Thử tìm bằng MCM trước (Cách cũ)
+        // 1. Thử tìm bằng MCM trước
         var lookupError: NSString?
         if let path = MCMActivateContainerPath(2, bundleID, false, &lookupError),
            isApplicationContainerPath(path) {
             return path
         }
         
-        // 2. Nếu là Free Fire, quét trực tiếp thư mục (Bỏ qua MCM cho nhanh)
+        // 2. Nếu là Free Fire, quét trực tiếp thư mục
         let lowerID = bundleID.lowercased()
         if lowerID.contains("garena") || lowerID.contains("ffvn") {
             if let path = findPathByKeyword(keywords: ["garena", "ffvn", "freefire"]) {
-                log("patch: keyword scan found game at \(path)")
                 return path
             }
         }
         
-        // 3. Quét thư mục metadata plist
+        // 3. Quét metadata plist
         return resolveAppContainerPathByDirectoryScan(bundleID: bundleID)
     }
     
-    // Quét thư mục tìm App chứa từ khóa (dùng cho Free Fire)
     private static func findPathByKeyword(keywords: [String]) -> String? {
         let dirs = enumerateDirectories(path: appDataRoot)
         for dir in dirs {
@@ -122,8 +121,6 @@ enum ContainerStore {
         }
         return nil
     }
-
-    // MARK: Primary -- MobileInstallation / LSApplicationWorkspace
 
     static func installedAppsFromAPI() -> [InstalledApp] {
         let raw = installedAppInfo() as? [String: [String: Any]] ?? [:]
@@ -274,6 +271,54 @@ enum ContainerStore {
         progress?(apps)
         log("browser: MHA-C2 resolved \(apps.count)/\(identifiers.count) bundle candidates")
         return apps
+    }
+
+    private static func applicationBundleMetadata(
+        at rootPath: String,
+        nested: Bool
+    ) -> [ApplicationBundleMetadata] {
+        let handle = grantContainerAccess(rootPath)
+        defer {
+            if handle >= 0 { bad_query_release(handle) }
+        }
+
+        let fileManager = FileManager.default
+        guard let rootEntries = try? fileManager.contentsOfDirectory(atPath: rootPath) else {
+            log("browser: app-bundle metadata unavailable root=\(rootPath) grant=\(handle)")
+            return []
+        }
+
+        let bundlePaths: [String]
+        if nested {
+            bundlePaths = rootEntries.prefix(2_048).flatMap { entry -> [String] in
+                guard UUID(uuidString: entry) != nil else { return [] }
+                let containerPath = (rootPath as NSString).appendingPathComponent(entry)
+                let children = (try? fileManager.contentsOfDirectory(atPath: containerPath)) ?? []
+                return children.prefix(16).compactMap { child in
+                    guard child.hasSuffix(".app") else { return nil }
+                    return (containerPath as NSString).appendingPathComponent(child)
+                }
+            }
+        } else {
+            bundlePaths = rootEntries.prefix(2_048).compactMap { entry in
+                guard entry.hasSuffix(".app") else { return nil }
+                return (rootPath as NSString).appendingPathComponent(entry)
+            }
+        }
+
+        return bundlePaths.compactMap { bundlePath in
+            let infoPath = (bundlePath as NSString).appendingPathComponent("Info.plist")
+            let infoSize = (try? fileManager.attributesOfItem(atPath: infoPath)[.size] as? NSNumber)?
+                .int64Value ?? 0
+            guard infoSize > 0, infoSize <= 2 * 1_024 * 1_024 else { return nil }
+            guard let plistData = try? Data(contentsOf: URL(fileURLWithPath: infoPath)) else {
+                return nil
+            }
+            return ApplicationBundleMetadataReader.metadata(
+                from: plistData,
+                localizedInfo: Bundle(path: bundlePath)?.localizedInfoDictionary
+            )
+        }
     }
 
     static func launchServicesStoreIdentifiers() -> [String] {
@@ -482,6 +527,156 @@ enum ContainerStore {
         }
         log("browser: filesystem accepted \(apps.count)/\(dirs.count) app containers")
         return apps
+    }
+
+    static func inferredApp(
+        for fallback: InstalledApp,
+        knownAppsByBundleID: [String: InstalledApp],
+        launchServicesIdentifiers: Set<String>
+    ) -> InstalledApp? {
+        guard UUID(uuidString: fallback.bundleID) != nil else { return fallback }
+
+        if let metadata = readContainerMetadata(containerPath: fallback.containerPath) {
+            let bundleID = metadata.bundleID.trimmingCharacters(in: .whitespacesAndNewlines)
+            if ContainerBundleCandidateResolver.isValidBundleIdentifier(bundleID),
+               !bundleID.hasPrefix("systemgroup.") {
+                let info = appInfoForBundleID(bundleID) as? [String: Any] ?? [:]
+                let resolvedName = metadata.displayName.isEmpty
+                    ? (info["name"] as? String ?? bundleID)
+                    : metadata.displayName
+                return InstalledApp(
+                    bundleID: bundleID,
+                    name: resolvedName,
+                    containerPath: fallback.containerPath,
+                    version: info["version"] as? String ?? "",
+                    icon: info["icon"] as? UIImage
+                )
+            }
+        }
+
+        let handle = grantContainerAccess(fallback.containerPath)
+        defer {
+            if handle >= 0 { bad_query_release(handle) }
+        }
+
+        let libraryPath = (fallback.containerPath as NSString).appendingPathComponent("Library")
+        let savedStatePath = (libraryPath as NSString).appendingPathComponent("Saved Application State")
+        let preferencesPath = (libraryPath as NSString).appendingPathComponent("Preferences")
+        let savedStates = (try? FileManager.default.contentsOfDirectory(atPath: savedStatePath)) ?? []
+        let preferences = (try? FileManager.default.contentsOfDirectory(atPath: preferencesPath)) ?? []
+        let strongCandidates = ContainerBundleCandidateResolver.candidates(
+            savedStateNames: savedStates,
+            preferenceFileNames: []
+        )
+        let candidates = ContainerBundleCandidateResolver.candidates(
+            savedStateNames: savedStates,
+            preferenceFileNames: preferences
+        )
+
+        func resolvedApp(from candidates: [String], source: String) -> InstalledApp? {
+            for bundleID in candidates {
+                if let known = knownAppsByBundleID[bundleID] {
+                    return InstalledApp(
+                        bundleID: bundleID,
+                        name: known.name,
+                        containerPath: fallback.containerPath,
+                        version: known.version,
+                        icon: known.icon
+                    )
+                }
+
+                let info = appInfoForBundleID(bundleID) as? [String: Any] ?? [:]
+                guard info["found"] as? Bool == true else { continue }
+                return InstalledApp(
+                    bundleID: bundleID,
+                    name: info["name"] as? String ?? bundleID,
+                    containerPath: fallback.containerPath,
+                    version: info["version"] as? String ?? "",
+                    icon: info["icon"] as? UIImage
+                )
+            }
+
+            guard let bundleID = ContainerBundleCandidateResolver.confirmedCandidate(
+                candidates: candidates,
+                launchServicesIdentifiers: launchServicesIdentifiers
+            ) else {
+                return nil
+            }
+            let uuid = (fallback.containerPath as NSString).lastPathComponent
+            log("browser: content+LaunchServices confirmed \(uuid) -> \(bundleID) source=\(source)")
+            return InstalledApp(
+                bundleID: bundleID,
+                name: bundleID,
+                containerPath: fallback.containerPath,
+                version: "",
+                icon: nil
+            )
+        }
+
+        if let app = resolvedApp(from: candidates, source: "state/preferences") {
+            return app
+        }
+        if let bundleID = strongCandidates.first {
+            return InstalledApp(
+                bundleID: bundleID,
+                name: bundleID,
+                containerPath: fallback.containerPath,
+                version: "",
+                icon: nil
+            )
+        }
+
+        let artifactPaths = [
+            (libraryPath as NSString).appendingPathComponent("SplashBoard/Snapshots"),
+            (libraryPath as NSString).appendingPathComponent("Caches/Snapshots"),
+            (libraryPath as NSString).appendingPathComponent("Cookies"),
+            (libraryPath as NSString).appendingPathComponent("WebKit")
+        ]
+        let artifactNames = artifactPaths.flatMap {
+            (try? FileManager.default.contentsOfDirectory(atPath: $0)) ?? []
+        }
+        let artifactCandidates = ContainerBundleCandidateResolver.candidates(
+            savedStateNames: [],
+            preferenceFileNames: [],
+            artifactNames: artifactNames
+        )
+        if let app = resolvedApp(from: artifactCandidates, source: "artifacts") {
+            return app
+        }
+
+        let uuid = (fallback.containerPath as NSString).lastPathComponent
+        let preview = (candidates + artifactCandidates).prefix(6).joined(separator: ",")
+        log("browser: unresolved \(uuid) metadata=unavailable savedStates=\(savedStates.count) preferences=\(preferences.count) artifacts=\(artifactNames.count) candidates=[\(preview)]")
+        return nil
+    }
+
+    static func inferUnidentifiedApps(
+        in apps: [InstalledApp],
+        knownApps: [InstalledApp],
+        launchServicesIdentifiers: Set<String> = []
+    ) -> [InstalledApp] {
+        let knownByBundleID = Dictionary(knownApps.map { ($0.bundleID, $0) }, uniquingKeysWith: { first, _ in first })
+        var inferredCount = 0
+        let result = apps.enumerated().map { index, app -> InstalledApp in
+            guard UUID(uuidString: app.bundleID) != nil,
+                  let inferred = autoreleasepool(invoking: {
+                      inferredApp(
+                        for: app,
+                        knownAppsByBundleID: knownByBundleID,
+                        launchServicesIdentifiers: launchServicesIdentifiers
+                      )
+                  }) else {
+                return app
+            }
+            inferredCount += 1
+            if inferredCount <= 5 {
+                log("browser: inferred \((app.containerPath as NSString).lastPathComponent) -> \(inferred.bundleID)")
+            }
+            return inferred
+        }
+        let unresolvedCount = result.filter { UUID(uuidString: $0.bundleID) != nil }.count
+        log("browser: inferred identities for \(inferredCount)/\(apps.count) merged containers; unresolved=\(unresolvedCount)")
+        return result
     }
 
     static func listFiles(at path: String) -> [FileEntry] {

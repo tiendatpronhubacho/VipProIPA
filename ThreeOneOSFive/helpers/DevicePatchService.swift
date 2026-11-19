@@ -35,33 +35,12 @@ enum DevicePatchService {
     }
 
     static func restore(
-        receipt: PatchTransactionReceipt,
-        allowChangedTargets: Bool = false
+        receipt: PatchTransactionReceipt
     ) throws {
         let bundleIDs = try PatchTransaction.requiredBundleIdentifiers(for: receipt)
         try withResolvedContainers(bundleIDs: bundleIDs) { roots in
             try PatchTransaction.restore(
                 receipt: receipt,
-                allowChangedTargets: allowChangedTargets,
-                containerResolver: { bundleID in
-                    guard let root = roots[bundleID] else {
-                        throw PatchPackageError.targetAppUnavailable(bundleID)
-                    }
-                    return root
-                }
-            )
-        }
-    }
-
-    static func resetToAppliedState(
-        receipt: PatchTransactionReceipt,
-        project: PatchProject
-    ) throws {
-        let bundleIDs = try PatchTransaction.requiredBundleIdentifiers(for: receipt)
-        try withResolvedContainers(bundleIDs: bundleIDs) { roots in
-            try PatchTransaction.resetToAppliedState(
-                receipt: receipt,
-                fallbackProject: project,
                 containerResolver: { bundleID in
                     guard let root = roots[bundleID] else {
                         throw PatchPackageError.targetAppUnavailable(bundleID)
@@ -133,13 +112,4 @@ enum DevicePatchService {
         for dir in dirs {
             let metadataPath = (dir as NSString).appendingPathComponent(".com.apple.mobile_container_manager.metadata.plist")
             if let data = try? Data(contentsOf: URL(fileURLWithPath: metadataPath)),
-               let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any],
-               let id = plist["MCMMetadataIdentifier"] as? String {
-                if id.lowercased().contains(keyword) {
-                    return dir
-                }
-            }
-        }
-        return nil
-    }
-}
+               let pl
