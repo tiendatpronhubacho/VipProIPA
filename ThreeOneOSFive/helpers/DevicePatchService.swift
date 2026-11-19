@@ -42,7 +42,9 @@ enum DevicePatchService {
 
     private static func fixBundleID(_ bundleID: String) -> String {
         let lower = bundleID.lowercased()
-        if lower.contains("ffvn") || lower.contains("freefire") || lower.contains("garena") { return "com.garena.ffvn" }
+        if lower.contains("ffvn") || lower.contains("freefire") || lower.contains("garena") {
+            return "com.garena.ffvn"
+        }
         return bundleID
     }
 
@@ -56,11 +58,15 @@ enum DevicePatchService {
 
         for bundleID in bundleIDs {
             var path = ContainerStore.resolveAppContainerPath(bundleID: bundleID)
+            
             guard let validPath = path, ContainerStore.isApplicationContainerPath(validPath) else {
                 throw PatchPackageError.targetAppUnavailable(bundleID)
             }
+            
+            // Xin quyền truy cập (Grant) trước khi ghi file
             let grant = ContainerStore.grantContainerAccess(validPath)
             if grant >= 0 { grants.append(grant) }
+            
             roots[bundleID] = PatchPathValidator.canonicalFileURL(URL(fileURLWithPath: validPath, isDirectory: true))
         }
         return try operation(roots)
