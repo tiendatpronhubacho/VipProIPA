@@ -55,6 +55,9 @@ struct ContentView: View {
         }
         .accentColor(AppTheme.accent)
         .preferredColorScheme(.dark)
+        // Fix màu thanh Tab (Xcode 26)
+        .toolbarBackground(.visible, for: .tabBar)
+        .toolbarBackground(Color.black.opacity(0.85), for: .tabBar)
         .sheet(item: $patchStore.passwordRequest, onDismiss: patchStore.cancelUnlock) { _ in
             PatchUnlockPrompt(store: patchStore)
         }
@@ -72,14 +75,17 @@ struct HomeView: View {
             // Nền đen dự phòng
             Color.black.ignoresSafeArea()
             
-            // Background Image
+            // Background Image (Đã tách ZStack để fix lỗi ám xám)
             GeometryReader { proxy in
-                loadImageFromBundle(named: "background_home")
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: proxy.size.width, height: proxy.size.height)
-                    .clipped()
-                    .overlay(Color.black.opacity(0.35)) // Lớp phủ tối 35% để dễ đọc chữ
+                ZStack {
+                    loadImageFromBundle(named: "background_home")
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: proxy.size.width, height: proxy.size.height)
+                        .clipped()
+                    
+                    Color.black.opacity(0.65) // Lớp phủ đen chuẩn
+                }
             }
             .ignoresSafeArea()
 
@@ -284,13 +290,17 @@ struct FeaturesView: View {
         ZStack {
             Color.black.ignoresSafeArea()
             
+            // Background Image (Đã tách ZStack)
             GeometryReader { proxy in
-                loadImageFromBundle(named: "background_features")
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: proxy.size.width, height: proxy.size.height)
-                    .clipped()
-                    .overlay(Color.black.opacity(0.45))
+                ZStack {
+                    loadImageFromBundle(named: "background_features")
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: proxy.size.width, height: proxy.size.height)
+                        .clipped()
+                    
+                    Color.black.opacity(0.75) // Đậm hơn để nổi bật thẻ patch
+                }
             }
             .ignoresSafeArea()
 
