@@ -15,12 +15,12 @@ struct ContentView: View {
     @State private var p1 = false // Aim Drag
     @State private var p2 = false // Aim Neck
     @State private var p3 = false // Aim Body
-    @State private var p4 = false // Nhẹ Tâm
+    @State private var p4 = false // Nhe Tam
     @State private var p5 = false // Aim Chest
     @State private var p6 = false // Aim R8
     @State private var p7 = false // Aim Magic
-    @State private var p8 = false // Neck+Anten
-    @State private var p9 = false // Nhẹ + Anten
+    @State private var p8 = false // Neck Anten
+    @State private var p9 = false // Nhe Anten
     @State private var p10 = false // Mod Sonic Dimitri
     @State private var p11 = false // Mod Thỏ Dimitri
     @State private var p12 = false // Mod Roblox Dimitri
@@ -120,12 +120,12 @@ struct ContentView: View {
                 patchCard(name: "Aim Drag", target: "FREE FIRE • VN", package: "Aim Drag.3105", color: AppTheme.accent, state: $p1)
                 patchCard(name: "Aim Neck", target: "FREE FIRE • VN", package: "Aim Neck.3105", color: AppTheme.secondaryAccent, state: $p2)
                 patchCard(name: "Aim Body", target: "FREE FIRE • VN", package: "Aim Body.3105", color: AppTheme.accent, state: $p3)
-                patchCard(name: "Nhẹ Tâm", target: "FREE FIRE • VN", package: "Nhẹ Tâm.3105", color: AppTheme.secondaryAccent, state: $p4)
+                patchCard(name: "Nhe Tam", target: "FREE FIRE • VN", package: "Nhe Tam.3105", color: AppTheme.secondaryAccent, state: $p4)
                 patchCard(name: "Aim Chest", target: "FREE FIRE • VN", package: "Aim Chest.3105", color: AppTheme.accent, state: $p5)
                 patchCard(name: "Aim R8", target: "FREE FIRE • VN", package: "Aim R8.3105", color: AppTheme.secondaryAccent, state: $p6)
                 patchCard(name: "Aim Magic", target: "FREE FIRE • VN", package: "Aim Magic.3105", color: AppTheme.accent, state: $p7)
-                patchCard(name: "Neck+Anten", target: "FREE FIRE • VN", package: "Neck+Anten.3105", color: AppTheme.secondaryAccent, state: $p8)
-                patchCard(name: "Nhẹ + Anten", target: "FREE FIRE • VN", package: "Nhẹ + Anten.3105", color: AppTheme.accent, state: $p9)
+                patchCard(name: "Neck Anten", target: "FREE FIRE • VN", package: "Neck Anten.3105", color: AppTheme.secondaryAccent, state: $p8)
+                patchCard(name: "Nhe Anten", target: "FREE FIRE • VN", package: "Nhe Anten.3105", color: AppTheme.accent, state: $p9)
                 patchCard(name: "Mod Sonic", target: "FREE FIRE • DIMITRI", package: "Mod Sonic Dimitri.3105", color: AppTheme.secondaryAccent, state: $p10)
                 patchCard(name: "Mod Thỏ", target: "FREE FIRE • DIMITRI", package: "Mod Thỏ Dimitri.3105", color: AppTheme.accent, state: $p11)
                 patchCard(name: "Mod Roblox", target: "FREE FIRE • DIMITRI", package: "Mod Roblox Dimitri.3105", color: AppTheme.secondaryAccent, state: $p12)

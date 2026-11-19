@@ -54,8 +54,8 @@ final class PatchProjectStore: ObservableObject {
         
         let filenames = [
             "Aim Drag.3105", "Aim Neck.3105", "Aim Body.3105",
-            "Nhẹ Tâm.3105", "Aim Chest.3105", "Aim R8.3105",
-            "Aim Magic.3105", "NeckAnten.3105", "NhẹAnten.3105",
+            "Nhe Tam.3105", "Aim Chest.3105", "Aim R8.3105",
+            "Aim Magic.3105", "Neck Anten.3105", "Nhe Anten.3105",
             "Mod Sonic Dimitri.3105", "Mod Thỏ Dimitri.3105", "Mod Roblox Dimitri.3105",
             "Mod Báo Hồng Dimitri.3105", "Mod Baki Alock.3105"
         ]
