@@ -4,9 +4,8 @@ import Foundation
 import Security
 
 enum PatchPackageCodec {
-    // Kept as "3105PATCH": the magic and the UUID-derived keys below are part of
-    // the on-disk package format. Renaming them would make every existing
-    // .3105/.3106 package undecryptable, so only the app identity changes.
+    static let bundledResourcePassword = "OGIOS_Default_Password"
+    
     private static let magic = Data("3105PATCH\0".utf8)
     static let latestSchemaVersion = 3
     private static let minimumSchemaVersion = 1

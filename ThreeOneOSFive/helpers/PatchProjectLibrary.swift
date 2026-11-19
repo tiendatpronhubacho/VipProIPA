@@ -10,9 +10,6 @@ struct PatchLibraryItem: Identifiable {
     var isLocked: Bool { project == nil }
     var displayName: String {
         let filename = packageURL.deletingPathExtension().lastPathComponent
-        if filename.hasPrefix("OGIOS File (") {
-            return filename
-        }
         return project?.name ?? filename
     }
     var workspaceURL: URL? {
@@ -80,7 +77,6 @@ enum PatchProjectLibrary {
               ) else { return [] }
 
         var byID: [UUID: PatchLibraryItem] = [:]
-        // ĐỔI ĐUÔI TÌM KIẾM THÀNH 3105
         for url in urls where ["3106", "3105"].contains(url.pathExtension.lowercased()) {
             do {
                 let data = try readPackage(at: url)
@@ -89,20 +85,7 @@ enum PatchProjectLibrary {
                 if let contentKey = try PatchKeyStore.load(for: summary) {
                     decoded = try PatchPackageCodec.decode(data, contentKey: contentKey)
                 } else if summary.isPasswordProtected {
-                    guard url.deletingPathExtension().lastPathComponent.hasPrefix("OGIOS File (") else {
-                        decoded = nil
-                        continue
-                    }
-                    do {
-                        let bundled = try PatchPackageCodec.decode(
-                            data,
-                            password: PatchPackageCodec.bundledResourcePassword
-                        )
-                        try PatchKeyStore.store(bundled.contentKey, for: summary)
-                        decoded = bundled
-                    } catch {
-                        decoded = nil
-                    }
+                    decoded = nil
                 } else {
                     decoded = try PatchPackageCodec.decode(data, password: nil)
                 }
@@ -151,7 +134,6 @@ enum PatchProjectLibrary {
         } else {
             let root = try packageRootURL(fileManager: fileManager)
             let baseName = sanitizedFilename(projectName)
-            // ĐỔI ĐUÔI LƯU THÀNH 3105
             var candidate = root.appendingPathComponent(baseName).appendingPathExtension("3105")
             var suffix = 2
             while fileManager.fileExists(atPath: candidate.path) {

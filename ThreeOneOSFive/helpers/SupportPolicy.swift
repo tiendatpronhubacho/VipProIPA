@@ -3,9 +3,17 @@ import Foundation
 enum ExploitSupportPolicy {
     static let verifiedIOS17Range = "17.0–17.7.x"
     static let verifiedIOS18Range = "18.0–18.7.1"
+    static let verifiedIOS26Range = "26.0–26.7.2"
     static let verifiedIOS26BadQueryRange = "26.0–26.6.1"
     static let verifiedIOS26WorseQueryRange = "26.7–26.7.2"
     static let verifiedIOS27Range = "27.0–27.2.1"
+    
+    static let verifiedIOS27Builds: [(beta: Int, publicBeta: Int?, build: String)] = [
+        (1, nil, "24A5355q"),
+        (2, nil, "24A5370h"),
+        (3, 1, "24A5380h"),
+        (4, 2, "24A5390f")
+    ]
 
     static func supportsKernelExploit(major: Int, minor: Int, patch: Int) -> Bool {
         guard minor >= 0, patch >= 0 else { return false }
@@ -21,16 +29,11 @@ enum ExploitSupportPolicy {
         return false
     }
 
-    /// bad_query still works on the builds it was verified for; it is kept as
-    /// the primary backend there because it also reaches System Data.
     static func supportsBadQuery(major: Int, minor: Int, patch: Int) -> Bool {
         guard major == 26, minor >= 0, patch >= 0 else { return false }
         return minor < 6 || (minor == 6 && patch <= 1)
     }
 
-    /// worse_query targets iOS 26.0–26.7.2 and 27.x through 27.3.
-    /// iOS 27.3 beta 1 was verified working on hardware and is fully
-    /// supported (operator-confirmed).
     static func supportsWorseQuery(major: Int, minor: Int, patch: Int) -> Bool {
         guard minor >= 0, patch >= 0 else { return false }
         if major == 26 {
@@ -42,8 +45,6 @@ enum ExploitSupportPolicy {
         return false
     }
 
-    /// Kept for the experimental-features gate; no release currently maps
-    /// to an experimental tier.
     static func isExperimental(major: Int, minor: Int) -> Bool {
         false
     }

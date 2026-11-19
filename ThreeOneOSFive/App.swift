@@ -7,13 +7,10 @@ struct ThreeOneOSSixApp: App {
     @StateObject private var patchDraftCoordinator = PatchDraftCoordinator()
     @StateObject private var fileOperationCoordinator = FileOperationCoordinator()
     @StateObject private var patchStore = PatchProjectStore()
-    @StateObject private var repositoryStore = PackageRepositoryStore()
-    @StateObject private var migrationTaskCenter = MigrationTaskCenter()
     @AppStorage(AppLanguage.storageKey) private var languageCode = AppLanguage.english.rawValue
     @State private var showOnboarding = OnboardingStore.shouldShow()
     @State private var showAttribution = false
     @State private var updateOffer: AppUpdateChecker.Offer?
-    @State private var configImportError: String?
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -21,45 +18,12 @@ struct ThreeOneOSSixApp: App {
         setupLogCapture()
         let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
         let appBuild = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?"
-        log("app: 3106 \(appVersion) (\(appBuild)) launching — iOS \(AppInfo.osVersion) (\(AppInfo.osBuild)) \(AppInfo.machineName)")
+        log("app: TienDat \(appVersion) (\(appBuild)) launching -- iOS \(AppInfo.osVersion) (\(AppInfo.osBuild)) \(AppInfo.machineName)")
         SandboxAccess.prepare()
-        TempSpaceRegistry.purgeExpired()
     }
 
     private var language: AppLanguage {
         AppLanguage(rawValue: languageCode) ?? .english
-    }
-
-    private func importConfigPackage(at url: URL) {
-        do {
-            _ = try MigrationConfigBackupService.importPackage(at: url)
-            migrationTaskCenter.refreshStoredSets()
-            configImportError = nil
-            log("migration: config package imported — \(url.lastPathComponent)")
-        } catch {
-            log("migration: config package import failed — \(error)")
-            configImportError = language.errorText(error)
-        }
-    }
-
-    /// GestaltX #133: a share extension may drop packages into the App Group
-    /// inbox without delivering an onOpenURL callback. Read whichever App
-    /// Group the side-loaded build was actually signed with.
-    private func importSharedConfigPackages() {
-        guard let group = SandboxAccess.appGroup,
-              let inbox = FileManager.default
-                .containerURL(forSecurityApplicationGroupIdentifier: group)?
-                .appendingPathComponent("SharedConfigInbox", isDirectory: true) else { return }
-        let urls = (try? FileManager.default.contentsOfDirectory(
-            at: inbox,
-            includingPropertiesForKeys: nil,
-            options: [.skipsHiddenFiles]
-        )) ?? []
-        for url in urls where url.pathExtension.lowercased()
-            == MigrationConfigBackupService.packageExtension {
-            importConfigPackage(at: url)
-            try? FileManager.default.removeItem(at: url)
-        }
     }
 
     private func checkForUpdate() {
@@ -69,8 +33,6 @@ struct ThreeOneOSSixApp: App {
         }
     }
 
-    /// Foreground-switch variant: 30-minute throttle lives in the checker
-    /// (persisted), so repeated quick app switches cost nothing.
     private func checkForUpdateThrottled() {
         Task {
             guard let offer = await AppUpdateChecker.throttledForegroundCheck() else { return }
@@ -86,8 +48,6 @@ struct ThreeOneOSSixApp: App {
                     .environmentObject(patchDraftCoordinator)
                     .environmentObject(fileOperationCoordinator)
                     .environmentObject(patchStore)
-                    .environmentObject(repositoryStore)
-                    .environmentObject(migrationTaskCenter)
                     .environment(\.appLanguage, language)
                     .environment(\.locale, language.locale)
                     .opacity(showOnboarding ? 0 : 1)
@@ -116,19 +76,6 @@ struct ThreeOneOSSixApp: App {
             .sheet(isPresented: $showAttribution) {
                 DisplayAttributionSheet()
             }
-            .alert(
-                language.text("config.import_error.title"),
-                isPresented: .init(
-                    get: { configImportError != nil },
-                    set: { if !$0 { configImportError = nil } }
-                )
-            ) {
-                Button(language.text("common.ok"), role: .cancel) {
-                    configImportError = nil
-                }
-            } message: {
-                Text(configImportError ?? "")
-            }
             .alert(item: $updateOffer) { offer in
                 Alert(
                     title: Text(language.text("update.title")),
@@ -146,26 +93,13 @@ struct ThreeOneOSSixApp: App {
                     appState.detectSupport()
                     checkForUpdate()
                 }
-                migrationTaskCenter.refreshPendingResumes()
-                importSharedConfigPackages()
             }
             .onChange(of: scenePhase) { phase in
                 guard phase == .active, !showOnboarding else { return }
                 appState.detectSupport()
-                // 3.2.4: also probe for updates on foreground switches —
-                // the cold-start check alone misses releases published
-                // while the app idles in the background. Throttled to one
-                // probe per 30 minutes; failures stay silent here.
                 checkForUpdateThrottled()
             }
             .onOpenURL { url in
-                // Config backup packages (.3106cfg) route to the migration
-                // importer; everything else stays on the patch-package path.
-                if url.isFileURL,
-                   url.pathExtension.lowercased() == MigrationConfigBackupService.packageExtension {
-                    importConfigPackage(at: url)
-                    return
-                }
                 patchDraftCoordinator.presentImport(url)
             }
         }
@@ -235,8 +169,6 @@ class AppState: ObservableObject {
     private func refreshKernelExploitStatus() {
         guard !kernelExploitRunning else { return }
 
-        // iOS < 26: kernel R/W success persists (no sandbox probe)
-        // iOS >= 26: verify full sandbox escape is still active
         if KernelExploit.requiresSandboxEscape {
             if KernelExploit.hasSandboxAccess() {
                 if !exploitStatus.isSuccess {
@@ -275,7 +207,7 @@ class AppState: ObservableObject {
                     if backend == .worseQuery && !SandboxAccess.hasAppGroup {
                         log("app: worse_query needs an App Group; re-sign with a tool that provides one")
                     } else {
-                        log("app: \(backend.displayName) setup failed — relaunch the app before retrying")
+                        log("app: \(backend.displayName) setup failed -- relaunch the app before retrying")
                     }
                 }
             }
