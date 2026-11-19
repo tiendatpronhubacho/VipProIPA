@@ -711,7 +711,64 @@ workflows:
           cd $CM_BUILD_DIR
           chmod +x build_unsigned.sh
           ./build_unsigned.sh
-          
+
+      - name: Inject Entitlements into IPA
+        script: |
+          set -e
+          cd $CM_BUILD_DIR
+
+          IPA=$(ls -t *.ipa | head -n 1)
+          if [ -z "$IPA" ]; then
+            echo "No IPA found"
+            exit 1
+          fi
+          echo "Target IPA: $IPA"
+
+          ENTITLEMENTS="ThreeOneOSFive/TienDat.entitlements"
+          if [ ! -f "$ENTITLEMENTS" ]; then
+            echo "Missing entitlements file: $ENTITLEMENTS"
+            exit 1
+          fi
+
+          WORK=$(mktemp -d)
+          unzip -q "$IPA" -d "$WORK"
+
+          APP=$(find "$WORK/Payload" -maxdepth 1 -name "*.app" -type d | head -n 1)
+          if [ -z "$APP" ]; then
+            echo "No .app bundle found in Payload"
+            rm -rf "$WORK"
+            exit 1
+          fi
+          APP_NAME=$(basename "$APP" .app)
+          BIN="$APP/$APP_NAME"
+          echo "App bundle: $APP"
+          echo "Binary: $BIN"
+
+          if [ ! -f "$BIN" ]; then
+            echo "Missing executable inside .app"
+            rm -rf "$WORK"
+            exit 1
+          fi
+
+          echo "--- Original entitlements ---"
+          codesign -d --entitlements :- "$BIN" 2>/dev/null || true
+
+          echo "--- Injecting entitlements ---"
+          find "$APP/Frameworks" -maxdepth 1 -name "*.framework" -type d -exec codesign --force --sign - --entitlements "$ENTITLEMENTS" --timestamp=none {} \; 2>/dev/null || true
+          find "$APP" -name "*.dylib" -type f -exec codesign --force --sign - --timestamp=none {} \; 2>/dev/null || true
+          codesign --force --sign - --entitlements "$ENTITLEMENTS" --timestamp=none "$BIN"
+
+          echo "--- Verify ---"
+          codesign -d --entitlements :- "$BIN"
+
+          OUT="$(pwd)/${APP_NAME}-entitled.ipa"
+          rm -f "$OUT"
+          (cd "$WORK" && zip -qry "$OUT" Payload)
+          rm -rf "$WORK"
+
+          echo "Entitled IPA: $OUT"
+          ls -lh "$OUT"
+
     artifacts:
       - $CM_BUILD_DIR/*.ipa
       - $CM_BUILD_DIR/Payload/*.app
