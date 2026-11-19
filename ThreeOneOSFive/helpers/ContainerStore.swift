@@ -43,7 +43,7 @@ enum ContainerStore {
         "com.apple.Translate", "com.apple.measure", "com.apple.compass", "com.apple.Magnifier", "com.apple.DocumentsApp"
     ]
 
-    // SỬ DỤNG DIRECT CONTAINER QUERY CỦA 3106
+    // SỬA LỖI 1: THÊM TIMEOUT & FIX TỪ KHÓA TÌM KIẾM
     static func resolveAppContainerPath(bundleID: String) -> String? {
         // Gọi trực tiếp hàm xin quyền của 3106
         var lookupError: NSString?
@@ -52,17 +52,30 @@ enum ContainerStore {
         }
         
         // Fallback cho Free Fire nếu MCM bị chặn
-        if bundleID.contains("garena") || bundleID.contains("ffvn") {
-            let dirs = enumerateDirectories(path: appDataRoot)
-            for dir in dirs {
-                let metaPath = (dir as NSString).appendingPathComponent(".com.apple.mobile_container_manager.metadata.plist")
-                if let data = try? Data(contentsOf: URL(fileURLWithPath: metaPath)),
-                   let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any],
-                   let id = plist["MCMMetadataIdentifier"] as? String,
-                   id.contains("garena") || id.contains("ffvn") {
-                    return dir
+        let isFreeFire = bundleID.contains("garena") || bundleID.contains("ffvn") || bundleID.contains("kgvn")
+        
+        if isFreeFire {
+            let semaphore = DispatchSemaphore(value: 0)
+            var foundPath: String? = nil
+            
+            DispatchQueue.global(qos: .userInitiated).async {
+                let dirs = enumerateDirectories(path: appDataRoot)
+                for dir in dirs {
+                    let metaPath = (dir as NSString).appendingPathComponent(".com.apple.mobile_container_manager.metadata.plist")
+                    if let data = try? Data(contentsOf: URL(fileURLWithPath: metaPath)),
+                       let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any],
+                       let id = plist["MCMMetadataIdentifier"] as? String,
+                       id.contains("garena") || id.contains("ffvn") || id.contains("kgvn") {
+                        foundPath = dir
+                        break
+                    }
                 }
+                semaphore.signal()
             }
+            
+            // Đợi tối đa 3 giây, tránh treo app
+            _ = semaphore.wait(timeout: .now() + 3.0)
+            if let path = foundPath { return path }
         }
         return nil
     }
@@ -83,21 +96,18 @@ enum ContainerStore {
         return String(cString: result).components(separatedBy: "\n").filter { !$0.isEmpty }
     }
 
-    // SỬ DỤNG HÀM GRANT CỦA 3106
     static func grantContainerAccess(_ containerPath: String) -> Int64 {
         guard shouldUseBadQuery else { return -1 }
         var pathC = containerPath.utf8CString.map { Int8($0) }
         return bad_query(&pathC, true, nil, false)
     }
 
-    // MARK: - HÀM MỚI: Ensure Write Access
     static func ensureWriteAccess(to bundleID: String) -> URL? {
         guard let path = resolveAppContainerPath(bundleID: bundleID) else { return nil }
         _ = grantContainerAccess(path)
         return URL(fileURLWithPath: path)
     }
 
-    // Các hàm giả lập để View không lỗi
     static func installedAppsFromAPI() -> [InstalledApp] { return [] }
     static func applicationBundleMetadataCatalog() -> [String: ApplicationBundleMetadata] { return [:] }
     static func applyingBundleMetadata(to apps: [InstalledApp], catalog: [String: ApplicationBundleMetadata]) -> [InstalledApp] { return apps }

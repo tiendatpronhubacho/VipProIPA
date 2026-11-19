@@ -43,6 +43,7 @@ enum PatchTransaction {
                 let bf = "\(rule.id.uuidString).bak"
                 let backupURL = transDir.appendingPathComponent(bf)
                 try? fileManager.removeItem(at: backupURL)
+                // Bắt buộc phải backup được, nếu lỗi quyền thì throw ra ngoài
                 try fileManager.copyItem(at: target, to: backupURL)
                 backupFilename = bf
             } else {
@@ -52,6 +53,7 @@ enum PatchTransaction {
                 )
             }
 
+            // Ghi dữ liệu patch, nếu lỗi quyền/đầy bộ nhớ thì throw ra ngoài
             try rule.replacementData.write(to: target, options: .atomic)
 
             records.append(Record(

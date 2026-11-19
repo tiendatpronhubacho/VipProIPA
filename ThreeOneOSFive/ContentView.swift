@@ -91,7 +91,6 @@ struct HomeView: View {
         ZStack {
             Color.black.ignoresSafeArea()
             
-            // Background Image
             GeometryReader { proxy in
                 loadImageFromBundle(named: "background_home")
                     .resizable()
@@ -101,7 +100,6 @@ struct HomeView: View {
             }
             .ignoresSafeArea()
             
-            // Lớp phủ đen giảm xuống 0.3 để ảnh sáng rõ
             Color.black.opacity(0.3).ignoresSafeArea()
 
             ScrollView(showsIndicators: false) {
@@ -385,20 +383,18 @@ struct FeaturesView: View {
         .buttonStyle(.plain)
     }
 
-    // Hàng Patch (Đã nối với PatchProjectStore)
+    // Hàng Patch
     private func patchRow(name: String, target: String, package: String) -> some View {
         let item = patchStore.items.first(where: { $0.packageURL.lastPathComponent.caseInsensitiveCompare(package) == .orderedSame })
         let isEnabled = item.flatMap { patchStore.activePatchIDs.contains($0.id) } ?? false
         
         return HStack(spacing: 12) {
-            // Icon
             Image(systemName: "scope")
                 .font(.system(size: 18, weight: .bold))
                 .foregroundStyle(AppTheme.accent)
                 .frame(width: 40, height: 40)
                 .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             
-            // Text Info
             VStack(alignment: .leading, spacing: 4) {
                 Text(name)
                     .font(.system(size: 16, weight: .black, design: .rounded))
@@ -410,9 +406,13 @@ struct FeaturesView: View {
             
             Spacer()
             
-            // Nút bấm Toggle
             Button {
-                guard let item = item, !patchStore.isBusy else { return }
+                guard let item = item else {
+                    patchStore.alert = PatchStoreAlert(titleKey: "Error", messageKey: "Package not found!")
+                    return
+                }
+                guard !patchStore.isBusy else { return }
+                
                 if isEnabled {
                     patchStore.restorePatch(item)
                 } else {
