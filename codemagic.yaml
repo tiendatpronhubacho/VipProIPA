@@ -5,6 +5,12 @@ workflows:
     environment:
       xcode: latest
     scripts:
+      - name: Clean build directory
+        script: |
+          # Xóa sạch cache build cũ để tránh Xcode dùng lại Bundle ID cũ
+          rm -rf ./build
+          rm -rf ~/Library/Developer/Xcode/DerivedData/*
+
       - name: Fix project.pbxproj
         script: |
           python3 -c '
@@ -474,7 +480,7 @@ workflows:
           				);
           				MARKETING_VERSION = 1.1.1;
           				OTHER_LDFLAGS = "-lz";
-          				PRODUCT_BUNDLE_IDENTIFIER = "com.tiendat.develop	";
+          				PRODUCT_BUNDLE_IDENTIFIER = "com.tiendat.develop";
           				PRODUCT_NAME = TienDat;
           				SWIFT_EMIT_LOC_STRINGS = YES;
           				SWIFT_OBJC_BRIDGING_HEADER = "ThreeOneOSFive/ThreeOneOSFive-Bridging-Header.h";
@@ -508,7 +514,7 @@ workflows:
           				);
           				MARKETING_VERSION = 1.1.1;
           				OTHER_LDFLAGS = "-lz";
-          				PRODUCT_BUNDLE_IDENTIFIER = "com.tiendat.ogios";
+          				PRODUCT_BUNDLE_IDENTIFIER = "com.tiendat.develop";
           				PRODUCT_NAME = TienDat;
           				SWIFT_EMIT_LOC_STRINGS = YES;
           				SWIFT_OBJC_BRIDGING_HEADER = "ThreeOneOSFive/ThreeOneOSFive-Bridging-Header.h";
