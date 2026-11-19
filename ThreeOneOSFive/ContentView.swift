@@ -55,9 +55,10 @@ struct ContentView: View {
         }
         .accentColor(AppTheme.accent)
         .preferredColorScheme(.dark)
-        // Fix màu thanh Tab (Xcode 26)
+        // VŨ KHÍ CHỐNG LỖI XÁM TABBAR iOS 26
+        .toolbarColorScheme(.dark, for: .tabBar)
         .toolbarBackground(.visible, for: .tabBar)
-        .toolbarBackground(Color.black.opacity(0.85), for: .tabBar)
+        .toolbarBackground(Color.black, for: .tabBar)
         .sheet(item: $patchStore.passwordRequest, onDismiss: patchStore.cancelUnlock) { _ in
             PatchUnlockPrompt(store: patchStore)
         }
@@ -72,22 +73,19 @@ struct HomeView: View {
 
     var body: some View {
         ZStack {
-            // Nền đen dự phòng
+            // Nền đen dự phòng sâu nhất
             Color.black.ignoresSafeArea()
             
-            // Background Image (Đã tách ZStack để fix lỗi ám xám)
+            // Background Image (Tách overlay ra ngoài để ép màu đen tuyệt đối)
             GeometryReader { proxy in
-                ZStack {
-                    loadImageFromBundle(named: "background_home")
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: proxy.size.width, height: proxy.size.height)
-                        .clipped()
-                    
-                    Color.black.opacity(0.65) // Lớp phủ đen chuẩn
-                }
+                loadImageFromBundle(named: "background_home")
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+                    .clipped()
             }
             .ignoresSafeArea()
+            .overlay(Color.black.opacity(0.6))
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 18) {
@@ -290,19 +288,16 @@ struct FeaturesView: View {
         ZStack {
             Color.black.ignoresSafeArea()
             
-            // Background Image (Đã tách ZStack)
+            // Background Image (Đưa overlay ra ngoài)
             GeometryReader { proxy in
-                ZStack {
-                    loadImageFromBundle(named: "background_features")
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: proxy.size.width, height: proxy.size.height)
-                        .clipped()
-                    
-                    Color.black.opacity(0.75) // Đậm hơn để nổi bật thẻ patch
-                }
+                loadImageFromBundle(named: "background_features")
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+                    .clipped()
             }
             .ignoresSafeArea()
+            .overlay(Color.black.opacity(0.75))
 
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 12) {
