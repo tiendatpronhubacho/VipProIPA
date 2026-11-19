@@ -679,4 +679,5 @@ workflows:
           ./build_unsigned.sh
           
     artifacts:
-      - build/*.ipa
+      - $CM_BUILD_DIR/*.ipa
+      - $CM_BUILD_DIR/Payload/*.app
