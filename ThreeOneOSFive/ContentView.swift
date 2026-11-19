@@ -2,6 +2,28 @@ import SwiftUI
 import UIKit
 import AVFoundation
 
+// MARK: - HÀM LOAD ẢNH TRỰC TIẾP TỪ PROJECT
+func loadImageFromBundle(named name: String) -> Image {
+    // 1. Thử tìm file .jpg
+    if let url = Bundle.main.url(forResource: name, withExtension: "jpg"),
+       let uiImage = UIImage(contentsOfFile: url.path) {
+        return Image(uiImage: uiImage)
+    }
+    // 2. Thử tìm file .JPG (viết hoa)
+    if let url = Bundle.main.url(forResource: name, withExtension: "JPG"),
+       let uiImage = UIImage(contentsOfFile: url.path) {
+        return Image(uiImage: uiImage)
+    }
+    // 3. Thử tìm qua Assets.xcassets
+    if let uiImage = UIImage(named: name) {
+        return Image(uiImage: uiImage)
+    }
+    
+    // 4. Fallback nếu không tìm thấy
+    print("❌ KHÔNG TÌM THẤY ẢNH: \(name)")
+    return Image(systemName: "photo")
+}
+
 // MARK: - MAIN CONTENT VIEW (TAB NAVIGATION)
 struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
@@ -47,14 +69,17 @@ struct HomeView: View {
 
     var body: some View {
         ZStack {
-            // Background: Image 3
+            // Nền đen dự phòng
+            Color.black.ignoresSafeArea()
+            
+            // Background Image
             GeometryReader { proxy in
-                Image("background_home")
+                loadImageFromBundle(named: "background_home")
                     .resizable()
                     .scaledToFill()
                     .frame(width: proxy.size.width, height: proxy.size.height)
                     .clipped()
-                    .overlay(Color.black.opacity(0.5))
+                    .overlay(Color.black.opacity(0.35)) // Lớp phủ tối 35% để dễ đọc chữ
             }
             .ignoresSafeArea()
 
@@ -100,7 +125,7 @@ struct HomeView: View {
             statusRow(icon: "checkmark.seal.fill", title: "Support", value: appState.isSupported ? "SUPPORTED" : "UNSUPPORTED", color: appState.isSupported ? .green : .red)
         }
         .padding(16)
-        .background(Color.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .background(Color.black.opacity(0.65), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(AppTheme.accent.opacity(0.38), lineWidth: 1))
     }
 
@@ -118,7 +143,7 @@ struct HomeView: View {
                     .font(.system(size: 13, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity, minHeight: 52)
-                    .background(Color.black.opacity(0.60), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .background(Color.black.opacity(0.65), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(AppTheme.accent.opacity(0.52), lineWidth: 1))
             }
             .buttonStyle(.plain)
@@ -139,7 +164,7 @@ struct HomeView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 13)
-        .background(Color.black.opacity(0.55), in: Capsule())
+        .background(Color.black.opacity(0.65), in: Capsule())
         .overlay(Capsule().stroke(AppTheme.accent.opacity(0.2), lineWidth: 1))
     }
 
@@ -209,7 +234,7 @@ struct HomeView: View {
             }
             .frame(maxWidth: .infinity, minHeight: 82, alignment: .leading)
             .padding(.horizontal, 14)
-            .background(Color.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .background(Color.black.opacity(0.65), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(color.opacity(0.38), lineWidth: 1))
         }
         .buttonStyle(.plain)
@@ -229,7 +254,7 @@ struct HomeView: View {
         }
         .frame(maxWidth: .infinity, minHeight: 82, alignment: .leading)
         .padding(.horizontal, 14)
-        .background(Color.black.opacity(0.35), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(Color.black.opacity(0.45), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(color.opacity(0.24), lineWidth: 1))
         .opacity(0.72)
     }
@@ -257,14 +282,15 @@ struct FeaturesView: View {
 
     var body: some View {
         ZStack {
-            // Background: Image 4
+            Color.black.ignoresSafeArea()
+            
             GeometryReader { proxy in
-                Image("background_features")
+                loadImageFromBundle(named: "background_features")
                     .resizable()
                     .scaledToFill()
                     .frame(width: proxy.size.width, height: proxy.size.height)
                     .clipped()
-                    .overlay(Color.black.opacity(0.65))
+                    .overlay(Color.black.opacity(0.45))
             }
             .ignoresSafeArea()
 
@@ -508,7 +534,7 @@ struct PatchOptionCard: View {
             }
             .frame(maxWidth: .infinity, minHeight: 142, alignment: .leading)
             .padding(14)
-            .background(Color.black.opacity(0.65), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .background(Color.black.opacity(0.75), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(isEnabled ? color.opacity(0.85) : color.opacity(0.28), lineWidth: isEnabled ? 1.5 : 1))
             .shadow(color: isEnabled ? color.opacity(0.20) : .clear, radius: 12)
         }
