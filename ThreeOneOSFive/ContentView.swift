@@ -384,11 +384,13 @@ struct ContentView: View {
             DispatchQueue.main.async {
                 switch result {
                 case .applied:
-                    self.setPatchState(for: packageFilename, enabled: true)
+                    // Fix: Gán trực tiếp giá trị cho Binding thay vì gọi hàm setPatchState
+                    state.wrappedValue = true
                     self.patchMessage = "Inject Successful -- \(packageFilename)"
                     PatchAudioFeedback.bypassActivated()
                 case .restored:
-                    self.setPatchState(for: packageFilename, enabled: false)
+                    // Fix: Gán trực tiếp giá trị cho Binding thay vì gọi hàm setPatchState
+                    state.wrappedValue = false
                     self.patchMessage = "Restore Successful -- \(packageFilename)"
                     PatchAudioFeedback.originalRestored()
                 case .unavailable(let message):
