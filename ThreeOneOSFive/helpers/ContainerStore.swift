@@ -2,14 +2,20 @@ import Foundation
 import Darwin
 import UIKit
 
+// MARK: - Models
+
 struct InstalledApp: Identifiable, Hashable {
     let bundleID: String
     let name: String
     let containerPath: String
     let version: String
     let icon: UIImage?
+
     var id: String { bundleID }
-    var displayName: String { AppDisplayNamePolicy.resolve(bundleID: bundleID, candidates: [name]) }
+    var displayName: String {
+        AppDisplayNamePolicy.resolve(bundleID: bundleID, candidates: [name])
+    }
+
     static func == (lhs: InstalledApp, rhs: InstalledApp) -> Bool { lhs.id == rhs.id }
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
 }
@@ -19,14 +25,23 @@ struct FileEntry: Identifiable, Hashable {
     let path: String
     let isDirectory: Bool
     let size: Int64
+
     var id: String { path }
-    var sizeText: String { isDirectory ? "--" : ByteCountFormatter.string(fromByteCount: size, countStyle: .file) }
+    var sizeText: String {
+        if isDirectory { return "--" }
+        return ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
+    }
 }
+
+// MARK: - Store
 
 enum ContainerStore {
     static let appDataRoot = "/var/mobile/Containers/Data/Application"
     static let systemDataRoot = "/var/mobile/Containers/Data/System"
-    private static var shouldUseBadQuery: Bool { ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 26 }
+    
+    private static var shouldUseBadQuery: Bool {
+        ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 26
+    }
     
     static let researchAppIdentifiers = [
         "com.apple.mobilesafari", "com.apple.mobilenotes", "com.apple.Maps", "com.apple.facetime",
@@ -41,14 +56,16 @@ enum ContainerStore {
     ]
 
     static func resolveAppContainerPath(bundleID: String) -> String? {
-        // Quét plist trực tiếp để tránh gọi MCM
+        // Quét trực tiếp file metadata, không dùng MCM
         let dirs = enumerateDirectories(path: appDataRoot)
         for dir in dirs {
             let metaPath = (dir as NSString).appendingPathComponent(".com.apple.mobile_container_manager.metadata.plist")
             if let data = try? Data(contentsOf: URL(fileURLWithPath: metaPath)),
                let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any],
                let id = plist["MCMMetadataIdentifier"] as? String {
-                if id == bundleID || (bundleID.contains("garena") && id.contains("garena")) {
+                let lowerID = id.lowercased()
+                let targetID = bundleID.lowercased()
+                if lowerID == targetID || (targetID.contains("garena") && (lowerID.contains("garena") || lowerID.contains("ffvn"))) {
                     return dir
                 }
             }
@@ -66,7 +83,9 @@ enum ContainerStore {
     static func launchServicesStoreIdentifiers() -> [String] { return [] }
 
     static func isApplicationContainerPath(_ path: String) -> Bool {
-        return path.contains("/var/mobile/Containers/Data/Application/")
+        let canonicalRoot = ContainerDiscoveryMerger.canonicalPath(appDataRoot)
+        let canonicalPath = ContainerDiscoveryMerger.canonicalPath(path)
+        return canonicalPath.hasPrefix(canonicalRoot + "/") && UUID(uuidString: (canonicalPath as NSString).lastPathComponent) != nil
     }
 
     static func enumerateDirectories(path: String, maxInode: Int64 = 2_000_000) -> [String] {
