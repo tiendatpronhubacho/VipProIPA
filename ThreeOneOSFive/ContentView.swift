@@ -17,7 +17,7 @@ struct ContentView: View {
                 .tabItem { Label("Chức năng", systemImage: "cube.fill") }
                 .tag(1)
             
-            SettingsView() // View này cần có sẵn trong project của cậu
+            SettingsView()
                 .tabItem { Label("Cài đặt", systemImage: "gearshape.fill") }
                 .tag(2)
         }
@@ -26,18 +26,21 @@ struct ContentView: View {
     }
 }
 
-// MARK: - HOME DASHBOARD (Giao diện Ảnh 1 + Nền Ảnh 2)
+// MARK: - HOME DASHBOARD
 struct HomeDashboardView: View {
     @EnvironmentObject private var appState: AppState
     
     var body: some View {
         ZStack {
-            // Nền ảnh 2
+            // Fallback màu nền tối
+            AppTheme.pageBackground.ignoresSafeArea()
+            
+            // Nền ảnh 2 (Chỉ hiện nếu có ảnh)
             Image("bg_home")
                 .resizable()
                 .scaledToFill()
                 .ignoresSafeArea()
-                .overlay(Color.black.opacity(0.45)) // Làm tối nền để dễ đọc chữ
+                .overlay(Color.black.opacity(0.65)) // Làm tối nền
             
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 16) {
@@ -53,6 +56,7 @@ struct HomeDashboardView: View {
                             .foregroundStyle(.white.opacity(0.8))
                     }
                     .padding(.top, 40)
+                    .padding(.bottom, 20)
                     
                     // Card thông số
                     VStack(spacing: 14) {
@@ -69,7 +73,7 @@ struct HomeDashboardView: View {
                         Divider().background(.white.opacity(0.2))
                         
                         // Timer boxes
-                        HStack(spacing: 16) {
+                        HStack(spacing: 12) {
                             timeBox(value: "00", label: "NGÀY")
                             timeBox(value: "00", label: "GIỜ")
                             timeBox(value: "00", label: "PHÚT")
@@ -91,9 +95,9 @@ struct HomeDashboardView: View {
                         }
                     }
                     .padding(20)
-                    .background(Color.black.opacity(0.4))
+                    .background(Color.black.opacity(0.5))
                     .cornerRadius(24)
-                    .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.white.opacity(0.1), lineWidth: 1))
+                    .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.white.opacity(0.15), lineWidth: 1))
                     
                     // Footer Credits
                     VStack(spacing: 8) {
@@ -105,7 +109,7 @@ struct HomeDashboardView: View {
                         }
                     }
                     .padding(.top, 10)
-                    .padding(.bottom, 20)
+                    .padding(.bottom, 30)
                 }
                 .padding(.horizontal, 20)
             }
@@ -149,7 +153,7 @@ struct HomeDashboardView: View {
     }
 }
 
-// MARK: - PATCH CONTROL (Giao diện Ảnh 3 + Nền Ảnh 4)
+// MARK: - PATCH CONTROL
 struct PatchControlView: View {
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var appState: AppState
@@ -159,7 +163,6 @@ struct PatchControlView: View {
     @State private var patchOperationBusy = false
     @State private var patchMessage = "READY -- SELECT A PATCH"
 
-    // 14 State độc lập cho 14 chức năng
     @State private var p1 = false
     @State private var p2 = false
     @State private var p3 = false
@@ -177,12 +180,15 @@ struct PatchControlView: View {
 
     var body: some View {
         ZStack {
+            // Fallback màu nền tối
+            AppTheme.pageBackground.ignoresSafeArea()
+            
             // Nền ảnh 4
             Image("bg_patch")
                 .resizable()
                 .scaledToFill()
                 .ignoresSafeArea()
-                .overlay(Color.black.opacity(0.7)) // Tối hơn để nổi bật UI đỏ
+                .overlay(Color.black.opacity(0.75))
             
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 18) {
@@ -262,23 +268,21 @@ struct PatchControlView: View {
                     .font(.system(size: 9, weight: .bold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.45))
             }
+            .padding(.horizontal, 4)
 
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
                 patchCard(name: "Aim Drag", target: "FREE FIRE • VN", package: "Aim Drag.3105", color: AppTheme.accent, state: $p1)
                 patchCard(name: "Aim Neck", target: "FREE FIRE • VN", package: "Aim Neck.3105", color: AppTheme.secondaryAccent, state: $p2)
                 patchCard(name: "Aim Body", target: "FREE FIRE • VN", package: "Aim Body.3105", color: AppTheme.accent, state: $p3)
                 
-                // Đã sửa tại đây: Nhẹ Tâm -> Nhe Tam
                 patchCard(name: "Nhe Tam", target: "FREE FIRE • VN", package: "Nhe Tam.3105", color: AppTheme.secondaryAccent, state: $p4)
                 
                 patchCard(name: "Aim Chest", target: "FREE FIRE • VN", package: "Aim Chest.3105", color: AppTheme.accent, state: $p5)
                 patchCard(name: "Aim R8", target: "FREE FIRE • VN", package: "Aim R8.3105", color: AppTheme.secondaryAccent, state: $p6)
                 patchCard(name: "Aim Magic", target: "FREE FIRE • VN", package: "Aim Magic.3105", color: AppTheme.accent, state: $p7)
                 
-                // Đã sửa tại đây: Neck+Anten -> Neck Anten
                 patchCard(name: "Neck Anten", target: "FREE FIRE • VN", package: "Neck Anten.3105", color: AppTheme.secondaryAccent, state: $p8)
                 
-                // Đã sửa tại đây: Nhẹ + Anten -> Nhe Anten
                 patchCard(name: "Nhe Anten", target: "FREE FIRE • VN", package: "Nhe Anten.3105", color: AppTheme.accent, state: $p9)
                 
                 patchCard(name: "Mod Sonic", target: "FREE FIRE • DIMITRI", package: "Mod Sonic Dimitri.3105", color: AppTheme.secondaryAccent, state: $p10)
@@ -299,6 +303,7 @@ struct PatchControlView: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
             .background(Color.black.opacity(0.60), in: Capsule())
+            .padding(.top, 8)
         }
     }
 
@@ -399,7 +404,7 @@ struct PatchControlView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 4)
-        .padding(.bottom, 8)
+        .padding(.bottom, 20)
     }
 
     private func channelButton(title: String, url: String) -> some View {
@@ -439,20 +444,12 @@ struct PatchControlView: View {
         p1 = isPatchActive("Aim Drag.3105")
         p2 = isPatchActive("Aim Neck.3105")
         p3 = isPatchActive("Aim Body.3105")
-        
-        // Đã sửa tại đây: Nhe Tam.3105
         p4 = isPatchActive("Nhe Tam.3105")
-        
         p5 = isPatchActive("Aim Chest.3105")
         p6 = isPatchActive("Aim R8.3105")
         p7 = isPatchActive("Aim Magic.3105")
-        
-        // Đã sửa tại đây: Neck Anten.3105
         p8 = isPatchActive("Neck Anten.3105")
-        
-        // Đã sửa tại đây: Nhe Anten.3105
         p9 = isPatchActive("Nhe Anten.3105")
-        
         p10 = isPatchActive("Mod Sonic Dimitri.3105")
         p11 = isPatchActive("Mod Thỏ Dimitri.3105")
         p12 = isPatchActive("Mod Roblox Dimitri.3105")
