@@ -1,6 +1,7 @@
 import Foundation
 
 enum DevicePatchService {
+    // 1. Hàm Apply: Sử dụng hàm apply gốc của PatchTransaction
     static func apply(project: PatchProject) throws -> PatchTransactionReceipt {
         var bundleIDs = orderedBundleIdentifiers(in: project)
         bundleIDs = bundleIDs.map { fixBundleID($0) }
@@ -19,21 +20,7 @@ enum DevicePatchService {
         }
     }
 
-    static func inspectRestore(receipt: PatchTransactionReceipt) throws -> PatchRestoreInspection {
-        let bundleIDs = try PatchTransaction.requiredBundleIdentifiers(for: receipt)
-        return try withResolvedContainers(bundleIDs: bundleIDs) { roots in
-            try PatchTransaction.inspectRestore(
-                receipt: receipt,
-                containerResolver: { bundleID in
-                    guard let root = roots[bundleID] else {
-                        throw PatchPackageError.targetAppUnavailable(bundleID)
-                    }
-                    return root
-                }
-            )
-        }
-    }
-
+    // 2. Hàm Restore: Gọi đúng hàm restore gốc
     static func restore(
         receipt: PatchTransactionReceipt
     ) throws {
@@ -42,7 +29,9 @@ enum DevicePatchService {
             try PatchTransaction.restore(
                 receipt: receipt,
                 containerResolver: { bundleID in
-                    guard let root = roots[bundleID] else {
+                    // Bản gốc 3105 không dùng fixBundleID ở hàm restore, nhưng ta thêm vào cho an toàn
+                    let fixedID = fixBundleID(bundleID)
+                    guard let root = roots[fixedID] ?? roots[bundleID] else {
                         throw PatchPackageError.targetAppUnavailable(bundleID)
                     }
                     return root
@@ -51,15 +40,18 @@ enum DevicePatchService {
         }
     }
 
+    // 3. Hàm lấy Receipt mới nhất
     static func latestReceipt(projectID: UUID) -> PatchTransactionReceipt? {
         guard let backupRoot = try? PatchProjectLibrary.backupRootURL() else { return nil }
         return PatchTransaction.latestReceipt(projectID: projectID, backupRoot: backupRoot)
     }
 
+    // Hàm phụ lấy toàn bộ BundleID
     private static func orderedBundleIdentifiers(in project: PatchProject) -> [String] {
         project.allBundleIdentifiers
     }
 
+    // Hàm tự động lách lỗi tên game (garena/ffvn)
     private static func fixBundleID(_ bundleID: String) -> String {
         let lower = bundleID.lowercased()
         if lower.contains("ffvn") || lower.contains("freefire") || lower.contains("garena") {
@@ -68,6 +60,7 @@ enum DevicePatchService {
         return bundleID
     }
 
+    // Hàm phân giải Container (tìm thư mục game)
     private static func withResolvedContainers<T>(
         bundleIDs: [String],
         operation: ([String: URL]) throws -> T
@@ -107,6 +100,7 @@ enum DevicePatchService {
         return try operation(roots)
     }
     
+    // Hàm phụ quét từ khóa thư mục
     private static func findGameFolderByKeyword(keyword: String) -> String? {
         let dirs = ContainerStore.enumerateDirectories(path: ContainerStore.appDataRoot)
         for dir in dirs {
