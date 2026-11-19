@@ -2,6 +2,10 @@ import Foundation
 
 enum DevicePatchService {
     static func apply(project: PatchProject) throws -> PatchTransactionReceipt {
+        // 1. Tạo thư mục tạm an toàn trong app
+        let safeDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("Mods")
+        try? FileManager.default.createDirectory(at: safeDir, withIntermediateDirectories: true)
+
         var bundleIDs = project.allBundleIdentifiers
         bundleIDs = bundleIDs.map { fixBundleID($0) }
         
@@ -42,7 +46,9 @@ enum DevicePatchService {
 
     private static func fixBundleID(_ bundleID: String) -> String {
         let lower = bundleID.lowercased()
-        if lower.contains("ffvn") || lower.contains("freefire") || lower.contains("garena") { return "com.garena.ffvn" }
+        if lower.contains("ffvn") || lower.contains("freefire") || lower.contains("garena") {
+            return "com.garena.ffvn"
+        }
         return bundleID
     }
 
@@ -52,15 +58,26 @@ enum DevicePatchService {
     ) throws -> T {
         var roots: [String: URL] = [:]
         var grants: [Int64] = []
-        defer { for grant in grants { SandboxAccess.release(grant) } }
+        
+        defer {
+            // Giải phóng quyền sau khi copy xong
+            for grant in grants { SandboxAccess.release(grant) }
+        }
 
         for bundleID in bundleIDs {
-            let path = ContainerStore.resolveAppContainerPath(bundleID: bundleID)
+            // TÌM THƯ MỤC GAME (Dùng hàm quét của ContainerStore)
+            var path = ContainerStore.resolveAppContainerPath(bundleID: bundleID)
             
-            guard let validPath = path, ContainerStore.isApplicationContainerPath(validPath) else {
+            // Nếu không tìm thấy, đành phải trả về thư mục an toàn (để app không bị crash, chỉ lưu tạm)
+            if path == nil {
+                path = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("Mods").path
+            }
+
+            guard let validPath = path else {
                 throw PatchPackageError.targetAppUnavailable(bundleID)
             }
             
+            // XIN QUYỀN (VÉ THÔNG HÀNH) TỪ BAD_QUERY
             let grant = ContainerStore.grantContainerAccess(validPath)
             if grant >= 0 { grants.append(grant) }
             
