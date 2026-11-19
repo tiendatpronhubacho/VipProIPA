@@ -665,6 +665,13 @@ workflows:
               f.write(content)
           '
           
+      - name: Fix build script scheme name
+        script: |
+          # Tự động sửa lỗi scheme trong file build_unsigned.sh
+          if [ -f "build_unsigned.sh" ]; then
+            sed -i '' 's/-scheme TienDat/-scheme OGIOS/g' build_unsigned.sh
+          fi
+          
       - name: Build App
         script: |
           cd $CM_BUILD_DIR
