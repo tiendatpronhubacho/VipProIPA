@@ -46,15 +46,18 @@ struct SettingsView: View {
                     LabeledContent("iOS 17", value: ExploitSupportPolicy.verifiedIOS17Range)
                     LabeledContent("iOS 18", value: ExploitSupportPolicy.verifiedIOS18Range)
                     LabeledContent("iOS 26", value: ExploitSupportPolicy.verifiedIOS26Range)
+                    
+                    // SỬA Ở ĐÂY: Hiển thị dải phiên bản iOS 27 tự động thay vì hardcode "27.0"
+                    LabeledContent("iOS 27", value: ExploitSupportPolicy.verifiedIOS27Range)
+                    
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("iOS 27.0")
-                            .font(.body)
                         ForEach(ExploitSupportPolicy.verifiedIOS27Builds, id: \.build) { version in
                             Text(versionLabel(version))
                             .font(.caption.monospaced())
                             .foregroundStyle(.secondary)
                         }
                     }
+                    .padding(.leading, 16)
                     .padding(.vertical, 2)
                 } header: {
                     Text(language.text("settings.verified_versions"))
