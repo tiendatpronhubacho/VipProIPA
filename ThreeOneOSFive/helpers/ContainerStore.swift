@@ -38,14 +38,17 @@ struct FileEntry: Identifiable, Hashable {
 enum ContainerStore {
     static let appDataRoot = "/var/mobile/Containers/Data/Application"
     static let systemDataRoot = "/var/mobile/Containers/Data/System"
+    
     private static var shouldUseBadQuery: Bool {
         ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 26
     }
+    
     private static let applicationBundleRoots: [(path: String, nested: Bool)] = [
         ("/var/containers/Bundle/Application", true),
         ("/Applications", false),
         ("/System/Applications", false)
     ]
+    
     static let researchAppIdentifiers = [
         "com.apple.mobilesafari", "com.apple.mobilenotes", "com.apple.Maps",
         "com.apple.facetime", "com.apple.iBooks", "com.apple.podcasts",
@@ -66,32 +69,33 @@ enum ContainerStore {
             return nil
         }
         
-        // 1. Thử dùng MCM (cách cũ)
+        // [FIX iOS 26.5] Chạy hàm quét thư mục trước tiên để lách lệnh chặn MCM của Apple
+        if let scanned = resolveAppContainerPathByMetadataScan(bundleID: bundleID) {
+            log("patch: filesystem metadata scan resolved \(bundleID)")
+            return scanned
+        }
+        
+        // Fallback 1: Quét thẳng file plist metadata
+        if let bruteForced = resolveAppContainerPathByDirectoryScan(bundleID: bundleID) {
+            log("patch: directory scan resolved \(bundleID)")
+            return bruteForced
+        }
+        
+        // Fallback 2: Thử dùng MCM (cách cũ, có thể bị iOS 26 chặn)
         var lookupError: NSString?
         if let path = MCMActivateContainerPath(2, bundleID, false, &lookupError),
            isApplicationContainerPath(path) {
             log("patch: MHA-C2 resolved \(bundleID)")
             return path
         }
-        let detail = lookupError.map(String.init) ?? "unavailable"
-        log("patch: MHA-C2 could not resolve \(bundleID), detail=\(detail)")
-
-        // 2. [FALLBACK THÊM VÀO] Thử quét Metadata (nếu MCM thất bại trên iOS 26)
-        if let scanned = resolveAppContainerPathByMetadataScan(bundleID: bundleID) {
-            log("patch: filesystem metadata scan resolved \(bundleID)")
-            return scanned
-        }
         
-        // 3. [FALLBACK THÊM VÀO] Quét trực tiếp thư mục (Brute-force)
-        if let bruteForced = resolveAppContainerPathByDirectoryScan(bundleID: bundleID) {
-            log("patch: directory scan resolved \(bundleID)")
-            return bruteForced
-        }
+        let detail = lookupError.map(String.init) ?? "unavailable"
+        log("patch: All resolve methods failed for \(bundleID), MCM detail=\(detail)")
         
         return nil
     }
     
-    // HÀM MỚI: Quét thẳng vào thư mục của app để tìm bundle ID
+    // Hàm quét trực tiếp file metadata plist
     static func resolveAppContainerPathByDirectoryScan(bundleID: String) -> String? {
         let dirs = enumerateDirectories(path: appDataRoot)
         for dir in dirs {
@@ -100,17 +104,17 @@ enum ContainerStore {
                let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any],
                let id = plist["MCMMetadataIdentifier"] as? String,
                id == bundleID {
-                return dir
+                let canonical = ContainerDiscoveryMerger.canonicalPath(dir)
+                if isApplicationContainerPath(canonical) {
+                    return canonical
+                }
             }
         }
         return nil
     }
 
     static func resolveAppContainerPathByMetadataScan(bundleID: String) -> String? {
-        if KernelExploit.requiresSandboxEscape, !KernelExploit.hasSandboxAccess() {
-            // log("patch: metadata scan skipped -- sandbox access not active")
-            // Vẫn cố gắng chạy tiếp vì có thể exploit chạy ngầm đã xong
-        }
+        // Vẫn cố gắng chạy tiếp vì có thể exploit chạy ngầm đã xong
         let dirs = enumerateDirectories(path: appDataRoot)
         guard !dirs.isEmpty else {
             log("patch: metadata scan unavailable -- no containers enumerated")
@@ -361,17 +365,12 @@ enum ContainerStore {
             ? enumerateDirectories(path: systemDataRoot)
             : traversedSystemDirectories
         for directory in systemDirectories {
-            // Attempt the raw metadata read even without a traversal grant:
-            // it succeeds when the sandbox escape is active, which is the
-            // only path left when MCM/bad_query grants are denied.
             guard readContainerMetadata(containerPath: directory)?.bundleID == "com.apple.lsd" else {
                 continue
             }
             addCachePath((directory as NSString).appendingPathComponent("Library/Caches"))
         }
 
-        // Older and Simulator layouts keep the same store outside the MCM
-        // service-container layout. They are harmless fallbacks on device.
         addCachePath("/var/db/lsd")
         addCachePath("/var/mobile/Library/Caches")
 
@@ -552,9 +551,6 @@ enum ContainerStore {
     ) -> InstalledApp? {
         guard UUID(uuidString: fallback.bundleID) != nil else { return fallback }
 
-        // Read the MCM metadata plist directly. With the sandbox escape
-        // active the raw read succeeds even when every MCM/bad_query grant
-        // is denied; without it the read simply fails and we fall through.
         if let metadata = readContainerMetadata(containerPath: fallback.containerPath) {
             let bundleID = metadata.bundleID.trimmingCharacters(in: .whitespacesAndNewlines)
             if ContainerBundleCandidateResolver.isValidBundleIdentifier(bundleID),
