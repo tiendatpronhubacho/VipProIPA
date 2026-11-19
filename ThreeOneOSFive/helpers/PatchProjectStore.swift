@@ -27,6 +27,13 @@ final class PatchProjectStore: ObservableObject {
     @Published var passwordRequest: PatchPasswordRequest?
     @Published var alert: PatchStoreAlert?
     @Published var unlockErrorKey: String?
+    
+    @Published var activePatchIDs: Set<UUID> = [] {
+        didSet {
+            let ids = activePatchIDs.map { $0.uuidString }
+            UserDefaults.standard.set(ids, forKey: "com.tiendat.develop.activePatchIDs")
+        }
+    }
 
     private struct PendingUnlock {
         let data: Data
@@ -35,8 +42,13 @@ final class PatchProjectStore: ObservableObject {
     }
 
     private var pendingUnlock: PendingUnlock?
+    private let receiptKeyPrefix = "com.tiendat.develop.receipt."
 
     init() {
+        if let saved = UserDefaults.standard.array(forKey: "com.tiendat.develop.activePatchIDs") as? [String] {
+            self.activePatchIDs = Set(saved.compactMap { UUID(uuidString: $0) })
+        }
+        
         PatchProjectLibrary.installBundledPackagesIfNeeded()
         reload()
         
@@ -89,9 +101,7 @@ final class PatchProjectStore: ObservableObject {
         items = PatchProjectLibrary.load()
     }
 
-    // Các hàm bên dưới giữ nguyên như file cũ của bạn.
-    // ... (Copy từ hàm create(project:password:) trở xuống của file cũ)
-    
+    // MARK: - CRUD
     func create(project: PatchProject, password: String?) {
         runOperation(successMessageKey: "patch.created_message") {
             let encoded = try PatchPackageCodec.encodeNew(project: project, password: password)
@@ -303,15 +313,126 @@ final class PatchProjectStore: ObservableObject {
         }
     }
 
+    // MARK: - Apply & Restore Patch (REAL)
+
+    func applyPatch(_ item: PatchLibraryItem) {
+        guard !isBusy else { return }
+        guard let project = try? PatchProjectLibrary.loadProject(from: item.packageURL) else {
+            present(.invalidProject)
+            return
+        }
+        guard let backupRoot = try? PatchProjectLibrary.backupRootURL() else {
+            present(.unsupportedFormat)
+            return
+        }
+        
+        let itemID = item.id
+        let journalKey = receiptKeyPrefix + itemID.uuidString
+        
+        isBusy = true
+        Task.detached(priority: .userInitiated) { [weak self] in
+            do {
+                let receipt = try PatchTransaction.apply(
+                    project: project,
+                    backupRoot: backupRoot,
+                    containerResolver: { bundleID in
+                        guard let url = ContainerStore.ensureWriteAccess(to: bundleID) else {
+                            throw PatchPackageError.targetAppUnavailable(bundleID)
+                        }
+                        return url
+                    }
+                )
+                
+                UserDefaults.standard.set(receipt.journalURL.path, forKey: journalKey)
+                
+                await MainActor.run {
+                    self?.activePatchIDs.insert(itemID)
+                    self?.isBusy = false
+                    self?.alert = PatchStoreAlert(
+                        titleKey: "common.done",
+                        messageKey: "patch.applied_message"
+                    )
+                }
+            } catch let error as PatchPackageError {
+                await MainActor.run {
+                    self?.isBusy = false
+                    self?.present(error)
+                }
+            } catch {
+                await MainActor.run {
+                    self?.isBusy = false
+                    self?.present(.applyFailed)
+                }
+            }
+        }
+    }
+
+    func restorePatch(_ item: PatchLibraryItem) {
+        guard !isBusy else { return }
+        
+        let key = receiptKeyPrefix + item.id.uuidString
+        let itemID = item.id
+        
+        guard let journalPath = UserDefaults.standard.string(forKey: key) else {
+            activePatchIDs.remove(itemID)
+            return
+        }
+        
+        let journalURL = URL(fileURLWithPath: journalPath)
+        let receipt = PatchTransactionReceipt(
+            id: UUID(),
+            projectID: itemID,
+            journalURL: journalURL
+        )
+        
+        isBusy = true
+        Task.detached(priority: .userInitiated) { [weak self] in
+            do {
+                try PatchTransaction.restore(
+                    receipt: receipt,
+                    containerResolver: { bundleID in
+                        guard let url = ContainerStore.ensureWriteAccess(to: bundleID) else {
+                            throw PatchPackageError.targetAppUnavailable(bundleID)
+                        }
+                        return url
+                    }
+                )
+                
+                try? FileManager.default.removeItem(at: journalURL)
+                UserDefaults.standard.removeObject(forKey: key)
+                
+                await MainActor.run {
+                    self?.activePatchIDs.remove(itemID)
+                    self?.isBusy = false
+                    self?.alert = PatchStoreAlert(
+                        titleKey: "common.done",
+                        messageKey: "patch.restored_message"
+                    )
+                }
+            } catch let error as PatchPackageError {
+                await MainActor.run {
+                    self?.isBusy = false
+                    self?.present(error)
+                }
+            } catch {
+                await MainActor.run {
+                    self?.isBusy = false
+                    self?.present(.restoreFailed)
+                }
+            }
+        }
+    }
+
+    // MARK: - Helpers
     private func runOperation(
         successMessageKey: String,
-        operation: @escaping () throws -> Void
+        operation: @escaping () async throws -> Void
     ) {
         guard !isBusy else { return }
         isBusy = true
         Task.detached(priority: .userInitiated) { [weak self] in
             do {
-                try operation()
+                try await operation()
                 await self?.finishOperation(successMessageKey: successMessageKey)
             } catch let error as PatchPackageError {
                 await self?.failOperation(error)

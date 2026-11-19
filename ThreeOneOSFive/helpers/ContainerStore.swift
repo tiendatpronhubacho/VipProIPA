@@ -90,6 +90,13 @@ enum ContainerStore {
         return bad_query(&pathC, true, nil, false)
     }
 
+    // MARK: - HÀM MỚI: Ensure Write Access
+    static func ensureWriteAccess(to bundleID: String) -> URL? {
+        guard let path = resolveAppContainerPath(bundleID: bundleID) else { return nil }
+        _ = grantContainerAccess(path)
+        return URL(fileURLWithPath: path)
+    }
+
     // Các hàm giả lập để View không lỗi
     static func installedAppsFromAPI() -> [InstalledApp] { return [] }
     static func applicationBundleMetadataCatalog() -> [String: ApplicationBundleMetadata] { return [:] }

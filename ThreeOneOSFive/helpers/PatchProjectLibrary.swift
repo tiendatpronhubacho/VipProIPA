@@ -51,7 +51,7 @@ enum PatchProjectLibrary {
         }
 
         let nestedURLs = bundle.urls(forResourcesWithExtension: "3105", subdirectory: "Patches") ?? []
-        let flattenedURLs = bundle.urls(forResourcesWithExtension: "3105", subdirectory: nil) ?? []
+        let flattenedURLs = bundle.urls(forResource: "3105", withExtension: nil) ?? []
         var seen = Set<String>()
         let bundledURLs = (nestedURLs + flattenedURLs).filter { seen.insert($0.standardizedFileURL.path).inserted }
 
@@ -228,9 +228,25 @@ enum PatchProjectLibrary {
         return project
     }
 
+    // MARK: - HÀM MỚI: Load Project
+    static func loadProject(from packageURL: URL) throws -> PatchProject {
+        let data = try readPackage(at: packageURL)
+        let summary = try PatchPackageCodec.inspect(data)
+        
+        if let key = try PatchKeyStore.load(for: summary) {
+            let decoded = try PatchPackageCodec.decode(data, contentKey: key)
+            return decoded.project
+        }
+        if summary.isPasswordProtected {
+            throw PatchPackageError.invalidPasswordOrCorruptedPackage
+        }
+        let decoded = try PatchPackageCodec.decode(data, password: nil)
+        return decoded.project
+    }
+
     private static func sanitizedFilename(_ rawName: String) -> String {
         let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_ "))
-        let scalars = rawName.unicodeScalars.map { allowed.contains($0) ? Character(String($0)) : "-" }
+        let scalars = rawName.unicodeScalars.map { allowed.contains($0) ? Character($0) : "-" }
         let result = String(scalars)
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .prefix(80)

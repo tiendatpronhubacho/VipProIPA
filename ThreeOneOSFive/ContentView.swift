@@ -292,15 +292,7 @@ struct HomeView: View {
 struct FeaturesView: View {
     @Environment(\.scenePhase) private var scenePhase
     @ObservedObject var patchStore: PatchProjectStore
-    @State private var patchOperationBusy = false
-    @State private var patchMessage = "READY -- SELECT A PATCH"
     @State private var selectedMenu = 0 // 0: AIM, 1: MOD
-
-    @State private var p1 = false; @State private var p2 = false; @State private var p3 = false
-    @State private var p4 = false; @State private var p5 = false; @State private var p6 = false
-    @State private var p7 = false; @State private var p8 = false; @State private var p9 = false
-    @State private var p10 = false; @State private var p11 = false; @State private var p12 = false
-    @State private var p13 = false; @State private var p14 = false
 
     var body: some View {
         ZStack {
@@ -332,22 +324,22 @@ struct FeaturesView: View {
                     VStack(spacing: 10) {
                         if selectedMenu == 0 {
                             // TAB AIM
-                            patchRow(name: "Aim Drag", target: "FREE FIRE • VN", package: "Aim Drag.3105", state: $p1)
-                            patchRow(name: "Aim Neck", target: "FREE FIRE • VN", package: "Aim Neck.3105", state: $p2)
-                            patchRow(name: "Aim Body", target: "FREE FIRE • VN", package: "Aim Body.3105", state: $p3)
-                            patchRow(name: "Nhe Tam", target: "FREE FIRE • VN", package: "Nhe Tam.3105", state: $p4)
-                            patchRow(name: "Aim Chest", target: "FREE FIRE • VN", package: "Aim Chest.3105", state: $p5)
-                            patchRow(name: "Aim R8", target: "FREE FIRE • VN", package: "Aim R8.3105", state: $p6)
-                            patchRow(name: "Aim Magic", target: "FREE FIRE • VN", package: "Aim Magic.3105", state: $p7)
-                            patchRow(name: "Neck Anten", target: "FREE FIRE • VN", package: "Neck Anten.3105", state: $p8)
-                            patchRow(name: "Nhe Anten", target: "FREE FIRE • VN", package: "Nhe Anten.3105", state: $p9)
+                            patchRow(name: "Aim Drag", target: "FREE FIRE • VN", package: "Aim Drag.3105")
+                            patchRow(name: "Aim Neck", target: "FREE FIRE • VN", package: "Aim Neck.3105")
+                            patchRow(name: "Aim Body", target: "FREE FIRE • VN", package: "Aim Body.3105")
+                            patchRow(name: "Nhe Tam", target: "FREE FIRE • VN", package: "Nhe Tam.3105")
+                            patchRow(name: "Aim Chest", target: "FREE FIRE • VN", package: "Aim Chest.3105")
+                            patchRow(name: "Aim R8", target: "FREE FIRE • VN", package: "Aim R8.3105")
+                            patchRow(name: "Aim Magic", target: "FREE FIRE • VN", package: "Aim Magic.3105")
+                            patchRow(name: "Neck Anten", target: "FREE FIRE • VN", package: "Neck Anten.3105")
+                            patchRow(name: "Nhe Anten", target: "FREE FIRE • VN", package: "Nhe Anten.3105")
                         } else {
                             // TAB MOD
-                            patchRow(name: "Mod Sonic", target: "FREE FIRE • DIMITRI", package: "Mod Sonic Dimitri.3105", state: $p10)
-                            patchRow(name: "Mod Thỏ", target: "FREE FIRE • DIMITRI", package: "Mod Thỏ Dimitri.3105", state: $p11)
-                            patchRow(name: "Mod Roblox", target: "FREE FIRE • DIMITRI", package: "Mod Roblox Dimitri.3105", state: $p12)
-                            patchRow(name: "Mod Báo Hồng", target: "FREE FIRE • DIMITRI", package: "Mod Báo Hồng Dimitri.3105", state: $p13)
-                            patchRow(name: "Mod Baki", target: "FREE FIRE • ALOCK", package: "Mod Baki Alock.3105", state: $p14)
+                            patchRow(name: "Mod Sonic", target: "FREE FIRE • DIMITRI", package: "Mod Sonic Dimitri.3105")
+                            patchRow(name: "Mod Thỏ", target: "FREE FIRE • DIMITRI", package: "Mod Thỏ Dimitri.3105")
+                            patchRow(name: "Mod Roblox", target: "FREE FIRE • DIMITRI", package: "Mod Roblox Dimitri.3105")
+                            patchRow(name: "Mod Báo Hồng", target: "FREE FIRE • DIMITRI", package: "Mod Báo Hồng Dimitri.3105")
+                            patchRow(name: "Mod Baki", target: "FREE FIRE • ALOCK", package: "Mod Baki Alock.3105")
                         }
                     }
                     .padding(.horizontal, 18)
@@ -356,8 +348,8 @@ struct FeaturesView: View {
 
                 // Thanh trạng thái dưới cùng
                 HStack(spacing: 8) {
-                    Circle().fill(patchMessage.localizedCaseInsensitiveContains("successful") ? .green : AppTheme.accent).frame(width: 7, height: 7)
-                    Text(patchOperationBusy ? "PROCESSING PATCH…" : patchMessage)
+                    Circle().fill(patchStore.alert != nil ? .red : AppTheme.accent).frame(width: 7, height: 7)
+                    Text(patchStore.isBusy ? "PROCESSING PATCH…" : "READY -- SELECT A PATCH")
                         .font(.system(size: 10, weight: .bold, design: .rounded))
                         .foregroundStyle(.white.opacity(0.8))
                         .lineLimit(2)
@@ -370,12 +362,6 @@ struct FeaturesView: View {
                 .padding(.horizontal, 18)
                 .padding(.bottom, 8)
             }
-        }
-        .onAppear { syncPatchStates() }
-        .onChange(of: scenePhase) { phase in
-            guard phase == .active, !patchOperationBusy else { return }
-            syncPatchStates()
-            patchMessage = "READY -- SELECT A PATCH"
         }
     }
 
@@ -399,9 +385,12 @@ struct FeaturesView: View {
         .buttonStyle(.plain)
     }
 
-    // Hàng Patch (Đã thay Toggle bằng Button)
-    private func patchRow(name: String, target: String, package: String, state: Binding<Bool>) -> some View {
-        HStack(spacing: 12) {
+    // Hàng Patch (Đã nối với PatchProjectStore)
+    private func patchRow(name: String, target: String, package: String) -> some View {
+        let item = patchStore.items.first(where: { $0.packageURL.lastPathComponent.caseInsensitiveCompare(package) == .orderedSame })
+        let isEnabled = item.flatMap { patchStore.activePatchIDs.contains($0.id) } ?? false
+        
+        return HStack(spacing: 12) {
             // Icon
             Image(systemName: "scope")
                 .font(.system(size: 18, weight: .bold))
@@ -421,132 +410,35 @@ struct FeaturesView: View {
             
             Spacer()
             
-            // Nút bấm giả lập Toggle
+            // Nút bấm Toggle
             Button {
-                guard !patchOperationBusy else { return }
-                let newValue = !state.wrappedValue
-                state.wrappedValue = newValue
-                togglePatch(packageFilename: package, state: state, isEnabling: newValue)
+                guard let item = item, !patchStore.isBusy else { return }
+                if isEnabled {
+                    patchStore.restorePatch(item)
+                } else {
+                    patchStore.applyPatch(item)
+                }
             } label: {
                 ZStack {
                     Capsule()
-                        .fill(state.wrappedValue ? AppTheme.accent : Color.white.opacity(0.15))
+                        .fill(isEnabled ? AppTheme.accent : Color.white.opacity(0.15))
                         .frame(width: 50, height: 30)
                     
                     Circle()
                         .fill(Color.white)
                         .frame(width: 24, height: 24)
-                        .offset(x: state.wrappedValue ? 10 : -10)
+                        .offset(x: isEnabled ? 10 : -10)
                         .shadow(radius: 2)
                 }
             }
             .buttonStyle(.plain)
-            .disabled(patchOperationBusy)
+            .disabled(patchStore.isBusy || item == nil)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .background(Color.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(AppTheme.accent.opacity(0.3), lineWidth: 0.5))
-        .opacity(patchOperationBusy ? 0.5 : 1)
-    }
-
-    private func syncPatchStates() {
-        p1 = isPatchActive("Aim Drag.3105"); p2 = isPatchActive("Aim Neck.3105")
-        p3 = isPatchActive("Aim Body.3105"); p4 = isPatchActive("Nhẹ Tâm.3105")
-        p5 = isPatchActive("Aim Chest.3105"); p6 = isPatchActive("Aim R8.3105")
-        p7 = isPatchActive("Aim Magic.3105"); p8 = isPatchActive("Neck+Anten.3105")
-        p9 = isPatchActive("Nhẹ + Anten.3105"); p10 = isPatchActive("Mod Sonic Dimitri.3105")
-        p11 = isPatchActive("Mod Thỏ Dimitri.3105"); p12 = isPatchActive("Mod Roblox Dimitri.3105")
-        p13 = isPatchActive("Mod Báo Hồng Dimitri.3105"); p14 = isPatchActive("Mod Baki Alock.3105")
-    }
-
-    private func isPatchActive(_ packageFilename: String) -> Bool {
-        patchStore.items.first(where: { $0.packageURL.lastPathComponent.caseInsensitiveCompare(packageFilename) == .orderedSame })
-            .flatMap { DevicePatchService.latestReceipt(projectID: $0.id) } != nil
-    }
-
-    private func setPatchState(for packageFilename: String, enabled: Bool) {
-        switch packageFilename {
-        case "Aim Drag.3105": p1 = enabled
-        case "Aim Neck.3105": p2 = enabled
-        case "Aim Body.3105": p3 = enabled
-        case "Nhẹ Tâm.3105": p4 = enabled
-        case "Aim Chest.3105": p5 = enabled
-        case "Aim R8.3105": p6 = enabled
-        case "Aim Magic.3105": p7 = enabled
-        case "Neck+Anten.3105": p8 = enabled
-        case "Nhẹ + Anten.3105": p9 = enabled
-        case "Mod Sonic Dimitri.3105": p10 = enabled
-        case "Mod Thỏ Dimitri.3105": p11 = enabled
-        case "Mod Roblox Dimitri.3105": p12 = enabled
-        case "Mod Báo Hồng Dimitri.3105": p13 = enabled
-        case "Mod Baki Alock.3105": p14 = enabled
-        default: break
-        }
-    }
-
-    private func togglePatch(packageFilename: String, state: Binding<Bool>, isEnabling: Bool) {
-        guard !patchOperationBusy else { return }
-        guard let item = patchStore.items.first(where: { $0.packageURL.lastPathComponent.caseInsensitiveCompare(packageFilename) == .orderedSame }) else {
-            patchMessage = "ERROR -- PACKAGE NOT FOUND"
-            state.wrappedValue = !isEnabling // Revert
-            return
-        }
-
-        patchOperationBusy = true
-        patchMessage = "PROCESSING -- \(packageFilename)"
-        let project = item.project
-        let projectID = item.id
-
-        DispatchQueue.global(qos: .userInitiated).async {
-            var resultMessage = ""
-            
-            do {
-                if !isEnabling {
-                    // Đang tắt (Restore)
-                    guard let receipt = DevicePatchService.latestReceipt(projectID: projectID) else {
-                        DispatchQueue.main.async {
-                            self.setPatchState(for: packageFilename, enabled: false)
-                            self.patchMessage = "OFF -- NO ACTIVE PATCH FOUND"
-                            self.patchOperationBusy = false
-                        }
-                        return
-                    }
-                    try DevicePatchService.restore(receipt: receipt)
-                    resultMessage = "Restore Successful -- \(packageFilename)"
-                } else {
-                    // Đang bật (Apply)
-                    guard let project else {
-                        DispatchQueue.main.async {
-                            self.patchStore.requestUnlock(for: item)
-                            self.patchMessage = "PASSWORD REQUIRED -- ENTER PACKAGE PASSWORD"
-                            // Revert lại trạng thái UI nếu cần mật khẩu
-                            self.setPatchState(for: packageFilename, enabled: false)
-                            self.patchOperationBusy = false
-                        }
-                        return
-                    }
-                    _ = try DevicePatchService.apply(project: project)
-                    resultMessage = "Inject Successful -- \(packageFilename)"
-                }
-            } catch {
-                resultMessage = "FAILED -- \(String(describing: error))"
-                // Nếu lỗi, hoàn tác lại trạng thái
-                DispatchQueue.main.async {
-                    self.setPatchState(for: packageFilename, enabled: !isEnabling)
-                }
-            }
-
-            DispatchQueue.main.async {
-                if resultMessage.contains("Successful") {
-                    self.patchMessage = resultMessage
-                    if isEnabling { PatchAudioFeedback.bypassActivated() } else { PatchAudioFeedback.originalRestored() }
-                } else {
-                    self.patchMessage = resultMessage
-                }
-                self.patchOperationBusy = false
-            }
-        }
+        .opacity(patchStore.isBusy ? 0.5 : 1)
     }
 }
 

@@ -20,53 +20,77 @@ enum PatchTransaction {
         let records: [Record]
     }
 
-    static func apply(project: PatchProject, backupRoot: URL, containerResolver: (String) throws -> URL, fileManager: FileManager = .default) throws -> PatchTransactionReceipt {
-        var roots: [String: URL] = [:]
-        var resolvedRules: [(PatchRule, URL)] = []
-        
-        for rule in project.rules {
-            let root = PatchPathValidator.canonicalFileURL(try containerResolver(rule.bundleID))
-            let target = try PatchPathValidator.resolveContainedTargetURL(relativePath: rule.relativePath, containerRoot: root)
-            roots[rule.bundleID] = root
-            resolvedRules.append((rule, target))
-        }
-        
+    static func apply(
+        project: PatchProject,
+        backupRoot: URL,
+        containerResolver: (String) throws -> URL,
+        fileManager: FileManager = .default
+    ) throws -> PatchTransactionReceipt {
         let transactionID = UUID()
-        let transDir = backupRoot.appendingPathComponent(transactionID.uuidString)
-        try? fileManager.createDirectory(at: transDir, withIntermediateDirectories: true)
-        
+        let transDir = backupRoot.appendingPathComponent(transactionID.uuidString, isDirectory: true)
+        try fileManager.createDirectory(at: transDir, withIntermediateDirectories: true)
+
         var records: [Record] = []
-        for (rule, target) in resolvedRules {
+
+        for rule in project.rules {
+            let root = try containerResolver(rule.bundleID)
+            let target = root.appendingPathComponent(rule.relativePath)
+
             let existed = fileManager.fileExists(atPath: target.path)
-            let backupFilename = existed ? "\(rule.id.uuidString).bak" : nil
-            
-            if let bf = backupFilename { try? fileManager.copyItem(at: target, to: transDir.appendingPathComponent(bf)) }
-            try? fileManager.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try? rule.replacementData.write(to: target)
-            
-            records.append(Record(bundleID: rule.bundleID, relativePath: rule.relativePath, originalExisted: existed, backupFilename: backupFilename))
+            var backupFilename: String? = nil
+
+            if existed {
+                let bf = "\(rule.id.uuidString).bak"
+                let backupURL = transDir.appendingPathComponent(bf)
+                try? fileManager.removeItem(at: backupURL)
+                try fileManager.copyItem(at: target, to: backupURL)
+                backupFilename = bf
+            } else {
+                try fileManager.createDirectory(
+                    at: target.deletingLastPathComponent(),
+                    withIntermediateDirectories: true
+                )
+            }
+
+            try rule.replacementData.write(to: target, options: .atomic)
+
+            records.append(Record(
+                bundleID: rule.bundleID,
+                relativePath: rule.relativePath,
+                originalExisted: existed,
+                backupFilename: backupFilename
+            ))
         }
-        
+
         let journal = Journal(transactionID: transactionID, projectID: project.id, records: records)
         let journalURL = transDir.appendingPathComponent("journal.plist")
-        try? PropertyListEncoder().encode(journal).write(to: journalURL)
-        
+        let encoded = try PropertyListEncoder().encode(journal)
+        try encoded.write(to: journalURL)
+
         return PatchTransactionReceipt(id: transactionID, projectID: project.id, journalURL: journalURL)
     }
 
-    static func restore(receipt: PatchTransactionReceipt, containerResolver: (String) throws -> URL, fileManager: FileManager = .default) throws {
+    static func restore(
+        receipt: PatchTransactionReceipt,
+        containerResolver: (String) throws -> URL,
+        fileManager: FileManager = .default
+    ) throws {
         guard let data = try? Data(contentsOf: receipt.journalURL),
-              let journal = try? PropertyListDecoder().decode(Journal.self, from: data) else { return }
-        
+              let journal = try? PropertyListDecoder().decode(Journal.self, from: data) else {
+            throw PatchPackageError.invalidProject
+        }
+
         for record in journal.records {
-            let root = PatchPathValidator.canonicalFileURL(try containerResolver(record.bundleID))
-            let target = try PatchPathValidator.resolveContainedTargetURL(relativePath: record.relativePath, containerRoot: root)
-            
+            let root = try containerResolver(record.bundleID)
+            let target = root.appendingPathComponent(record.relativePath)
+
             if record.originalExisted, let bf = record.backupFilename {
-                let backupFile = receipt.journalURL.deletingLastPathComponent().appendingPathComponent(bf)
-                if fileManager.fileExists(atPath: backupFile.path) {
+                let backupURL = receipt.journalURL
+                    .deletingLastPathComponent()
+                    .appendingPathComponent(bf)
+                if fileManager.fileExists(atPath: backupURL.path) {
                     try? fileManager.removeItem(at: target)
-                    try? fileManager.copyItem(at: backupFile, to: target)
+                    try fileManager.copyItem(at: backupURL, to: target)
                 }
             } else {
                 try? fileManager.removeItem(at: target)
@@ -74,22 +98,45 @@ enum PatchTransaction {
         }
     }
 
-    static func latestReceipt(projectID: UUID, backupRoot: URL, fileManager: FileManager = .default) -> PatchTransactionReceipt? {
-        let dir = backupRoot.appendingPathComponent(projectID.uuidString, isDirectory: true)
-        guard let dirs = try? fileManager.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) else { return nil }
-        for d in dirs {
-            let jUrl = d.appendingPathComponent("journal.plist")
-            if let data = try? Data(contentsOf: jUrl),
-               let journal = try? PropertyListDecoder().decode(Journal.self, from: data) {
-                return PatchTransactionReceipt(id: journal.transactionID, projectID: journal.projectID, journalURL: jUrl)
+    static func latestReceipt(
+        projectID: UUID,
+        backupRoot: URL,
+        fileManager: FileManager = .default
+    ) -> PatchTransactionReceipt? {
+        guard let dirs = try? fileManager.contentsOfDirectory(
+            at: backupRoot,
+            includingPropertiesForKeys: [.contentModificationDateKey],
+            options: [.skipsHiddenFiles]
+        ) else { return nil }
+
+        var result: PatchTransactionReceipt?
+        var newestDate: Date = .distantPast
+
+        for dir in dirs {
+            let journalURL = dir.appendingPathComponent("journal.plist")
+            guard let data = try? Data(contentsOf: journalURL),
+                  let journal = try? PropertyListDecoder().decode(Journal.self, from: data),
+                  journal.projectID == projectID else { continue }
+            
+            let modDate = (try? dir.resourceValues(forKeys: [.contentModificationDateKey])
+                .contentModificationDate) ?? .distantPast
+            if modDate > newestDate {
+                newestDate = modDate
+                result = PatchTransactionReceipt(
+                    id: journal.transactionID,
+                    projectID: journal.projectID,
+                    journalURL: journalURL
+                )
             }
         }
-        return nil
+        return result
     }
 
     static func requiredBundleIdentifiers(for receipt: PatchTransactionReceipt) throws -> [String] {
         guard let data = try? Data(contentsOf: receipt.journalURL),
-              let journal = try? PropertyListDecoder().decode(Journal.self, from: data) else { return [] }
+              let journal = try? PropertyListDecoder().decode(Journal.self, from: data) else {
+            throw PatchPackageError.invalidProject
+        }
         return Array(Set(journal.records.map { $0.bundleID }))
     }
 }
