@@ -24,6 +24,7 @@ struct ContentView: View {
                 }
                 .tag(1)
             
+            // Gọi file SettingsView gốc của bạn ở đây
             SettingsView()
                 .tabItem {
                     Label("Cài đặt", systemImage: "gearshape.fill")
@@ -428,127 +429,48 @@ struct FeaturesView: View {
     }
 }
 
-// MARK: - TRANG CÀI ĐẶT (SETTINGS VIEW)
-struct SettingsView: View {
-    @Environment(\.appLanguage) private var language
-    @EnvironmentObject private var appState: AppState
-    @AppStorage(AppLanguage.storageKey) private var languageCode = AppLanguage.english.rawValue
-
+// MARK: - HELPER VIEWS & COMPONENTS
+struct AnimatedHyperBackdrop: View {
+    @State private var animate = false
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    HStack(spacing: 14) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("TienDat").font(.headline)
-                            Text(language.text("common.version", appVersion))
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
-
-                Section(language.text("settings.language")) {
-                    Picker(language.text("settings.language"), selection: $languageCode) {
-                        ForEach(AppLanguage.allCases) { option in
-                            Text(option.displayName).tag(option.rawValue)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                }
-
-                Section(language.text("common.device")) {
-                    LabeledContent(language.text("dashboard.hardware_model"), value: AppInfo.displayMachineName)
-                    LabeledContent(language.text("settings.ios_version"), value: "\(AppInfo.osVersion) (\(AppInfo.osBuild))")
-                }
-
-                Section {
-                    HStack {
-                        Text(language.text("settings.current_version"))
-                        Spacer()
-                        Text(language.text(appState.isSupported ? "settings.supported" : "settings.unsupported"))
-                            .foregroundStyle(appState.isSupported ? Color.green : Color.red)
-                    }
-                    LabeledContent("iOS 17", value: ExploitSupportPolicy.verifiedIOS17Range)
-                    LabeledContent("iOS 18", value: ExploitSupportPolicy.verifiedIOS18Range)
-                    LabeledContent("iOS 26", value: ExploitSupportPolicy.verifiedIOS26Range)
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("iOS 27.0")
-                            .font(.body)
-                        ForEach(ExploitSupportPolicy.verifiedIOS27Builds, id: \.build) { version in
-                            Text(versionLabel(version))
-                                .font(.caption.monospaced())
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .padding(.vertical, 2)
-                } header: {
-                    Text(language.text("settings.verified_versions"))
-                } footer: {
-                    Text(language.text("settings.supported_versions_footer"))
-                }
+        GeometryReader { proxy in
+            ZStack {
+                AppTheme.pageBackground
+                Circle()
+                    .fill(AppTheme.accent.opacity(0.12))
+                    .frame(width: 280, height: 280)
+                    .blur(radius: 70)
+                    .offset(x: animate ? 120 : -120, y: -proxy.size.height * 0.23)
+                Circle()
+                    .fill(AppTheme.secondaryAccent.opacity(0.08))
+                    .frame(width: 260, height: 260)
+                    .blur(radius: 80)
+                    .offset(x: animate ? -100 : 100, y: proxy.size.height * 0.22)
+                GridOverlay()
             }
-            .tint(AppTheme.accent)
-            .scrollContentBackground(.hidden)
-            .background(AppTheme.pageBackground)
-            .navigationTitle(language.text("settings.title"))
-            .navigationBarTitleDisplayMode(.inline)
-        }
-    }
-
-    private var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "AppReleaseDisplayVersion") as? String
-            ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
-            ?? "1.0"
-    }
-
-    private func versionLabel(
-        _ version: (beta: Int, publicBeta: Int?, build: String)
-    ) -> String {
-        if let publicBeta = version.publicBeta {
-            return language.text(
-                "settings.developer_public_beta_build",
-                Int64(version.beta),
-                Int64(publicBeta),
-                version.build
-            )
-        }
-        return language.text(
-            "settings.developer_beta_build",
-            Int64(version.beta),
-            version.build
-        )
-    }
-
-    @ViewBuilder
-    private func creditsRow(name: String, role: String, url: String) -> some View {
-        if let destination = URL(string: url) {
-            Link(destination: destination) {
-                HStack(spacing: 12) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(name)
-                            .font(.headline)
-                            .foregroundStyle(.primary)
-                        Text(role)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    Image(systemName: "arrow.up.right")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(AppTheme.accent)
-                        .frame(width: 28, height: 28)
-                }
-                .contentShape(Rectangle())
+            .onAppear {
+                withAnimation(.easeInOut(duration: 7).repeatForever(autoreverses: true)) { animate = true }
             }
-            .accessibilityLabel(language.text("accessibility.open_profile", name))
         }
     }
 }
 
-// MARK: - HELPER VIEWS & COMPONENTS
+private struct GridOverlay: View {
+    var body: some View {
+        Canvas { context, size in
+            var path = Path()
+            let spacing: CGFloat = 44
+            stride(from: CGFloat(0), through: size.width, by: spacing).forEach { x in
+                path.move(to: CGPoint(x: x, y: 0)); path.addLine(to: CGPoint(x: x, y: size.height))
+            }
+            stride(from: CGFloat(0), through: size.height, by: spacing).forEach { y in
+                path.move(to: CGPoint(x: 0, y: y)); path.addLine(to: CGPoint(x: size.width, y: y))
+            }
+            context.stroke(path, with: .color(AppTheme.accent.opacity(0.055)), lineWidth: 1)
+        }
+    }
+}
+
 struct PatchOptionCard: View {
     let name: String
     let target: String
