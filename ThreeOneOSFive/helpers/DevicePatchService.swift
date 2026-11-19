@@ -42,7 +42,9 @@ enum DevicePatchService {
 
     private static func fixBundleID(_ bundleID: String) -> String {
         let lower = bundleID.lowercased()
-        if lower.contains("ffvn") || lower.contains("freefire") || lower.contains("garena") { return "com.garena.ffvn" }
+        if lower.contains("ffvn") || lower.contains("freefire") || lower.contains("garena") {
+            return "com.garena.ffvn"
+        }
         return bundleID
     }
 
@@ -55,12 +57,30 @@ enum DevicePatchService {
         defer { for grant in grants { SandboxAccess.release(grant) } }
 
         for bundleID in bundleIDs {
-            let path = ContainerStore.resolveAppContainerPath(bundleID: bundleID)
+            var path = ContainerStore.resolveAppContainerPath(bundleID: bundleID)
+            
+            // Fallback dự phòng nếu hàm gốc không tìm thấy
+            if path == nil && bundleID.contains("garena") {
+                let dirs = ContainerStore.enumerateDirectories(path: ContainerStore.appDataRoot)
+                for dir in dirs {
+                    let metaPath = (dir as NSString).appendingPathComponent(".com.apple.mobile_container_manager.metadata.plist")
+                    if let data = try? Data(contentsOf: URL(fileURLWithPath: metaPath)),
+                       let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any],
+                       let id = plist["MCMMetadataIdentifier"] as? String,
+                       (id == "com.garena.ffvn" || id == "com.garena.game.ffvn") {
+                        path = dir
+                        break
+                    }
+                }
+            }
+
             guard let validPath = path, ContainerStore.isApplicationContainerPath(validPath) else {
                 throw PatchPackageError.targetAppUnavailable(bundleID)
             }
+            
             let grant = ContainerStore.grantContainerAccess(validPath)
             if grant >= 0 { grants.append(grant) }
+            
             roots[bundleID] = PatchPathValidator.canonicalFileURL(URL(fileURLWithPath: validPath, isDirectory: true))
         }
         return try operation(roots)
