@@ -2,199 +2,65 @@ import SwiftUI
 import UIKit
 import AVFoundation
 
-// MARK: - MAIN TAB VIEW
+// MARK: - MAIN CONTENT VIEW (TAB NAVIGATION)
 struct ContentView: View {
-    @State private var selectedTab = 0
+    @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var appState: AppState
+    @StateObject private var patchStore = PatchProjectStore()
     
+    @State private var selectedTab = 0
+
     var body: some View {
         TabView(selection: $selectedTab) {
-            HomeDashboardView()
-                .tabItem { Label("Trang chủ", systemImage: "house.fill") }
+            HomeView(patchStore: patchStore)
+                .tabItem {
+                    Label("Trang chủ", systemImage: "house.fill")
+                }
                 .tag(0)
             
-            PatchControlView()
-                .tabItem { Label("Chức năng", systemImage: "cube.fill") }
+            FeaturesView(patchStore: patchStore)
+                .tabItem {
+                    Label("Chức năng", systemImage: "cube.fill")
+                }
                 .tag(1)
             
             SettingsView()
-                .tabItem { Label("Cài đặt", systemImage: "gearshape.fill") }
+                .tabItem {
+                    Label("Cài đặt", systemImage: "gearshape.fill")
+                }
                 .tag(2)
         }
-        .tint(AppTheme.accent)
+        .accentColor(AppTheme.accent)
         .preferredColorScheme(.dark)
+        .sheet(item: $patchStore.passwordRequest, onDismiss: patchStore.cancelUnlock) { _ in
+            PatchUnlockPrompt(store: patchStore)
+        }
     }
 }
 
-// MARK: - HOME DASHBOARD
-struct HomeDashboardView: View {
+// MARK: - TRANG CHỦ (HOME VIEW)
+struct HomeView: View {
     @EnvironmentObject private var appState: AppState
-    
-    var body: some View {
-        ZStack {
-            // Fallback màu nền tối
-            AppTheme.pageBackground.ignoresSafeArea()
-            
-            // Nền ảnh 2 (Chỉ hiện nếu có ảnh)
-            Image("bg_home")
-                .resizable()
-                .scaledToFill()
-                .ignoresSafeArea()
-                .overlay(Color.black.opacity(0.65)) // Làm tối nền
-            
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 16) {
-                    // Header
-                    VStack(spacing: 4) {
-                        Text("TIENDAT")
-                            .font(.system(size: 34, weight: .black, design: .rounded))
-                            .tracking(4)
-                            .foregroundStyle(.white)
-                        Text("- FF THƯỜNG / FF MAX -")
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
-                            .tracking(2)
-                            .foregroundStyle(.white.opacity(0.8))
-                    }
-                    .padding(.top, 40)
-                    .padding(.bottom, 20)
-                    
-                    // Card thông số
-                    VStack(spacing: 14) {
-                        statusRow(icon: "apple.logo", title: "Model", value: AppInfo.displayMachineName)
-                        statusRow(icon: "iphone", title: "Device", value: AppInfo.osVersion)
-                        statusRow(icon: "checkmark.shield.fill", title: "Tương thích", value: appState.isSupported ? "Thiết Bị Hỗ Trợ" : "Không Hỗ Trợ", valueColor: appState.isSupported ? .green : .red)
-                        
-                        Divider().background(.white.opacity(0.2))
-                        
-                        statusRow(icon: "key.fill", title: "Key", value: "Đang được bảo vệ")
-                        statusRow(icon: "clock.fill", title: "Thời Gian", value: "Vĩnh viễn")
-                        statusRow(icon: "infinity", title: "Hạn Sử Dụng", value: "Không giới hạn")
-                        
-                        Divider().background(.white.opacity(0.2))
-                        
-                        // Timer boxes
-                        HStack(spacing: 12) {
-                            timeBox(value: "00", label: "NGÀY")
-                            timeBox(value: "00", label: "GIỜ")
-                            timeBox(value: "00", label: "PHÚT")
-                        }
-                        .padding(.vertical, 8)
-                        
-                        // Logout button
-                        Button {
-                            // Action logout
-                        } label: {
-                            Label("Đăng Xuất Key", systemImage: "rectangle.portrait.and.arrow.right")
-                                .font(.system(size: 13, weight: .bold))
-                                .foregroundStyle(.red)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .background(Color.red.opacity(0.1))
-                                .cornerRadius(12)
-                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.red.opacity(0.3), lineWidth: 1))
-                        }
-                    }
-                    .padding(20)
-                    .background(Color.black.opacity(0.5))
-                    .cornerRadius(24)
-                    .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.white.opacity(0.15), lineWidth: 1))
-                    
-                    // Footer Credits
-                    VStack(spacing: 8) {
-                        Text("Developed by TienDat")
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.5))
-                        HStack(spacing: 10) {
-                            channelButton(title: "Zalo Admin", url: "https://zalo.me/0986321175")
-                        }
-                    }
-                    .padding(.top, 10)
-                    .padding(.bottom, 30)
-                }
-                .padding(.horizontal, 20)
-            }
-        }
-    }
-    
-    private func statusRow(icon: String, title: String, value: String, valueColor: Color = .white) -> some View {
-        HStack {
-            Image(systemName: icon).frame(width: 20).foregroundStyle(.white.opacity(0.6))
-            Text(title).font(.system(size: 13, weight: .medium)).foregroundStyle(.white)
-            Spacer()
-            Text(value).font(.system(size: 13, weight: .bold)).foregroundStyle(valueColor)
-        }
-    }
-    
-    private func timeBox(value: String, label: String) -> some View {
-        VStack(spacing: 4) {
-            Text(value).font(.system(size: 24, weight: .black, design: .monospaced)).foregroundStyle(.white)
-            Text(label).font(.system(size: 9, weight: .bold)).foregroundStyle(.white.opacity(0.6))
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-        .background(Color.white.opacity(0.05))
-        .cornerRadius(12)
-    }
-    
-    private func channelButton(title: String, url: String) -> some View {
-        Button {
-            guard let destination = URL(string: url) else { return }
-            UIApplication.shared.open(destination)
-        } label: {
-            Label(title, systemImage: "paperplane.fill")
-                .font(.system(size: 10, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 9)
-                .background(AppTheme.accent.opacity(0.18), in: Capsule())
-                .overlay(Capsule().stroke(AppTheme.accent.opacity(0.42), lineWidth: 1))
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-// MARK: - PATCH CONTROL
-struct PatchControlView: View {
-    @Environment(\.scenePhase) private var scenePhase
-    @EnvironmentObject private var appState: AppState
-    @State private var showSettings = false
+    @ObservedObject var patchStore: PatchProjectStore
     @State private var showCleaner = false
-    @StateObject private var patchStore = PatchProjectStore()
-    @State private var patchOperationBusy = false
-    @State private var patchMessage = "READY -- SELECT A PATCH"
-
-    @State private var p1 = false
-    @State private var p2 = false
-    @State private var p3 = false
-    @State private var p4 = false
-    @State private var p5 = false
-    @State private var p6 = false
-    @State private var p7 = false
-    @State private var p8 = false
-    @State private var p9 = false
-    @State private var p10 = false
-    @State private var p11 = false
-    @State private var p12 = false
-    @State private var p13 = false
-    @State private var p14 = false
 
     var body: some View {
         ZStack {
-            // Fallback màu nền tối
-            AppTheme.pageBackground.ignoresSafeArea()
-            
-            // Nền ảnh 4
-            Image("bg_patch")
-                .resizable()
-                .scaledToFill()
-                .ignoresSafeArea()
-                .overlay(Color.black.opacity(0.75))
-            
+            // Background: Image 3
+            GeometryReader { proxy in
+                Image("background_home")
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+                    .clipped()
+                    .overlay(Color.black.opacity(0.5))
+            }
+            .ignoresSafeArea()
+
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 18) {
                     brandHeader
                     devicePanel
-                    patchOptions
                     gameLaunchPanel
                     footerStatus
                     developerCredits
@@ -204,17 +70,8 @@ struct PatchControlView: View {
                 .padding(.bottom, 28)
             }
         }
-        .preferredColorScheme(.dark)
-        .sheet(isPresented: $showSettings) { SettingsView() }
-        .sheet(isPresented: $showCleaner) { CleanerView() }
-        .sheet(item: $patchStore.passwordRequest, onDismiss: patchStore.cancelUnlock) { _ in
-            PatchUnlockPrompt(store: patchStore)
-        }
-        .onAppear { syncPatchStates() }
-        .onChange(of: scenePhase) { phase in
-            guard phase == .active, !patchOperationBusy else { return }
-            syncPatchStates()
-            patchMessage = "READY -- SELECT A PATCH"
+        .sheet(isPresented: $showCleaner) {
+            CleanerView()
         }
     }
 
@@ -230,20 +87,7 @@ struct PatchControlView: View {
                     .tracking(1.7)
                     .foregroundStyle(AppTheme.accent)
             }
-
             Spacer()
-
-            Button {
-                showSettings = true
-            } label: {
-                Image(systemName: "gearshape.fill")
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundStyle(AppTheme.accent)
-                    .frame(width: 48, height: 48)
-                    .background(Color.black.opacity(0.38), in: Circle())
-                    .overlay(Circle().stroke(AppTheme.accent.opacity(0.42), lineWidth: 1))
-            }
-            .buttonStyle(.plain)
         }
     }
 
@@ -255,62 +99,8 @@ struct PatchControlView: View {
             statusRow(icon: "checkmark.seal.fill", title: "Support", value: appState.isSupported ? "SUPPORTED" : "UNSUPPORTED", color: appState.isSupported ? .green : .red)
         }
         .padding(16)
-        .background(Color.black.opacity(0.60), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .background(Color.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(AppTheme.accent.opacity(0.38), lineWidth: 1))
-    }
-
-    private var patchOptions: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                panelTitle("PATCH OPTIONS", icon: "bolt.fill")
-                Spacer()
-                Text("SELECT TO ENABLE")
-                    .font(.system(size: 9, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.45))
-            }
-            .padding(.horizontal, 4)
-
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
-                patchCard(name: "Aim Drag", target: "FREE FIRE • VN", package: "Aim Drag.3105", color: AppTheme.accent, state: $p1)
-                patchCard(name: "Aim Neck", target: "FREE FIRE • VN", package: "Aim Neck.3105", color: AppTheme.secondaryAccent, state: $p2)
-                patchCard(name: "Aim Body", target: "FREE FIRE • VN", package: "Aim Body.3105", color: AppTheme.accent, state: $p3)
-                
-                patchCard(name: "Nhe Tam", target: "FREE FIRE • VN", package: "Nhe Tam.3105", color: AppTheme.secondaryAccent, state: $p4)
-                
-                patchCard(name: "Aim Chest", target: "FREE FIRE • VN", package: "Aim Chest.3105", color: AppTheme.accent, state: $p5)
-                patchCard(name: "Aim R8", target: "FREE FIRE • VN", package: "Aim R8.3105", color: AppTheme.secondaryAccent, state: $p6)
-                patchCard(name: "Aim Magic", target: "FREE FIRE • VN", package: "Aim Magic.3105", color: AppTheme.accent, state: $p7)
-                
-                patchCard(name: "Neck Anten", target: "FREE FIRE • VN", package: "Neck Anten.3105", color: AppTheme.secondaryAccent, state: $p8)
-                
-                patchCard(name: "Nhe Anten", target: "FREE FIRE • VN", package: "Nhe Anten.3105", color: AppTheme.accent, state: $p9)
-                
-                patchCard(name: "Mod Sonic", target: "FREE FIRE • DIMITRI", package: "Mod Sonic Dimitri.3105", color: AppTheme.secondaryAccent, state: $p10)
-                patchCard(name: "Mod Thỏ", target: "FREE FIRE • DIMITRI", package: "Mod Thỏ Dimitri.3105", color: AppTheme.accent, state: $p11)
-                patchCard(name: "Mod Roblox", target: "FREE FIRE • DIMITRI", package: "Mod Roblox Dimitri.3105", color: AppTheme.secondaryAccent, state: $p12)
-                patchCard(name: "Mod Báo Hồng", target: "FREE FIRE • DIMITRI", package: "Mod Báo Hồng Dimitri.3105", color: AppTheme.accent, state: $p13)
-                patchCard(name: "Mod Baki", target: "FREE FIRE • ALOCK", package: "Mod Baki Alock.3105", color: AppTheme.secondaryAccent, state: $p14)
-            }
-
-            HStack(spacing: 8) {
-                Circle().fill(patchMessage.localizedCaseInsensitiveContains("successful") ? .green : AppTheme.accent).frame(width: 7, height: 7)
-                Text(patchOperationBusy ? "PROCESSING PATCH…" : patchMessage)
-                    .font(.system(size: 10, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.72))
-                    .lineLimit(2)
-                Spacer()
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(Color.black.opacity(0.60), in: Capsule())
-            .padding(.top, 8)
-        }
-    }
-
-    private func patchCard(name: String, target: String, package: String, color: Color, state: Binding<Bool>) -> some View {
-        PatchOptionCard(name: name, target: target, color: color, isEnabled: state, isBusy: patchOperationBusy) {
-            togglePatch(packageFilename: package, state: state)
-        }
     }
 
     private var gameLaunchPanel: some View {
@@ -334,46 +124,6 @@ struct PatchControlView: View {
         }
     }
 
-    private func launchButton(title: String, subtitle: String, color: Color, scheme: String) -> some View {
-        Button { openGame(scheme: scheme) } label: {
-            VStack(alignment: .leading, spacing: 7) {
-                Image(systemName: "arrow.up.right.square.fill")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(color)
-                Text(title)
-                    .font(.system(size: 13, weight: .black, design: .rounded))
-                    .foregroundStyle(.white)
-                Text(subtitle)
-                    .font(.system(size: 10, weight: .medium, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.5))
-            }
-            .frame(maxWidth: .infinity, minHeight: 82, alignment: .leading)
-            .padding(.horizontal, 14)
-            .background(Color.black.opacity(0.60), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(color.opacity(0.38), lineWidth: 1))
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func lockedLaunchButton(title: String, subtitle: String, color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 7) {
-            Image(systemName: "lock.fill")
-                .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(color.opacity(0.72))
-            Text(title)
-                .font(.system(size: 13, weight: .black, design: .rounded))
-                .foregroundStyle(.white.opacity(0.72))
-            Text(subtitle)
-                .font(.system(size: 10, weight: .bold, design: .rounded))
-                .foregroundStyle(color.opacity(0.72))
-        }
-        .frame(maxWidth: .infinity, minHeight: 82, alignment: .leading)
-        .padding(.horizontal, 14)
-        .background(Color.black.opacity(0.40), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(color.opacity(0.24), lineWidth: 1))
-        .opacity(0.72)
-    }
-
     private var footerStatus: some View {
         HStack(spacing: 10) {
             Circle().fill(.green).frame(width: 9, height: 9).shadow(color: .green, radius: 6)
@@ -388,23 +138,26 @@ struct PatchControlView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 13)
-        .background(Color.black.opacity(0.65), in: Capsule())
+        .background(Color.black.opacity(0.55), in: Capsule())
         .overlay(Capsule().stroke(AppTheme.accent.opacity(0.2), lineWidth: 1))
     }
 
     private var developerCredits: some View {
         VStack(spacing: 10) {
-            Text("Admin: TienDat")
-                .font(.system(size: 12, weight: .bold, design: .rounded))
-                .foregroundStyle(.white.opacity(0.85))
-
+            Text("Developed by TienDat")
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundStyle(.white.opacity(0.72))
+                .multilineTextAlignment(.center)
+            Text("Zalo TienDat")
+                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                .foregroundStyle(AppTheme.secondaryAccent.opacity(0.85))
             HStack(spacing: 10) {
-                channelButton(title: "Zalo Admin", url: "https://zalo.me/0986321175")
+                channelButton(title: "Zalo", url: "https://zalo.me/0986321175")
             }
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 4)
-        .padding(.bottom, 20)
+        .padding(.bottom, 8)
     }
 
     private func channelButton(title: String, url: String) -> some View {
@@ -440,21 +193,153 @@ struct PatchControlView: View {
         .padding(.top, 14)
     }
 
+    private func launchButton(title: String, subtitle: String, color: Color, scheme: String) -> some View {
+        Button { openGame(scheme: scheme) } label: {
+            VStack(alignment: .leading, spacing: 7) {
+                Image(systemName: "arrow.up.right.square.fill")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(color)
+                Text(title)
+                    .font(.system(size: 13, weight: .black, design: .rounded))
+                    .foregroundStyle(.white)
+                Text(subtitle)
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.5))
+            }
+            .frame(maxWidth: .infinity, minHeight: 82, alignment: .leading)
+            .padding(.horizontal, 14)
+            .background(Color.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(color.opacity(0.38), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func lockedLaunchButton(title: String, subtitle: String, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Image(systemName: "lock.fill")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(color.opacity(0.72))
+            Text(title)
+                .font(.system(size: 13, weight: .black, design: .rounded))
+                .foregroundStyle(.white.opacity(0.72))
+            Text(subtitle)
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .foregroundStyle(color.opacity(0.72))
+        }
+        .frame(maxWidth: .infinity, minHeight: 82, alignment: .leading)
+        .padding(.horizontal, 14)
+        .background(Color.black.opacity(0.35), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(color.opacity(0.24), lineWidth: 1))
+        .opacity(0.72)
+    }
+
+    private func openGame(scheme: String) {
+        guard let url = URL(string: "\(scheme)://") else { return }
+        UIApplication.shared.open(url, options: [:]) { success in
+            print("launch: \(scheme) success=\(success)")
+        }
+    }
+}
+
+// MARK: - TRANG CHỨC NĂNG (FEATURES VIEW)
+struct FeaturesView: View {
+    @Environment(\.scenePhase) private var scenePhase
+    @ObservedObject var patchStore: PatchProjectStore
+    @State private var patchOperationBusy = false
+    @State private var patchMessage = "READY -- SELECT A PATCH"
+
+    @State private var p1 = false; @State private var p2 = false; @State private var p3 = false
+    @State private var p4 = false; @State private var p5 = false; @State private var p6 = false
+    @State private var p7 = false; @State private var p8 = false; @State private var p9 = false
+    @State private var p10 = false; @State private var p11 = false; @State private var p12 = false
+    @State private var p13 = false; @State private var p14 = false
+
+    var body: some View {
+        ZStack {
+            // Background: Image 4
+            GeometryReader { proxy in
+                Image("background_features")
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+                    .clipped()
+                    .overlay(Color.black.opacity(0.65))
+            }
+            .ignoresSafeArea()
+
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        panelTitle("PATCH OPTIONS", icon: "bolt.fill")
+                        Spacer()
+                        Text("SELECT TO ENABLE")
+                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.6))
+                    }
+                    .padding(.top, 18)
+
+                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                        patchCard(name: "Aim Drag", target: "FREE FIRE • VN", package: "Aim Drag.3105", color: AppTheme.accent, state: $p1)
+                        patchCard(name: "Aim Neck", target: "FREE FIRE • VN", package: "Aim Neck.3105", color: AppTheme.secondaryAccent, state: $p2)
+                        patchCard(name: "Aim Body", target: "FREE FIRE • VN", package: "Aim Body.3105", color: AppTheme.accent, state: $p3)
+                        patchCard(name: "Nhe Tam", target: "FREE FIRE • VN", package: "Nhe Tam.3105", color: AppTheme.secondaryAccent, state: $p4)
+                        patchCard(name: "Aim Chest", target: "FREE FIRE • VN", package: "Aim Chest.3105", color: AppTheme.accent, state: $p5)
+                        patchCard(name: "Aim R8", target: "FREE FIRE • VN", package: "Aim R8.3105", color: AppTheme.secondaryAccent, state: $p6)
+                        patchCard(name: "Aim Magic", target: "FREE FIRE • VN", package: "Aim Magic.3105", color: AppTheme.accent, state: $p7)
+                        patchCard(name: "Neck Anten", target: "FREE FIRE • VN", package: "Neck Anten.3105", color: AppTheme.secondaryAccent, state: $p8)
+                        patchCard(name: "Nhe Anten", target: "FREE FIRE • VN", package: "Nhe Anten.3105", color: AppTheme.accent, state: $p9)
+                        patchCard(name: "Mod Sonic", target: "FREE FIRE • DIMITRI", package: "Mod Sonic Dimitri.3105", color: AppTheme.secondaryAccent, state: $p10)
+                        patchCard(name: "Mod Thỏ", target: "FREE FIRE • DIMITRI", package: "Mod Thỏ Dimitri.3105", color: AppTheme.accent, state: $p11)
+                        patchCard(name: "Mod Roblox", target: "FREE FIRE • DIMITRI", package: "Mod Roblox Dimitri.3105", color: AppTheme.secondaryAccent, state: $p12)
+                        patchCard(name: "Mod Báo Hồng", target: "FREE FIRE • DIMITRI", package: "Mod Báo Hồng Dimitri.3105", color: AppTheme.accent, state: $p13)
+                        patchCard(name: "Mod Baki", target: "FREE FIRE • ALOCK", package: "Mod Baki Alock.3105", color: AppTheme.secondaryAccent, state: $p14)
+                    }
+
+                    HStack(spacing: 8) {
+                        Circle().fill(patchMessage.localizedCaseInsensitiveContains("successful") ? .green : AppTheme.accent).frame(width: 7, height: 7)
+                        Text(patchOperationBusy ? "PROCESSING PATCH…" : patchMessage)
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.8))
+                            .lineLimit(2)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(Color.black.opacity(0.65), in: Capsule())
+                }
+                .padding(.horizontal, 18)
+                .padding(.bottom, 28)
+            }
+        }
+        .onAppear { syncPatchStates() }
+        .onChange(of: scenePhase) { phase in
+            guard phase == .active, !patchOperationBusy else { return }
+            syncPatchStates()
+            patchMessage = "READY -- SELECT A PATCH"
+        }
+    }
+
+    private func panelTitle(_ title: String, icon: String) -> some View {
+        Label(title, systemImage: icon)
+            .font(.system(size: 12, weight: .black, design: .rounded))
+            .tracking(1.4)
+            .foregroundStyle(AppTheme.accent)
+    }
+
+    private func patchCard(name: String, target: String, package: String, color: Color, state: Binding<Bool>) -> some View {
+        PatchOptionCard(name: name, target: target, color: color, isEnabled: state, isBusy: patchOperationBusy) {
+            togglePatch(packageFilename: package, state: state)
+        }
+    }
+
     private func syncPatchStates() {
-        p1 = isPatchActive("Aim Drag.3105")
-        p2 = isPatchActive("Aim Neck.3105")
-        p3 = isPatchActive("Aim Body.3105")
-        p4 = isPatchActive("Nhe Tam.3105")
-        p5 = isPatchActive("Aim Chest.3105")
-        p6 = isPatchActive("Aim R8.3105")
-        p7 = isPatchActive("Aim Magic.3105")
-        p8 = isPatchActive("Neck Anten.3105")
-        p9 = isPatchActive("Nhe Anten.3105")
-        p10 = isPatchActive("Mod Sonic Dimitri.3105")
-        p11 = isPatchActive("Mod Thỏ Dimitri.3105")
-        p12 = isPatchActive("Mod Roblox Dimitri.3105")
-        p13 = isPatchActive("Mod Báo Hồng Dimitri.3105")
-        p14 = isPatchActive("Mod Baki Alock.3105")
+        p1 = isPatchActive("Aim Drag.3105"); p2 = isPatchActive("Aim Neck.3105")
+        p3 = isPatchActive("Aim Body.3105"); p4 = isPatchActive("Nhẹ Tâm.3105")
+        p5 = isPatchActive("Aim Chest.3105"); p6 = isPatchActive("Aim R8.3105")
+        p7 = isPatchActive("Aim Magic.3105"); p8 = isPatchActive("Neck+Anten.3105")
+        p9 = isPatchActive("Nhẹ + Anten.3105"); p10 = isPatchActive("Mod Sonic Dimitri.3105")
+        p11 = isPatchActive("Mod Thỏ Dimitri.3105"); p12 = isPatchActive("Mod Roblox Dimitri.3105")
+        p13 = isPatchActive("Mod Báo Hồng Dimitri.3105"); p14 = isPatchActive("Mod Baki Alock.3105")
     }
 
     private func isPatchActive(_ packageFilename: String) -> Bool {
@@ -462,23 +347,17 @@ struct PatchControlView: View {
             .flatMap { DevicePatchService.latestReceipt(projectID: $0.id) } != nil
     }
 
-    private enum PatchActionResult {
-        case applied
-        case restored
-        case unavailable(String)
-    }
-
     private func setPatchState(for packageFilename: String, enabled: Bool) {
         switch packageFilename {
         case "Aim Drag.3105": p1 = enabled
         case "Aim Neck.3105": p2 = enabled
         case "Aim Body.3105": p3 = enabled
-        case "Nhe Tam.3105": p4 = enabled
+        case "Nhẹ Tâm.3105": p4 = enabled
         case "Aim Chest.3105": p5 = enabled
         case "Aim R8.3105": p6 = enabled
         case "Aim Magic.3105": p7 = enabled
-        case "Neck Anten.3105": p8 = enabled
-        case "Nhe Anten.3105": p9 = enabled
+        case "Neck+Anten.3105": p8 = enabled
+        case "Nhẹ + Anten.3105": p9 = enabled
         case "Mod Sonic Dimitri.3105": p10 = enabled
         case "Mod Thỏ Dimitri.3105": p11 = enabled
         case "Mod Roblox Dimitri.3105": p12 = enabled
@@ -492,7 +371,6 @@ struct PatchControlView: View {
         guard !patchOperationBusy else { return }
         guard let item = patchStore.items.first(where: { $0.packageURL.lastPathComponent.caseInsensitiveCompare(packageFilename) == .orderedSame }) else {
             patchMessage = "ERROR -- PACKAGE NOT FOUND"
-            log("patch: package not found: \(packageFilename)")
             return
         }
 
@@ -503,11 +381,12 @@ struct PatchControlView: View {
         let projectID = item.id
 
         DispatchQueue.global(qos: .userInitiated).async {
-            let result: PatchActionResult
+            var resultMessage = ""
+            var isApplied = false
+            
             do {
                 if wasEnabled {
                     guard let receipt = DevicePatchService.latestReceipt(projectID: projectID) else {
-                        result = .unavailable("NO ACTIVE RECEIPT -- NOTHING TO RESTORE")
                         DispatchQueue.main.async {
                             self.setPatchState(for: packageFilename, enabled: false)
                             self.patchMessage = "OFF -- NO ACTIVE PATCH FOUND"
@@ -516,10 +395,10 @@ struct PatchControlView: View {
                         return
                     }
                     try DevicePatchService.restore(receipt: receipt)
-                    result = .restored
+                    resultMessage = "Restore Successful -- \(packageFilename)"
+                    isApplied = false
                 } else {
                     guard let project else {
-                        result = .unavailable("PASSWORD REQUIRED -- UNLOCK PACKAGE")
                         DispatchQueue.main.async {
                             self.patchStore.requestUnlock(for: item)
                             self.patchMessage = "PASSWORD REQUIRED -- ENTER PACKAGE PASSWORD"
@@ -528,40 +407,149 @@ struct PatchControlView: View {
                         return
                     }
                     _ = try DevicePatchService.apply(project: project)
-                    result = .applied
+                    resultMessage = "Inject Successful -- \(packageFilename)"
+                    isApplied = true
                 }
             } catch {
-                result = .unavailable("FAILED -- \(String(describing: error))")
+                resultMessage = "FAILED -- \(String(describing: error))"
             }
 
             DispatchQueue.main.async {
-                switch result {
-                case .applied:
-                    state.wrappedValue = true
-                    self.patchMessage = "Inject Successful -- \(packageFilename)"
-                    PatchAudioFeedback.bypassActivated()
-                case .restored:
-                    state.wrappedValue = false
-                    self.patchMessage = "Restore Successful -- \(packageFilename)"
-                    PatchAudioFeedback.originalRestored()
-                case .unavailable(let message):
-                    self.patchMessage = message
+                if resultMessage.contains("Successful") {
+                    state.wrappedValue = isApplied
+                    self.patchMessage = resultMessage
+                    if isApplied { PatchAudioFeedback.bypassActivated() } else { PatchAudioFeedback.originalRestored() }
+                } else {
+                    self.patchMessage = resultMessage
                 }
                 self.patchOperationBusy = false
             }
         }
     }
+}
 
-    private func openGame(scheme: String) {
-        guard let url = URL(string: "\(scheme)://") else { return }
-        UIApplication.shared.open(url, options: [:]) { success in
-            log("launch: \(scheme) success=\(success)")
+// MARK: - TRANG CÀI ĐẶT (SETTINGS VIEW)
+struct SettingsView: View {
+    @Environment(\.appLanguage) private var language
+    @EnvironmentObject private var appState: AppState
+    @AppStorage(AppLanguage.storageKey) private var languageCode = AppLanguage.english.rawValue
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    HStack(spacing: 14) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("TienDat").font(.headline)
+                            Text(language.text("common.version", appVersion))
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+
+                Section(language.text("settings.language")) {
+                    Picker(language.text("settings.language"), selection: $languageCode) {
+                        ForEach(AppLanguage.allCases) { option in
+                            Text(option.displayName).tag(option.rawValue)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                }
+
+                Section(language.text("common.device")) {
+                    LabeledContent(language.text("dashboard.hardware_model"), value: AppInfo.displayMachineName)
+                    LabeledContent(language.text("settings.ios_version"), value: "\(AppInfo.osVersion) (\(AppInfo.osBuild))")
+                }
+
+                Section {
+                    HStack {
+                        Text(language.text("settings.current_version"))
+                        Spacer()
+                        Text(language.text(appState.isSupported ? "settings.supported" : "settings.unsupported"))
+                            .foregroundStyle(appState.isSupported ? Color.green : Color.red)
+                    }
+                    LabeledContent("iOS 17", value: ExploitSupportPolicy.verifiedIOS17Range)
+                    LabeledContent("iOS 18", value: ExploitSupportPolicy.verifiedIOS18Range)
+                    LabeledContent("iOS 26", value: ExploitSupportPolicy.verifiedIOS26Range)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("iOS 27.0")
+                            .font(.body)
+                        ForEach(ExploitSupportPolicy.verifiedIOS27Builds, id: \.build) { version in
+                            Text(versionLabel(version))
+                                .font(.caption.monospaced())
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 2)
+                } header: {
+                    Text(language.text("settings.verified_versions"))
+                } footer: {
+                    Text(language.text("settings.supported_versions_footer"))
+                }
+            }
+            .tint(AppTheme.accent)
+            .scrollContentBackground(.hidden)
+            .background(AppTheme.pageBackground)
+            .navigationTitle(language.text("settings.title"))
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+
+    private var appVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "AppReleaseDisplayVersion") as? String
+            ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+            ?? "1.0"
+    }
+
+    private func versionLabel(
+        _ version: (beta: Int, publicBeta: Int?, build: String)
+    ) -> String {
+        if let publicBeta = version.publicBeta {
+            return language.text(
+                "settings.developer_public_beta_build",
+                Int64(version.beta),
+                Int64(publicBeta),
+                version.build
+            )
+        }
+        return language.text(
+            "settings.developer_beta_build",
+            Int64(version.beta),
+            version.build
+        )
+    }
+
+    @ViewBuilder
+    private func creditsRow(name: String, role: String, url: String) -> some View {
+        if let destination = URL(string: url) {
+            Link(destination: destination) {
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(name)
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                        Text(role)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(AppTheme.accent)
+                        .frame(width: 28, height: 28)
+                }
+                .contentShape(Rectangle())
+            }
+            .accessibilityLabel(language.text("accessibility.open_profile", name))
         }
     }
 }
 
-// MARK: - PATCH OPTION CARD
-private struct PatchOptionCard: View {
+// MARK: - HELPER VIEWS & COMPONENTS
+struct PatchOptionCard: View {
     let name: String
     let target: String
     let color: Color
@@ -598,7 +586,7 @@ private struct PatchOptionCard: View {
             }
             .frame(maxWidth: .infinity, minHeight: 142, alignment: .leading)
             .padding(14)
-            .background(Color.black.opacity(0.75), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .background(Color.black.opacity(0.65), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(isEnabled ? color.opacity(0.85) : color.opacity(0.28), lineWidth: isEnabled ? 1.5 : 1))
             .shadow(color: isEnabled ? color.opacity(0.20) : .clear, radius: 12)
         }
@@ -608,8 +596,7 @@ private struct PatchOptionCard: View {
     }
 }
 
-// MARK: - AUDIO FEEDBACK
-private enum PatchAudioFeedback {
+enum PatchAudioFeedback {
     private static let synthesizer = AVSpeechSynthesizer()
     static func bypassActivated() { speak("Bypass ativado") }
     static func originalRestored() { speak("Bypass desativado") }
@@ -632,8 +619,7 @@ private enum PatchAudioFeedback {
     }
 }
 
-// MARK: - PATCH UNLOCK PROMPT
-private struct PatchUnlockPrompt: View {
+struct PatchUnlockPrompt: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var store: PatchProjectStore
     @State private var password = ""
@@ -673,47 +659,5 @@ private struct PatchUnlockPrompt: View {
     private func unlock() {
         guard !password.isEmpty else { return }
         store.unlock(password: password)
-    }
-}
-
-// MARK: - ANIMATED HYPER BACKDROP (Fix cho LicenseActivationView)
-struct AnimatedHyperBackdrop: View {
-    @State private var animate = false
-    var body: some View {
-        GeometryReader { proxy in
-            ZStack {
-                AppTheme.pageBackground
-                Circle()
-                    .fill(AppTheme.accent.opacity(0.12))
-                    .frame(width: 280, height: 280)
-                    .blur(radius: 70)
-                    .offset(x: animate ? 120 : -120, y: -proxy.size.height * 0.23)
-                Circle()
-                    .fill(AppTheme.secondaryAccent.opacity(0.08))
-                    .frame(width: 260, height: 260)
-                    .blur(radius: 80)
-                    .offset(x: animate ? -100 : 100, y: proxy.size.height * 0.22)
-                GridOverlay()
-            }
-            .onAppear {
-                withAnimation(.easeInOut(duration: 7).repeatForever(autoreverses: true)) { animate = true }
-            }
-        }
-    }
-}
-
-private struct GridOverlay: View {
-    var body: some View {
-        Canvas { context, size in
-            var path = Path()
-            let spacing: CGFloat = 44
-            stride(from: CGFloat(0), through: size.width, by: spacing).forEach { x in
-                path.move(to: CGPoint(x: x, y: 0)); path.addLine(to: CGPoint(x: x, y: size.height))
-            }
-            stride(from: CGFloat(0), through: size.height, by: spacing).forEach { y in
-                path.move(to: CGPoint(x: 0, y: y)); path.addLine(to: CGPoint(x: size.width, y: y))
-            }
-            context.stroke(path, with: .color(AppTheme.accent.opacity(0.055)), lineWidth: 1)
-        }
     }
 }
