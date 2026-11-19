@@ -2,31 +2,67 @@ import Foundation
 
 enum DevicePatchService {
     static func apply(project: PatchProject) throws -> PatchTransactionReceipt {
-        var bundleIDs = project.allBundleIdentifiers
-        bundleIDs = bundleIDs.map { fixBundleID($0) }
-        
+        let bundleIDs = orderedBundleIdentifiers(in: project)
         return try withResolvedContainers(bundleIDs: bundleIDs) { roots in
             try PatchTransaction.apply(
                 project: project,
                 backupRoot: try PatchProjectLibrary.backupRootURL(),
                 containerResolver: { bundleID in
-                    let fixedID = fixBundleID(bundleID)
-                    if let root = roots[fixedID] { return root }
-                    if let firstRoot = roots.values.first { return firstRoot }
-                    throw PatchPackageError.targetAppUnavailable(bundleID)
+                    guard let root = roots[bundleID] else {
+                        throw PatchPackageError.targetAppUnavailable(bundleID)
+                    }
+                    return root
+                },
+                backupCenter: .shared
+            )
+        }
+    }
+
+    static func inspectRestore(receipt: PatchTransactionReceipt) throws -> PatchRestoreInspection {
+        let bundleIDs = try PatchTransaction.requiredBundleIdentifiers(for: receipt)
+        return try withResolvedContainers(bundleIDs: bundleIDs) { roots in
+            try PatchTransaction.inspectRestore(
+                receipt: receipt,
+                containerResolver: { bundleID in
+                    guard let root = roots[bundleID] else {
+                        throw PatchPackageError.targetAppUnavailable(bundleID)
+                    }
+                    return root
                 }
             )
         }
     }
 
-    static func restore(receipt: PatchTransactionReceipt) throws {
+    static func restore(
+        receipt: PatchTransactionReceipt,
+        allowChangedTargets: Bool = false
+    ) throws {
         let bundleIDs = try PatchTransaction.requiredBundleIdentifiers(for: receipt)
         try withResolvedContainers(bundleIDs: bundleIDs) { roots in
             try PatchTransaction.restore(
                 receipt: receipt,
+                allowChangedTargets: allowChangedTargets,
                 containerResolver: { bundleID in
-                    let fixedID = fixBundleID(bundleID)
-                    guard let root = roots[fixedID] ?? roots[bundleID] else {
+                    guard let root = roots[bundleID] else {
+                        throw PatchPackageError.targetAppUnavailable(bundleID)
+                    }
+                    return root
+                }
+            )
+        }
+    }
+
+    static func resetToAppliedState(
+        receipt: PatchTransactionReceipt,
+        project: PatchProject
+    ) throws {
+        let bundleIDs = try PatchTransaction.requiredBundleIdentifiers(for: receipt)
+        try withResolvedContainers(bundleIDs: bundleIDs) { roots in
+            try PatchTransaction.resetToAppliedState(
+                receipt: receipt,
+                fallbackProject: project,
+                containerResolver: { bundleID in
+                    guard let root = roots[bundleID] else {
                         throw PatchPackageError.targetAppUnavailable(bundleID)
                     }
                     return root
@@ -40,12 +76,8 @@ enum DevicePatchService {
         return PatchTransaction.latestReceipt(projectID: projectID, backupRoot: backupRoot)
     }
 
-    private static func fixBundleID(_ bundleID: String) -> String {
-        let lower = bundleID.lowercased()
-        if lower.contains("ffvn") || lower.contains("freefire") || lower.contains("garena") {
-            return "com.garena.ffvn"
-        }
-        return bundleID
+    private static func orderedBundleIdentifiers(in project: PatchProject) -> [String] {
+        project.allBundleIdentifiers
     }
 
     private static func withResolvedContainers<T>(
@@ -54,34 +86,21 @@ enum DevicePatchService {
     ) throws -> T {
         var roots: [String: URL] = [:]
         var grants: [Int64] = []
-        defer { for grant in grants { SandboxAccess.release(grant) } }
+        defer {
+            for grant in grants { SandboxAccess.release(grant) }
+        }
 
         for bundleID in bundleIDs {
-            var path = ContainerStore.resolveAppContainerPath(bundleID: bundleID)
-            
-            // Fallback dự phòng nếu hàm gốc không tìm thấy
-            if path == nil && bundleID.contains("garena") {
-                let dirs = ContainerStore.enumerateDirectories(path: ContainerStore.appDataRoot)
-                for dir in dirs {
-                    let metaPath = (dir as NSString).appendingPathComponent(".com.apple.mobile_container_manager.metadata.plist")
-                    if let data = try? Data(contentsOf: URL(fileURLWithPath: metaPath)),
-                       let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any],
-                       let id = plist["MCMMetadataIdentifier"] as? String,
-                       (id == "com.garena.ffvn" || id == "com.garena.game.ffvn") {
-                        path = dir
-                        break
-                    }
-                }
-            }
-
-            guard let validPath = path, ContainerStore.isApplicationContainerPath(validPath) else {
+            guard let path = ContainerStore.resolveAppContainerPath(bundleID: bundleID),
+                  ContainerStore.isApplicationContainerPath(path) else {
                 throw PatchPackageError.targetAppUnavailable(bundleID)
             }
             
-            let grant = ContainerStore.grantContainerAccess(validPath)
+            // Gọi grant thông qua ContainerStore
+            let grant = ContainerStore.grantContainerAccess(path)
             if grant >= 0 { grants.append(grant) }
             
-            roots[bundleID] = PatchPathValidator.canonicalFileURL(URL(fileURLWithPath: validPath, isDirectory: true))
+            roots[bundleID] = PatchPathValidator.canonicalFileURL(URL(fileURLWithPath: path, isDirectory: true))
         }
         return try operation(roots)
     }
