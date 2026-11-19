@@ -7,7 +7,6 @@ workflows:
     scripts:
       - name: Clean build directory
         script: |
-          # Xóa sạch cache build cũ để tránh Xcode dùng lại Bundle ID cũ
           rm -rf ./build
           rm -rf ~/Library/Developer/Xcode/DerivedData/*
 
@@ -89,6 +88,9 @@ workflows:
           		3105A211 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3105A031; };
           		3105L200 /* background_home.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 3105L100; };
           		3105L201 /* background_features.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 3105L101; };
+          		3106Z200 /* worse_query.m in Sources */ = {isa = PBXBuildFile; fileRef = 3106Z100; };
+          		3106Z300 /* SandboxDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3106Z301; };
+          		3106Z302 /* GrantRetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3106Z303; };
           /* End PBXBuildFile section */
           
           /* Begin PBXFileReference section */
@@ -176,6 +178,10 @@ workflows:
           		3105B123 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
           		3105L100 /* background_home.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = background_home.jpg; sourceTree = "<group>"; };
           		3105L101 /* background_features.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = background_features.jpg; sourceTree = "<group>"; };
+          		3106Z100 /* worse_query.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = worse_query.m; sourceTree = "<group>"; };
+          		3106Z101 /* worse_query.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = worse_query.h; sourceTree = "<group>"; };
+          		3106Z301 /* SandboxDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SandboxDiagnostics.swift; sourceTree = "<group>"; };
+          		3106Z303 /* GrantRetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrantRetry.swift; sourceTree = "<group>"; };
           /* End PBXFileReference section */
           
           /* Begin PBXFrameworksBuildPhase section */
@@ -233,6 +239,8 @@ workflows:
           				3105A041 /* mcm_bridge.h */,
           				3105F100 /* wallpaper_zip.c */,
           				3105F101 /* wallpaper_zip.h */,
+          				3106Z100 /* worse_query.m */,
+          				3106Z101 /* worse_query.h */,
           			);
           			path = exploit;
           			sourceTree = "<group>";
@@ -299,6 +307,8 @@ workflows:
           				3105A025 /* Utils.swift */,
           				3105A026 /* SBX.swift */,
           				3105A027 /* MG.swift */,
+          				3106Z301 /* SandboxDiagnostics.swift */,
+          				3106Z303 /* GrantRetry.swift */,
           			);
           			path = helpers;
           			sourceTree = "<group>";
@@ -443,6 +453,9 @@ workflows:
           				3105H200,
           				3105I200,
           				3105I201,
+          				3106Z200,
+          				3106Z300,
+          				3106Z302,
           			);
           			runOnlyForDeploymentPostprocessing = 0;
           		};
@@ -468,8 +481,8 @@ workflows:
           			buildSettings = {
           				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
           				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
-          				CODE_SIGN_ENTITLEMENTS = "";
-          				CODE_SIGN_STYLE = Automatic;
+          				CODE_SIGN_ENTITLEMENTS = ThreeOneOSFive/TienDat.entitlements;
+          				CODE_SIGN_STYLE = Manual;
           				CURRENT_PROJECT_VERSION = 7;
           				ENABLE_USER_SCRIPT_SANDBOXING = NO;
           				GCC_C_LANGUAGE_STANDARD = gnu17;
@@ -502,8 +515,8 @@ workflows:
           			buildSettings = {
           				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
           				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
-          				CODE_SIGN_ENTITLEMENTS = "";
-          				CODE_SIGN_STYLE = Automatic;
+          				CODE_SIGN_ENTITLEMENTS = ThreeOneOSFive/TienDat.entitlements;
+          				CODE_SIGN_STYLE = Manual;
           				CURRENT_PROJECT_VERSION = 7;
           				ENABLE_USER_SCRIPT_SANDBOXING = NO;
           				GCC_C_LANGUAGE_STANDARD = gnu17;
@@ -681,7 +694,6 @@ workflows:
           
       - name: Fix build script scheme name
         script: |
-          # Tự động sửa lỗi scheme trong file build_unsigned.sh
           if [ -f "build_unsigned.sh" ]; then
             sed -i '' 's/-scheme TienDat/-scheme OGIOS/g' build_unsigned.sh
           fi

@@ -3,22 +3,9 @@ import Foundation
 enum ExploitSupportPolicy {
     static let verifiedIOS17Range = "17.0–17.7.x"
     static let verifiedIOS18Range = "18.0–18.7.1"
-    static let verifiedIOS26Range = "26.0–26.6.1"
-
-    static let verifiedIOS27Builds: [(beta: Int, publicBeta: Int?, build: String)] = [
-        (1, nil, "24A5355q"),
-        (2, nil, "24A5370h"),
-        (3, 1, "24A5380h"),
-        (4, 2, "24A5390f")
-    ]
-
-    static func iOS27BetaNumber(for build: String) -> Int? {
-        verifiedIOS27Builds.first { $0.build == build }?.beta
-    }
-
-    static func iOS27PublicBetaNumber(for build: String) -> Int? {
-        verifiedIOS27Builds.first { $0.build == build }?.publicBeta
-    }
+    static let verifiedIOS26BadQueryRange = "26.0–26.6.1"
+    static let verifiedIOS26WorseQueryRange = "26.7–26.7.2"
+    static let verifiedIOS27Range = "27.0–27.3"
 
     static func supportsKernelExploit(major: Int, minor: Int, patch: Int) -> Bool {
         guard minor >= 0, patch >= 0 else { return false }
@@ -34,17 +21,37 @@ enum ExploitSupportPolicy {
         return false
     }
 
-    static func isSupported(major: Int, minor: Int, patch: Int, build: String) -> Bool {
-        if supportsKernelExploit(major: major, minor: minor, patch: patch) {
-            return true
-        }
+    /// bad_query still works on the builds it was verified for; it is kept as
+    /// the primary backend there because it also reaches System Data.
+    static func supportsBadQuery(major: Int, minor: Int, patch: Int) -> Bool {
+        guard major == 26, minor >= 0, patch >= 0 else { return false }
+        return minor < 6 || (minor == 6 && patch <= 1)
+    }
 
+    /// worse_query targets iOS 26.0–26.7.2 and 27.x through 27.3.
+    /// iOS 27.3 beta 1 was verified working on hardware and is fully
+    /// supported (operator-confirmed).
+    static func supportsWorseQuery(major: Int, minor: Int, patch: Int) -> Bool {
+        guard minor >= 0, patch >= 0 else { return false }
         if major == 26 {
-            guard minor >= 0, patch >= 0 else { return false }
-            return minor < 6 || (minor == 6 && patch <= 1)
+            return minor == 7 && patch <= 2
         }
+        if major == 27 {
+            return minor <= 3
+        }
+        return false
+    }
 
-        guard major == 27, minor == 0, patch == 0 else { return false }
-        return iOS27BetaNumber(for: build) != nil
+    /// Kept for the experimental-features gate; no release currently maps
+    /// to an experimental tier.
+    static func isExperimental(major: Int, minor: Int) -> Bool {
+        false
+    }
+
+    static func isSupported(major: Int, minor: Int, patch: Int, build: String) -> Bool {
+        if supportsKernelExploit(major: major, minor: minor, patch: patch) { return true }
+        if supportsBadQuery(major: major, minor: minor, patch: patch) { return true }
+        if supportsWorseQuery(major: major, minor: minor, patch: patch) { return true }
+        return isExperimental(major: major, minor: minor)
     }
 }
