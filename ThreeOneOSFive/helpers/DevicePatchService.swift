@@ -12,16 +12,65 @@ enum DevicePatchService {
                 containerResolver: { bundleID in
                     let fixedID = fixBundleID(bundleID)
                     if let root = roots[fixedID] { return root }
-                    // Nếu không tìm thấy, thử dùng root đầu tiên (cho trường hợp quét mò)
                     if let firstRoot = roots.values.first { return firstRoot }
                     throw PatchPackageError.targetAppUnavailable(bundleID)
-                },
-                backupCenter: .shared
+                }
             )
         }
     }
 
-    // ... (Các hàm inspectRestore, restore, resetToAppliedState giữ nguyên)
+    static func inspectRestore(receipt: PatchTransactionReceipt) throws -> PatchRestoreInspection {
+        let bundleIDs = try PatchTransaction.requiredBundleIdentifiers(for: receipt)
+        return try withResolvedContainers(bundleIDs: bundleIDs) { roots in
+            try PatchTransaction.inspectRestore(
+                receipt: receipt,
+                containerResolver: { bundleID in
+                    guard let root = roots[bundleID] else {
+                        throw PatchPackageError.targetAppUnavailable(bundleID)
+                    }
+                    return root
+                }
+            )
+        }
+    }
+
+    static func restore(
+        receipt: PatchTransactionReceipt,
+        allowChangedTargets: Bool = false
+    ) throws {
+        let bundleIDs = try PatchTransaction.requiredBundleIdentifiers(for: receipt)
+        try withResolvedContainers(bundleIDs: bundleIDs) { roots in
+            try PatchTransaction.restore(
+                receipt: receipt,
+                allowChangedTargets: allowChangedTargets,
+                containerResolver: { bundleID in
+                    guard let root = roots[bundleID] else {
+                        throw PatchPackageError.targetAppUnavailable(bundleID)
+                    }
+                    return root
+                }
+            )
+        }
+    }
+
+    static func resetToAppliedState(
+        receipt: PatchTransactionReceipt,
+        project: PatchProject
+    ) throws {
+        let bundleIDs = try PatchTransaction.requiredBundleIdentifiers(for: receipt)
+        try withResolvedContainers(bundleIDs: bundleIDs) { roots in
+            try PatchTransaction.resetToAppliedState(
+                receipt: receipt,
+                fallbackProject: project,
+                containerResolver: { bundleID in
+                    guard let root = roots[bundleID] else {
+                        throw PatchPackageError.targetAppUnavailable(bundleID)
+                    }
+                    return root
+                }
+            )
+        }
+    }
 
     static func latestReceipt(projectID: UUID) -> PatchTransactionReceipt? {
         guard let backupRoot = try? PatchProjectLibrary.backupRootURL() else { return nil }
@@ -32,11 +81,9 @@ enum DevicePatchService {
         project.allBundleIdentifiers
     }
 
-    // Hàm tự động sửa Bundle ID
     private static func fixBundleID(_ bundleID: String) -> String {
         let lower = bundleID.lowercased()
         if lower.contains("ffvn") || lower.contains("freefire") || lower.contains("garena") {
-            // Trả về bundle ID chuẩn (dù máy có thể không tìm thấy)
             return "com.garena.ffvn"
         }
         return bundleID
@@ -55,7 +102,6 @@ enum DevicePatchService {
         for bundleID in bundleIDs {
             var path = ContainerStore.resolveAppContainerPath(bundleID: bundleID)
             
-            // Nếu không tìm thấy, thử quét trực tiếp trên ổ cứng để tìm thư mục chứa chữ "garena" hoặc "ffvn"
             if path == nil && bundleID.contains("garena") {
                 if let foundPath = findGameFolderByKeyword(keyword: "garena") {
                     path = foundPath
@@ -65,7 +111,6 @@ enum DevicePatchService {
             }
 
             guard let validPath = path, ContainerStore.isApplicationContainerPath(validPath) else {
-                // Nếu vẫn không được, dùng đại thư mục Data/Application (fallback rủi ro)
                 if let genericPath = ContainerStore.enumerateDirectories(path: ContainerStore.appDataRoot).first {
                      let grant = ContainerStore.grantContainerAccess(genericPath)
                      if grant >= 0 { grants.append(grant) }
@@ -83,9 +128,7 @@ enum DevicePatchService {
         return try operation(roots)
     }
     
-    // Hàm phụ: Quét thư mục bằng keyword
     private static func findGameFolderByKeyword(keyword: String) -> String? {
-        // Thử liệt kê thư mục data/application
         let dirs = ContainerStore.enumerateDirectories(path: ContainerStore.appDataRoot)
         for dir in dirs {
             let metadataPath = (dir as NSString).appendingPathComponent(".com.apple.mobile_container_manager.metadata.plist")
