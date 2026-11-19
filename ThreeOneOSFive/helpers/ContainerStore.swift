@@ -2,14 +2,20 @@ import Foundation
 import Darwin
 import UIKit
 
+// MARK: - Models
+
 struct InstalledApp: Identifiable, Hashable {
     let bundleID: String
     let name: String
     let containerPath: String
     let version: String
     let icon: UIImage?
+
     var id: String { bundleID }
-    var displayName: String { AppDisplayNamePolicy.resolve(bundleID: bundleID, candidates: [name]) }
+    var displayName: String {
+        AppDisplayNamePolicy.resolve(bundleID: bundleID, candidates: [name])
+    }
+
     static func == (lhs: InstalledApp, rhs: InstalledApp) -> Bool { lhs.id == rhs.id }
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
 }
@@ -19,6 +25,7 @@ struct FileEntry: Identifiable, Hashable {
     let path: String
     let isDirectory: Bool
     let size: Int64
+
     var id: String { path }
     var sizeText: String {
         if isDirectory { return "--" }
@@ -26,10 +33,15 @@ struct FileEntry: Identifiable, Hashable {
     }
 }
 
+// MARK: - Store
+
 enum ContainerStore {
     static let appDataRoot = "/var/mobile/Containers/Data/Application"
     static let systemDataRoot = "/var/mobile/Containers/Data/System"
-    private static var shouldUseBadQuery: Bool { ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 26 }
+    
+    private static var shouldUseBadQuery: Bool {
+        ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 26
+    }
     
     static let researchAppIdentifiers = [
         "com.apple.mobilesafari", "com.apple.mobilenotes", "com.apple.Maps", "com.apple.facetime",
@@ -43,44 +55,34 @@ enum ContainerStore {
         "com.apple.Translate", "com.apple.measure", "com.apple.compass", "com.apple.Magnifier", "com.apple.DocumentsApp"
     ]
 
-    // SỬA LỖI 1: THÊM TIMEOUT & FIX TỪ KHÓA TÌM KIẾM
+    // SỬA LẠI HÀM NÀY ĐỂ TÌM GAME BẰNG QUÉT FILE ẨN
     static func resolveAppContainerPath(bundleID: String) -> String? {
-        // Gọi trực tiếp hàm xin quyền của 3106
-        var lookupError: NSString?
-        if let path = MCMActivateContainerPath(2, bundleID, false, &lookupError) {
-            if isApplicationContainerPath(path) { return path }
-        }
+        guard (try? PatchPathValidator.canonicalBundleIdentifier(bundleID)) == bundleID else { return nil }
         
-        // Fallback cho Free Fire nếu MCM bị chặn
-        let isFreeFire = bundleID.contains("garena") || bundleID.contains("ffvn") || bundleID.contains("kgvn")
-        
-        if isFreeFire {
-            let semaphore = DispatchSemaphore(value: 0)
-            var foundPath: String? = nil
-            
-            DispatchQueue.global(qos: .userInitiated).async {
-                let dirs = enumerateDirectories(path: appDataRoot)
-                for dir in dirs {
-                    let metaPath = (dir as NSString).appendingPathComponent(".com.apple.mobile_container_manager.metadata.plist")
-                    if let data = try? Data(contentsOf: URL(fileURLWithPath: metaPath)),
-                       let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any],
-                       let id = plist["MCMMetadataIdentifier"] as? String,
-                       id.contains("garena") || id.contains("ffvn") || id.contains("kgvn") {
-                        foundPath = dir
-                        break
-                    }
+        let dirs = enumerateDirectories(path: appDataRoot)
+        for dir in dirs {
+            let metadataPath = (dir as NSString).appendingPathComponent(".com.apple.mobile_container_manager.metadata.plist")
+            if let data = try? Data(contentsOf: URL(fileURLWithPath: metadataPath)),
+               let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any],
+               let id = plist["MCMMetadataIdentifier"] as? String {
+                let lowerID = id.lowercased()
+                let targetID = bundleID.lowercased()
+                if lowerID == targetID || (targetID.contains("garena") && (lowerID.contains("garena") || lowerID.contains("ffvn"))) {
+                    return dir
                 }
-                semaphore.signal()
             }
-            
-            // Đợi tối đa 3 giây, tránh treo app
-            _ = semaphore.wait(timeout: .now() + 3.0)
-            if let path = foundPath { return path }
         }
         return nil
     }
     
     static func resolveAppContainerPathByDirectoryScan(bundleID: String) -> String? { return resolveAppContainerPath(bundleID: bundleID) }
+    static func installedAppsFromAPI() -> [InstalledApp] { return [] }
+    static func applicationBundleMetadataCatalog() -> [String: ApplicationBundleMetadata] { return [:] }
+    static func applyingBundleMetadata(to apps: [InstalledApp], catalog: [String: ApplicationBundleMetadata]) -> [InstalledApp] { return apps }
+    static func dynamicAppIdentifiers() -> [String] { return [] }
+    static func installedAppsFromMCM(identifiers: [String]? = nil, bundleMetadata: [String: ApplicationBundleMetadata] = [:]) -> [InstalledApp] { return [] }
+    static func installedAppsFromMHACandidates(identifiers: [String], bundleMetadata: [String: ApplicationBundleMetadata] = [:], progress: (([InstalledApp]) -> Void)? = nil) -> [InstalledApp] { return [] }
+    static func launchServicesStoreIdentifiers() -> [String] { return [] }
 
     static func isApplicationContainerPath(_ path: String) -> Bool {
         let canonicalRoot = ContainerDiscoveryMerger.canonicalPath(appDataRoot)
@@ -96,28 +98,16 @@ enum ContainerStore {
         return String(cString: result).components(separatedBy: "\n").filter { !$0.isEmpty }
     }
 
+    static func enumerateDirectoriesWithTraversalGrant(path: String) -> [String] { return enumerateDirectories(path: path) }
+    static func readContainerMetadata(containerPath: String) -> ContainerMetadata? { return nil }
+    static func metadataPath(for containerPath: String) -> String { return "" }
+
     static func grantContainerAccess(_ containerPath: String) -> Int64 {
         guard shouldUseBadQuery else { return -1 }
         var pathC = containerPath.utf8CString.map { Int8($0) }
         return bad_query(&pathC, true, nil, false)
     }
 
-    static func ensureWriteAccess(to bundleID: String) -> URL? {
-        guard let path = resolveAppContainerPath(bundleID: bundleID) else { return nil }
-        _ = grantContainerAccess(path)
-        return URL(fileURLWithPath: path)
-    }
-
-    static func installedAppsFromAPI() -> [InstalledApp] { return [] }
-    static func applicationBundleMetadataCatalog() -> [String: ApplicationBundleMetadata] { return [:] }
-    static func applyingBundleMetadata(to apps: [InstalledApp], catalog: [String: ApplicationBundleMetadata]) -> [InstalledApp] { return apps }
-    static func dynamicAppIdentifiers() -> [String] { return [] }
-    static func installedAppsFromMCM(identifiers: [String]? = nil, bundleMetadata: [String: ApplicationBundleMetadata] = [:]) -> [InstalledApp] { return [] }
-    static func installedAppsFromMHACandidates(identifiers: [String], bundleMetadata: [String: ApplicationBundleMetadata] = [:], progress: (([InstalledApp]) -> Void)? = nil) -> [InstalledApp] { return [] }
-    static func launchServicesStoreIdentifiers() -> [String] { return [] }
-    static func enumerateDirectoriesWithTraversalGrant(path: String) -> [String] { return enumerateDirectories(path: path) }
-    static func readContainerMetadata(containerPath: String) -> ContainerMetadata? { return nil }
-    static func metadataPath(for containerPath: String) -> String { return "" }
     static func containersFromFilesystem() -> [InstalledApp] { return [] }
     static func inferredApp(for fallback: InstalledApp, knownAppsByBundleID: [String: InstalledApp], launchServicesIdentifiers: Set<String>) -> InstalledApp? { return fallback }
     static func inferUnidentifiedApps(in apps: [InstalledApp], knownApps: [InstalledApp], launchServicesIdentifiers: Set<String> = []) -> [InstalledApp] { return apps }
