@@ -10,7 +10,6 @@ final class LicenseManager: ObservableObject {
     @Published private(set) var isActive = false
     @Published private(set) var isBusy = false
     @Published private(set) var message: String?
-    @Published private(set) var contactOwner: String?
     @Published var rememberKey = true
 
     // Đã đổi service để không trùng với app cũ
@@ -19,11 +18,8 @@ final class LicenseManager: ObservableObject {
     private var lastAttemptAt: Date?
 
     init() {
-        // XOÁ KEY CŨ ĐỂ ÉP APP HIỆN LẠI MÀN HÌNH NHẬP KEY
-        delete(keyAccount)
-        
-        // Không tự động load key cũ nữa
-        isActive = false
+        // SỬA LẠI: Không xoá key cũ nữa, kiểm tra xem đã có key chưa
+        isActive = hasRememberedKey
     }
 
     var hasRememberedKey: Bool { string(for: keyAccount) == Self.accessKey }

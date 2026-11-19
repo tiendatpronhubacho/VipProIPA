@@ -7,8 +7,9 @@ struct ThreeOneOSSixApp: App {
     @StateObject private var patchDraftCoordinator = PatchDraftCoordinator()
     @StateObject private var fileOperationCoordinator = FileOperationCoordinator()
     @StateObject private var patchStore = PatchProjectStore()
+    @StateObject private var licenseManager = LicenseManager()
+    
     @AppStorage(AppLanguage.storageKey) private var languageCode = AppLanguage.english.rawValue
-    @State private var showOnboarding = OnboardingStore.shouldShow()
     @State private var showAttribution = false
     @State private var updateOffer: AppUpdateChecker.Offer?
     @Environment(\.scenePhase) private var scenePhase
@@ -33,46 +34,26 @@ struct ThreeOneOSSixApp: App {
         }
     }
 
-    private func checkForUpdateThrottled() {
-        Task {
-            guard let offer = await AppUpdateChecker.throttledForegroundCheck() else { return }
-            await MainActor.run { updateOffer = offer }
-        }
-    }
-
     var body: some Scene {
         WindowGroup {
             ZStack {
-                ContentView()
-                    .environmentObject(appState)
-                    .environmentObject(patchDraftCoordinator)
-                    .environmentObject(fileOperationCoordinator)
-                    .environmentObject(patchStore)
-                    .environment(\.appLanguage, language)
-                    .environment(\.locale, language.locale)
-                    .opacity(showOnboarding ? 0 : 1)
-                    .allowsHitTesting(!showOnboarding)
-
-                if showOnboarding {
-                    OnboardingView {
-                        OnboardingStore.markCompleted()
-                        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.24)) {
-                            showOnboarding = false
-                        }
-                        appState.detectSupport()
-                        checkForUpdate()
-                    }
-                    .environment(\.appLanguage, language)
-                    .environment(\.locale, language.locale)
-                    .transition(
-                        reduceMotion
-                            ? .opacity
-                            : .opacity.combined(with: .scale(scale: 0.98))
-                    )
-                    .zIndex(1)
+                if licenseManager.isActive {
+                    ContentView()
+                        .environmentObject(appState)
+                        .environmentObject(patchDraftCoordinator)
+                        .environmentObject(fileOperationCoordinator)
+                        .environmentObject(patchStore)
+                        .environment(\.appLanguage, language)
+                        .environment(\.locale, language.locale)
+                        .transition(.opacity)
+                } else {
+                    LicenseActivationView(manager: licenseManager)
+                        .environment(\.appLanguage, language)
+                        .environment(\.locale, language.locale)
                 }
             }
-            .displayIdentityAttribution(isPresented: $showAttribution, enabled: !showOnboarding)
+            .animation(.easeInOut(duration: 0.3), value: licenseManager.isActive)
+            .displayIdentityAttribution(isPresented: $showAttribution, enabled: true)
             .sheet(isPresented: $showAttribution) {
                 DisplayAttributionSheet()
             }
@@ -89,15 +70,20 @@ struct ThreeOneOSSixApp: App {
                 )
             }
             .onAppear {
-                if !showOnboarding {
+                if licenseManager.isActive {
+                    appState.detectSupport()
+                    checkForUpdate()
+                }
+            }
+            .onChange(of: licenseManager.isActive) { active in
+                if active {
                     appState.detectSupport()
                     checkForUpdate()
                 }
             }
             .onChange(of: scenePhase) { phase in
-                guard phase == .active, !showOnboarding else { return }
+                guard phase == .active, licenseManager.isActive else { return }
                 appState.detectSupport()
-                checkForUpdateThrottled()
             }
             .onOpenURL { url in
                 patchDraftCoordinator.presentImport(url)
@@ -107,6 +93,7 @@ struct ThreeOneOSSixApp: App {
 }
 
 class AppState: ObservableObject {
+    // ... (Giữ nguyên phần AppState như cũ của bạn)
     @Published var exploitStatus: ExploitStatus = .notStarted
     @Published var unsupportedMessage: String?
     @Published var kernelExploitRunning = false
