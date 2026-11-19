@@ -267,12 +267,20 @@ struct PatchControlView: View {
                 patchCard(name: "Aim Drag", target: "FREE FIRE • VN", package: "Aim Drag.3105", color: AppTheme.accent, state: $p1)
                 patchCard(name: "Aim Neck", target: "FREE FIRE • VN", package: "Aim Neck.3105", color: AppTheme.secondaryAccent, state: $p2)
                 patchCard(name: "Aim Body", target: "FREE FIRE • VN", package: "Aim Body.3105", color: AppTheme.accent, state: $p3)
+                
+                // Đã sửa tại đây: Nhẹ Tâm -> Nhe Tam
                 patchCard(name: "Nhe Tam", target: "FREE FIRE • VN", package: "Nhe Tam.3105", color: AppTheme.secondaryAccent, state: $p4)
+                
                 patchCard(name: "Aim Chest", target: "FREE FIRE • VN", package: "Aim Chest.3105", color: AppTheme.accent, state: $p5)
                 patchCard(name: "Aim R8", target: "FREE FIRE • VN", package: "Aim R8.3105", color: AppTheme.secondaryAccent, state: $p6)
                 patchCard(name: "Aim Magic", target: "FREE FIRE • VN", package: "Aim Magic.3105", color: AppTheme.accent, state: $p7)
+                
+                // Đã sửa tại đây: Neck+Anten -> Neck Anten
                 patchCard(name: "Neck Anten", target: "FREE FIRE • VN", package: "Neck Anten.3105", color: AppTheme.secondaryAccent, state: $p8)
+                
+                // Đã sửa tại đây: Nhẹ + Anten -> Nhe Anten
                 patchCard(name: "Nhe Anten", target: "FREE FIRE • VN", package: "Nhe Anten.3105", color: AppTheme.accent, state: $p9)
+                
                 patchCard(name: "Mod Sonic", target: "FREE FIRE • DIMITRI", package: "Mod Sonic Dimitri.3105", color: AppTheme.secondaryAccent, state: $p10)
                 patchCard(name: "Mod Thỏ", target: "FREE FIRE • DIMITRI", package: "Mod Thỏ Dimitri.3105", color: AppTheme.accent, state: $p11)
                 patchCard(name: "Mod Roblox", target: "FREE FIRE • DIMITRI", package: "Mod Roblox Dimitri.3105", color: AppTheme.secondaryAccent, state: $p12)
@@ -431,12 +439,20 @@ struct PatchControlView: View {
         p1 = isPatchActive("Aim Drag.3105")
         p2 = isPatchActive("Aim Neck.3105")
         p3 = isPatchActive("Aim Body.3105")
-        p4 = isPatchActive("Nhẹ Tâm.3105")
+        
+        // Đã sửa tại đây: Nhe Tam.3105
+        p4 = isPatchActive("Nhe Tam.3105")
+        
         p5 = isPatchActive("Aim Chest.3105")
         p6 = isPatchActive("Aim R8.3105")
         p7 = isPatchActive("Aim Magic.3105")
-        p8 = isPatchActive("Neck+Anten.3105")
-        p9 = isPatchActive("Nhẹ + Anten.3105")
+        
+        // Đã sửa tại đây: Neck Anten.3105
+        p8 = isPatchActive("Neck Anten.3105")
+        
+        // Đã sửa tại đây: Nhe Anten.3105
+        p9 = isPatchActive("Nhe Anten.3105")
+        
         p10 = isPatchActive("Mod Sonic Dimitri.3105")
         p11 = isPatchActive("Mod Thỏ Dimitri.3105")
         p12 = isPatchActive("Mod Roblox Dimitri.3105")
@@ -460,12 +476,12 @@ struct PatchControlView: View {
         case "Aim Drag.3105": p1 = enabled
         case "Aim Neck.3105": p2 = enabled
         case "Aim Body.3105": p3 = enabled
-        case "Nhẹ Tâm.3105": p4 = enabled
+        case "Nhe Tam.3105": p4 = enabled
         case "Aim Chest.3105": p5 = enabled
         case "Aim R8.3105": p6 = enabled
         case "Aim Magic.3105": p7 = enabled
-        case "Neck+Anten.3105": p8 = enabled
-        case "Nhẹ + Anten.3105": p9 = enabled
+        case "Neck Anten.3105": p8 = enabled
+        case "Nhe Anten.3105": p9 = enabled
         case "Mod Sonic Dimitri.3105": p10 = enabled
         case "Mod Thỏ Dimitri.3105": p11 = enabled
         case "Mod Roblox Dimitri.3105": p12 = enabled
@@ -660,5 +676,47 @@ private struct PatchUnlockPrompt: View {
     private func unlock() {
         guard !password.isEmpty else { return }
         store.unlock(password: password)
+    }
+}
+
+// MARK: - ANIMATED HYPER BACKDROP (Fix cho LicenseActivationView)
+struct AnimatedHyperBackdrop: View {
+    @State private var animate = false
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack {
+                AppTheme.pageBackground
+                Circle()
+                    .fill(AppTheme.accent.opacity(0.12))
+                    .frame(width: 280, height: 280)
+                    .blur(radius: 70)
+                    .offset(x: animate ? 120 : -120, y: -proxy.size.height * 0.23)
+                Circle()
+                    .fill(AppTheme.secondaryAccent.opacity(0.08))
+                    .frame(width: 260, height: 260)
+                    .blur(radius: 80)
+                    .offset(x: animate ? -100 : 100, y: proxy.size.height * 0.22)
+                GridOverlay()
+            }
+            .onAppear {
+                withAnimation(.easeInOut(duration: 7).repeatForever(autoreverses: true)) { animate = true }
+            }
+        }
+    }
+}
+
+private struct GridOverlay: View {
+    var body: some View {
+        Canvas { context, size in
+            var path = Path()
+            let spacing: CGFloat = 44
+            stride(from: CGFloat(0), through: size.width, by: spacing).forEach { x in
+                path.move(to: CGPoint(x: x, y: 0)); path.addLine(to: CGPoint(x: x, y: size.height))
+            }
+            stride(from: CGFloat(0), through: size.height, by: spacing).forEach { y in
+                path.move(to: CGPoint(x: 0, y: y)); path.addLine(to: CGPoint(x: size.width, y: y))
+            }
+            context.stroke(path, with: .color(AppTheme.accent.opacity(0.055)), lineWidth: 1)
+        }
     }
 }
