@@ -13,7 +13,6 @@ struct ThreeOneOSSixApp: App {
     @State private var showAttribution = false
     @State private var updateOffer: AppUpdateChecker.Offer?
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init() {
         setupLogCapture()
@@ -37,6 +36,7 @@ struct ThreeOneOSSixApp: App {
     var body: some Scene {
         WindowGroup {
             ZStack {
+                // NẾU ĐÃ NHẬP KEY ĐÚNG -> VÀO TRANG CHÍNH
                 if licenseManager.isActive {
                     ContentView()
                         .environmentObject(appState)
@@ -47,6 +47,7 @@ struct ThreeOneOSSixApp: App {
                         .environment(\.locale, language.locale)
                         .transition(.opacity)
                 } else {
+                    // NẾU CHƯA CÓ KEY -> HIỆN TRANG NHẬP KEY
                     LicenseActivationView(manager: licenseManager)
                         .environment(\.appLanguage, language)
                         .environment(\.locale, language.locale)
@@ -93,7 +94,6 @@ struct ThreeOneOSSixApp: App {
 }
 
 class AppState: ObservableObject {
-    // ... (Giữ nguyên phần AppState như cũ của bạn)
     @Published var exploitStatus: ExploitStatus = .notStarted
     @Published var unsupportedMessage: String?
     @Published var kernelExploitRunning = false
