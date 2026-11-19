@@ -91,6 +91,8 @@ workflows:
           		3106Z200 /* worse_query.m in Sources */ = {isa = PBXBuildFile; fileRef = 3106Z100; };
           		3106Z300 /* SandboxDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3106Z301; };
           		3106Z302 /* GrantRetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3106Z303; };
+          		3106Z400 /* SandboxAccess.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3106Z401; };
+          		3106Z402 /* BackupError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3106Z403; };
           /* End PBXBuildFile section */
           
           /* Begin PBXFileReference section */
@@ -182,6 +184,8 @@ workflows:
           		3106Z101 /* worse_query.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = worse_query.h; sourceTree = "<group>"; };
           		3106Z301 /* SandboxDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SandboxDiagnostics.swift; sourceTree = "<group>"; };
           		3106Z303 /* GrantRetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrantRetry.swift; sourceTree = "<group>"; };
+          		3106Z401 /* SandboxAccess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SandboxAccess.swift; sourceTree = "<group>"; };
+          		3106Z403 /* BackupError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupError.swift; sourceTree = "<group>"; };
           /* End PBXFileReference section */
           
           /* Begin PBXFrameworksBuildPhase section */
@@ -309,6 +313,8 @@ workflows:
           				3105A027 /* MG.swift */,
           				3106Z301 /* SandboxDiagnostics.swift */,
           				3106Z303 /* GrantRetry.swift */,
+          				3106Z401 /* SandboxAccess.swift */,
+          				3106Z403 /* BackupError.swift */,
           			);
           			path = helpers;
           			sourceTree = "<group>";
@@ -456,6 +462,8 @@ workflows:
           				3106Z200,
           				3106Z300,
           				3106Z302,
+          				3106Z400,
+          				3106Z402,
           			);
           			runOnlyForDeploymentPostprocessing = 0;
           		};

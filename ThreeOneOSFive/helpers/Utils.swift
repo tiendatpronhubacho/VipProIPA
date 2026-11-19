@@ -48,6 +48,10 @@ func setupLogCapture() {
 
 // MARK: - App Info
 enum AppInfo {
+    static var appVersion: String {
+        return Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.1.1"
+    }
+    
     static var osVersion: String {
         let v = ProcessInfo.processInfo.operatingSystemVersion
         return "\(v.majorVersion).\(v.minorVersion).\(v.patchVersion)"
@@ -171,6 +175,15 @@ enum AppUpdateChecker {
         } catch {
             return nil
         }
+    }
+    
+    static func throttledForegroundCheck() async -> Offer? {
+        let lastCheckKey = "update.lastCheckTime"
+        let lastCheck = UserDefaults.standard.double(forKey: lastCheckKey)
+        let now = Date().timeIntervalSince1970
+        if now - lastCheck < 1800 { return nil } // 30 minutes
+        UserDefaults.standard.set(now, forKey: lastCheckKey)
+        return await check()
     }
 
     private struct GitHubRelease: Decodable {
