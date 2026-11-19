@@ -2,25 +2,42 @@ import SwiftUI
 import UIKit
 import AVFoundation
 
+// MARK: - CẤU HÌNH TABBAR CHO MỌI IOS (CHỐNG LỖI XÁM)
+func configureTabBarAppearance() {
+    let appearance = UITabBarAppearance()
+    appearance.configureWithOpaqueBackground() // Bắt buộc nền đục
+    appearance.backgroundColor = UIColor.black // Nền đen tuyền
+    
+    // Cấu hình màu icon khi chưa chọn (Xám) và khi chọn (Đỏ)
+    let itemAppearance = UITabBarItemAppearance()
+    itemAppearance.normal.iconColor = UIColor.white.withAlphaComponent(0.5)
+    itemAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor.white.withAlphaComponent(0.5)]
+    itemAppearance.selected.iconColor = UIColor(AppTheme.accent)
+    itemAppearance.selected.titleTextAttributes = [.foregroundColor: UIColor(AppTheme.accent)]
+    
+    appearance.stackedLayoutAppearance = itemAppearance
+    appearance.inlineLayoutAppearance = itemAppearance
+    appearance.compactInlineLayoutAppearance = itemAppearance
+    
+    UITabBar.appearance().standardAppearance = appearance
+    if #available(iOS 15.0, *) {
+        UITabBar.appearance().scrollEdgeAppearance = appearance
+    }
+}
+
 // MARK: - HÀM LOAD ẢNH TRỰC TIẾP TỪ PROJECT
 func loadImageFromBundle(named name: String) -> Image {
-    // 1. Thử tìm file .jpg
     if let url = Bundle.main.url(forResource: name, withExtension: "jpg"),
        let uiImage = UIImage(contentsOfFile: url.path) {
         return Image(uiImage: uiImage)
     }
-    // 2. Thử tìm file .JPG (viết hoa)
     if let url = Bundle.main.url(forResource: name, withExtension: "JPG"),
        let uiImage = UIImage(contentsOfFile: url.path) {
         return Image(uiImage: uiImage)
     }
-    // 3. Thử tìm qua Assets.xcassets
     if let uiImage = UIImage(named: name) {
         return Image(uiImage: uiImage)
     }
-    
-    // 4. Fallback nếu không tìm thấy
-    print("❌ KHÔNG TÌM THẤY ẢNH: \(name)")
     return Image(systemName: "photo")
 }
 
@@ -46,7 +63,6 @@ struct ContentView: View {
                 }
                 .tag(1)
             
-            // Gọi file SettingsView gốc của bạn ở đây
             SettingsView()
                 .tabItem {
                     Label("Cài đặt", systemImage: "gearshape.fill")
@@ -55,10 +71,13 @@ struct ContentView: View {
         }
         .accentColor(AppTheme.accent)
         .preferredColorScheme(.dark)
-        // VŨ KHÍ CHỐNG LỖI XÁM TABBAR iOS 26
-        .toolbarColorScheme(.dark, for: .tabBar)
+        // Vẫn giữ toolbarBackground để SwiftUI không can thiệp
         .toolbarBackground(.visible, for: .tabBar)
         .toolbarBackground(Color.black, for: .tabBar)
+        .onAppear {
+            // Gọi cấu hình UIKit ngay khi view xuất hiện
+            configureTabBarAppearance()
+        }
         .sheet(item: $patchStore.passwordRequest, onDismiss: patchStore.cancelUnlock) { _ in
             PatchUnlockPrompt(store: patchStore)
         }
@@ -73,10 +92,10 @@ struct HomeView: View {
 
     var body: some View {
         ZStack {
-            // Nền đen dự phòng sâu nhất
+            // 1. Nền đen dự phòng
             Color.black.ignoresSafeArea()
             
-            // Background Image (Tách overlay ra ngoài để ép màu đen tuyệt đối)
+            // 2. Ảnh nền
             GeometryReader { proxy in
                 loadImageFromBundle(named: "background_home")
                     .resizable()
@@ -85,8 +104,11 @@ struct HomeView: View {
                     .clipped()
             }
             .ignoresSafeArea()
-            .overlay(Color.black.opacity(0.6))
+            
+            // 3. Lớp phủ đen
+            Color.black.opacity(0.65).ignoresSafeArea()
 
+            // 4. Nội dung
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 18) {
                     brandHeader
@@ -286,9 +308,10 @@ struct FeaturesView: View {
 
     var body: some View {
         ZStack {
+            // 1. Nền đen dự phòng
             Color.black.ignoresSafeArea()
             
-            // Background Image (Đưa overlay ra ngoài)
+            // 2. Ảnh nền
             GeometryReader { proxy in
                 loadImageFromBundle(named: "background_features")
                     .resizable()
@@ -297,8 +320,11 @@ struct FeaturesView: View {
                     .clipped()
             }
             .ignoresSafeArea()
-            .overlay(Color.black.opacity(0.75))
+            
+            // 3. Lớp phủ đen
+            Color.black.opacity(0.75).ignoresSafeArea()
 
+            // 4. Nội dung
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
