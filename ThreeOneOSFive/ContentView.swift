@@ -2,7 +2,155 @@ import SwiftUI
 import UIKit
 import AVFoundation
 
+// MARK: - MAIN TAB VIEW
 struct ContentView: View {
+    @State private var selectedTab = 0
+    @EnvironmentObject private var appState: AppState
+    
+    var body: some View {
+        TabView(selection: $selectedTab) {
+            HomeDashboardView()
+                .tabItem { Label("Trang chủ", systemImage: "house.fill") }
+                .tag(0)
+            
+            PatchControlView()
+                .tabItem { Label("Chức năng", systemImage: "cube.fill") }
+                .tag(1)
+            
+            SettingsView() // View này cần có sẵn trong project của cậu
+                .tabItem { Label("Cài đặt", systemImage: "gearshape.fill") }
+                .tag(2)
+        }
+        .tint(AppTheme.accent)
+        .preferredColorScheme(.dark)
+    }
+}
+
+// MARK: - HOME DASHBOARD (Giao diện Ảnh 1 + Nền Ảnh 2)
+struct HomeDashboardView: View {
+    @EnvironmentObject private var appState: AppState
+    
+    var body: some View {
+        ZStack {
+            // Nền ảnh 2
+            Image("bg_home")
+                .resizable()
+                .scaledToFill()
+                .ignoresSafeArea()
+                .overlay(Color.black.opacity(0.45)) // Làm tối nền để dễ đọc chữ
+            
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 16) {
+                    // Header
+                    VStack(spacing: 4) {
+                        Text("TIENDAT")
+                            .font(.system(size: 34, weight: .black, design: .rounded))
+                            .tracking(4)
+                            .foregroundStyle(.white)
+                        Text("- FF THƯỜNG / FF MAX -")
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .tracking(2)
+                            .foregroundStyle(.white.opacity(0.8))
+                    }
+                    .padding(.top, 40)
+                    
+                    // Card thông số
+                    VStack(spacing: 14) {
+                        statusRow(icon: "apple.logo", title: "Model", value: AppInfo.displayMachineName)
+                        statusRow(icon: "iphone", title: "Device", value: AppInfo.osVersion)
+                        statusRow(icon: "checkmark.shield.fill", title: "Tương thích", value: appState.isSupported ? "Thiết Bị Hỗ Trợ" : "Không Hỗ Trợ", valueColor: appState.isSupported ? .green : .red)
+                        
+                        Divider().background(.white.opacity(0.2))
+                        
+                        statusRow(icon: "key.fill", title: "Key", value: "Đang được bảo vệ")
+                        statusRow(icon: "clock.fill", title: "Thời Gian", value: "Vĩnh viễn")
+                        statusRow(icon: "infinity", title: "Hạn Sử Dụng", value: "Không giới hạn")
+                        
+                        Divider().background(.white.opacity(0.2))
+                        
+                        // Timer boxes
+                        HStack(spacing: 16) {
+                            timeBox(value: "00", label: "NGÀY")
+                            timeBox(value: "00", label: "GIỜ")
+                            timeBox(value: "00", label: "PHÚT")
+                        }
+                        .padding(.vertical, 8)
+                        
+                        // Logout button
+                        Button {
+                            // Action logout
+                        } label: {
+                            Label("Đăng Xuất Key", systemImage: "rectangle.portrait.and.arrow.right")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(.red)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(Color.red.opacity(0.1))
+                                .cornerRadius(12)
+                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.red.opacity(0.3), lineWidth: 1))
+                        }
+                    }
+                    .padding(20)
+                    .background(Color.black.opacity(0.4))
+                    .cornerRadius(24)
+                    .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.white.opacity(0.1), lineWidth: 1))
+                    
+                    // Footer Credits
+                    VStack(spacing: 8) {
+                        Text("Developed by TienDat")
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.5))
+                        HStack(spacing: 10) {
+                            channelButton(title: "Zalo Admin", url: "https://zalo.me/0986321175")
+                        }
+                    }
+                    .padding(.top, 10)
+                    .padding(.bottom, 20)
+                }
+                .padding(.horizontal, 20)
+            }
+        }
+    }
+    
+    private func statusRow(icon: String, title: String, value: String, valueColor: Color = .white) -> some View {
+        HStack {
+            Image(systemName: icon).frame(width: 20).foregroundStyle(.white.opacity(0.6))
+            Text(title).font(.system(size: 13, weight: .medium)).foregroundStyle(.white)
+            Spacer()
+            Text(value).font(.system(size: 13, weight: .bold)).foregroundStyle(valueColor)
+        }
+    }
+    
+    private func timeBox(value: String, label: String) -> some View {
+        VStack(spacing: 4) {
+            Text(value).font(.system(size: 24, weight: .black, design: .monospaced)).foregroundStyle(.white)
+            Text(label).font(.system(size: 9, weight: .bold)).foregroundStyle(.white.opacity(0.6))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .background(Color.white.opacity(0.05))
+        .cornerRadius(12)
+    }
+    
+    private func channelButton(title: String, url: String) -> some View {
+        Button {
+            guard let destination = URL(string: url) else { return }
+            UIApplication.shared.open(destination)
+        } label: {
+            Label(title, systemImage: "paperplane.fill")
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 9)
+                .background(AppTheme.accent.opacity(0.18), in: Capsule())
+                .overlay(Capsule().stroke(AppTheme.accent.opacity(0.42), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - PATCH CONTROL (Giao diện Ảnh 3 + Nền Ảnh 4)
+struct PatchControlView: View {
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var appState: AppState
     @State private var showSettings = false
@@ -12,26 +160,30 @@ struct ContentView: View {
     @State private var patchMessage = "READY -- SELECT A PATCH"
 
     // 14 State độc lập cho 14 chức năng
-    @State private var p1 = false // Aim Drag
-    @State private var p2 = false // Aim Neck
-    @State private var p3 = false // Aim Body
-    @State private var p4 = false // Nhe Tam
-    @State private var p5 = false // Aim Chest
-    @State private var p6 = false // Aim R8
-    @State private var p7 = false // Aim Magic
-    @State private var p8 = false // Neck Anten
-    @State private var p9 = false // Nhe Anten
-    @State private var p10 = false // Mod Sonic Dimitri
-    @State private var p11 = false // Mod Thỏ Dimitri
-    @State private var p12 = false // Mod Roblox Dimitri
-    @State private var p13 = false // Mod Báo Hồng Dimitri
-    @State private var p14 = false // Mod Baki Alock
+    @State private var p1 = false
+    @State private var p2 = false
+    @State private var p3 = false
+    @State private var p4 = false
+    @State private var p5 = false
+    @State private var p6 = false
+    @State private var p7 = false
+    @State private var p8 = false
+    @State private var p9 = false
+    @State private var p10 = false
+    @State private var p11 = false
+    @State private var p12 = false
+    @State private var p13 = false
+    @State private var p14 = false
 
     var body: some View {
         ZStack {
-            AnimatedHyperBackdrop()
+            // Nền ảnh 4
+            Image("bg_patch")
+                .resizable()
+                .scaledToFill()
                 .ignoresSafeArea()
-
+                .overlay(Color.black.opacity(0.7)) // Tối hơn để nổi bật UI đỏ
+            
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 18) {
                     brandHeader
@@ -47,12 +199,8 @@ struct ContentView: View {
             }
         }
         .preferredColorScheme(.dark)
-        .sheet(isPresented: $showSettings) {
-            SettingsView()
-        }
-        .sheet(isPresented: $showCleaner) {
-            CleanerView()
-        }
+        .sheet(isPresented: $showSettings) { SettingsView() }
+        .sheet(isPresented: $showCleaner) { CleanerView() }
         .sheet(item: $patchStore.passwordRequest, onDismiss: patchStore.cancelUnlock) { _ in
             PatchUnlockPrompt(store: patchStore)
         }
@@ -90,7 +238,6 @@ struct ContentView: View {
                     .overlay(Circle().stroke(AppTheme.accent.opacity(0.42), lineWidth: 1))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Open settings")
         }
     }
 
@@ -102,7 +249,7 @@ struct ContentView: View {
             statusRow(icon: "checkmark.seal.fill", title: "Support", value: appState.isSupported ? "SUPPORTED" : "UNSUPPORTED", color: appState.isSupported ? .green : .red)
         }
         .padding(16)
-        .background(Color.black.opacity(0.42), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .background(Color.black.opacity(0.60), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(AppTheme.accent.opacity(0.38), lineWidth: 1))
     }
 
@@ -143,7 +290,7 @@ struct ContentView: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
-            .background(Color.black.opacity(0.34), in: Capsule())
+            .background(Color.black.opacity(0.60), in: Capsule())
         }
     }
 
@@ -167,11 +314,10 @@ struct ContentView: View {
                     .font(.system(size: 13, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity, minHeight: 52)
-                    .background(Color.black.opacity(0.40), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .background(Color.black.opacity(0.60), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(AppTheme.accent.opacity(0.52), lineWidth: 1))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Open cache and temporary files cleaner")
         }
     }
 
@@ -190,7 +336,7 @@ struct ContentView: View {
             }
             .frame(maxWidth: .infinity, minHeight: 82, alignment: .leading)
             .padding(.horizontal, 14)
-            .background(Color.black.opacity(0.40), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .background(Color.black.opacity(0.60), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(color.opacity(0.38), lineWidth: 1))
         }
         .buttonStyle(.plain)
@@ -210,10 +356,9 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity, minHeight: 82, alignment: .leading)
         .padding(.horizontal, 14)
-        .background(Color.black.opacity(0.28), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(Color.black.opacity(0.40), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(color.opacity(0.24), lineWidth: 1))
         .opacity(0.72)
-        .accessibilityLabel("FF MAX locked, coming soon")
     }
 
     private var footerStatus: some View {
@@ -230,23 +375,18 @@ struct ContentView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 13)
-        .background(Color.black.opacity(0.45), in: Capsule())
+        .background(Color.black.opacity(0.65), in: Capsule())
         .overlay(Capsule().stroke(AppTheme.accent.opacity(0.2), lineWidth: 1))
     }
 
     private var developerCredits: some View {
         VStack(spacing: 10) {
-            Text("Developed by TienDat")
-                .font(.system(size: 11, weight: .bold, design: .rounded))
-                .foregroundStyle(.white.opacity(0.72))
-                .multilineTextAlignment(.center)
-
-            Text("Zalo TienDat")
-                .font(.system(size: 10, weight: .semibold, design: .rounded))
-                .foregroundStyle(AppTheme.secondaryAccent.opacity(0.85))
+            Text("Admin: TienDat")
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .foregroundStyle(.white.opacity(0.85))
 
             HStack(spacing: 10) {
-                channelButton(title: "Zalo", url: "https://zalo.me/0986321175")
+                channelButton(title: "Zalo Admin", url: "https://zalo.me/0986321175")
             }
         }
         .frame(maxWidth: .infinity)
@@ -384,12 +524,10 @@ struct ContentView: View {
             DispatchQueue.main.async {
                 switch result {
                 case .applied:
-                    // Fix: Gán trực tiếp giá trị cho Binding thay vì gọi hàm setPatchState
                     state.wrappedValue = true
                     self.patchMessage = "Inject Successful -- \(packageFilename)"
                     PatchAudioFeedback.bypassActivated()
                 case .restored:
-                    // Fix: Gán trực tiếp giá trị cho Binding thay vì gọi hàm setPatchState
                     state.wrappedValue = false
                     self.patchMessage = "Restore Successful -- \(packageFilename)"
                     PatchAudioFeedback.originalRestored()
@@ -409,6 +547,7 @@ struct ContentView: View {
     }
 }
 
+// MARK: - PATCH OPTION CARD
 private struct PatchOptionCard: View {
     let name: String
     let target: String
@@ -446,17 +585,17 @@ private struct PatchOptionCard: View {
             }
             .frame(maxWidth: .infinity, minHeight: 142, alignment: .leading)
             .padding(14)
-            .background(Color.black.opacity(0.52), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .background(Color.black.opacity(0.75), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(isEnabled ? color.opacity(0.85) : color.opacity(0.28), lineWidth: isEnabled ? 1.5 : 1))
             .shadow(color: isEnabled ? color.opacity(0.20) : .clear, radius: 12)
         }
         .buttonStyle(.plain)
         .disabled(isBusy)
         .opacity(isBusy ? 0.55 : 1)
-        .accessibilityLabel("\(name), \(target), \(isEnabled ? "On" : "Off")")
     }
 }
 
+// MARK: - AUDIO FEEDBACK
 private enum PatchAudioFeedback {
     private static let synthesizer = AVSpeechSynthesizer()
     static func bypassActivated() { speak("Bypass ativado") }
@@ -480,6 +619,7 @@ private enum PatchAudioFeedback {
     }
 }
 
+// MARK: - PATCH UNLOCK PROMPT
 private struct PatchUnlockPrompt: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var store: PatchProjectStore
@@ -520,46 +660,5 @@ private struct PatchUnlockPrompt: View {
     private func unlock() {
         guard !password.isEmpty else { return }
         store.unlock(password: password)
-    }
-}
-
-struct AnimatedHyperBackdrop: View {
-    @State private var animate = false
-    var body: some View {
-        GeometryReader { proxy in
-            ZStack {
-                AppTheme.pageBackground
-                Circle()
-                    .fill(AppTheme.accent.opacity(0.12))
-                    .frame(width: 280, height: 280)
-                    .blur(radius: 70)
-                    .offset(x: animate ? 120 : -120, y: -proxy.size.height * 0.23)
-                Circle()
-                    .fill(AppTheme.secondaryAccent.opacity(0.08))
-                    .frame(width: 260, height: 260)
-                    .blur(radius: 80)
-                    .offset(x: animate ? -100 : 100, y: proxy.size.height * 0.22)
-                GridOverlay()
-            }
-            .onAppear {
-                withAnimation(.easeInOut(duration: 7).repeatForever(autoreverses: true)) { animate = true }
-            }
-        }
-    }
-}
-
-private struct GridOverlay: View {
-    var body: some View {
-        Canvas { context, size in
-            var path = Path()
-            let spacing: CGFloat = 44
-            stride(from: CGFloat(0), through: size.width, by: spacing).forEach { x in
-                path.move(to: CGPoint(x: x, y: 0)); path.addLine(to: CGPoint(x: x, y: size.height))
-            }
-            stride(from: CGFloat(0), through: size.height, by: spacing).forEach { y in
-                path.move(to: CGPoint(x: 0, y: y)); path.addLine(to: CGPoint(x: size.width, y: y))
-            }
-            context.stroke(path, with: .color(AppTheme.accent.opacity(0.055)), lineWidth: 1)
-        }
     }
 }

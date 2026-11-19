@@ -19,7 +19,11 @@ final class LicenseManager: ObservableObject {
     private var lastAttemptAt: Date?
 
     init() {
-        isActive = hasRememberedKey
+        // XOÁ KEY CŨ ĐỂ ÉP APP HIỆN LẠI MÀN HÌNH NHẬP KEY
+        delete(keyAccount)
+        
+        // Không tự động load key cũ nữa
+        isActive = false
     }
 
     var hasRememberedKey: Bool { string(for: keyAccount) == Self.accessKey }
