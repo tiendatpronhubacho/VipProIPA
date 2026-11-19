@@ -28,7 +28,7 @@ struct FileEntry: Identifiable, Hashable {
 
     var id: String { path }
     var sizeText: String {
-        if isDirectory { return "—" }
+        if isDirectory { return "--" }
         return ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
     }
 }
@@ -65,6 +65,8 @@ enum ContainerStore {
         guard (try? PatchPathValidator.canonicalBundleIdentifier(bundleID)) == bundleID else {
             return nil
         }
+        
+        // 1. Thử dùng MCM (cách cũ)
         var lookupError: NSString?
         if let path = MCMActivateContainerPath(2, bundleID, false, &lookupError),
            isApplicationContainerPath(path) {
@@ -74,26 +76,44 @@ enum ContainerStore {
         let detail = lookupError.map(String.init) ?? "unavailable"
         log("patch: MHA-C2 could not resolve \(bundleID), detail=\(detail)")
 
-        // Fallback for iOS builds where MCM refuses to hand out sandbox
-        // tokens (e.g. iOS 18.1.x): scan the app-data root with the inode
-        // walk and read each container's MCM metadata plist directly. The
-        // raw reads only succeed when the sandbox escape is active.
+        // 2. [FALLBACK THÊM VÀO] Thử quét Metadata (nếu MCM thất bại trên iOS 26)
         if let scanned = resolveAppContainerPathByMetadataScan(bundleID: bundleID) {
             log("patch: filesystem metadata scan resolved \(bundleID)")
             return scanned
+        }
+        
+        // 3. [FALLBACK THÊM VÀO] Quét trực tiếp thư mục (Brute-force)
+        if let bruteForced = resolveAppContainerPathByDirectoryScan(bundleID: bundleID) {
+            log("patch: directory scan resolved \(bundleID)")
+            return bruteForced
+        }
+        
+        return nil
+    }
+    
+    // HÀM MỚI: Quét thẳng vào thư mục của app để tìm bundle ID
+    static func resolveAppContainerPathByDirectoryScan(bundleID: String) -> String? {
+        let dirs = enumerateDirectories(path: appDataRoot)
+        for dir in dirs {
+            let metadataPath = (dir as NSString).appendingPathComponent(".com.apple.mobile_container_manager.metadata.plist")
+            if let data = try? Data(contentsOf: URL(fileURLWithPath: metadataPath)),
+               let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any],
+               let id = plist["MCMMetadataIdentifier"] as? String,
+               id == bundleID {
+                return dir
+            }
         }
         return nil
     }
 
     static func resolveAppContainerPathByMetadataScan(bundleID: String) -> String? {
-        // iOS < 26: kernel R/W is enough, no need to require full sandbox escape
         if KernelExploit.requiresSandboxEscape, !KernelExploit.hasSandboxAccess() {
-            log("patch: metadata scan skipped — sandbox access not active")
-            return nil
+            // log("patch: metadata scan skipped -- sandbox access not active")
+            // Vẫn cố gắng chạy tiếp vì có thể exploit chạy ngầm đã xong
         }
         let dirs = enumerateDirectories(path: appDataRoot)
         guard !dirs.isEmpty else {
-            log("patch: metadata scan unavailable — no containers enumerated")
+            log("patch: metadata scan unavailable -- no containers enumerated")
             return nil
         }
         for dir in dirs {
@@ -107,7 +127,7 @@ enum ContainerStore {
         return nil
     }
 
-    // MARK: Primary — MobileInstallation / LSApplicationWorkspace
+    // MARK: Primary -- MobileInstallation / LSApplicationWorkspace
 
     static func installedAppsFromAPI() -> [InstalledApp] {
         let raw = installedAppInfo() as? [String: [String: Any]] ?? [:]
@@ -124,7 +144,6 @@ enum ContainerStore {
                     missingContainer += 1
                 }
             }
-            // Skip entries we cannot browse — empty path is dropped by mergers anyway.
             guard !containerPath.isEmpty else { continue }
             apps.append(InstalledApp(
                 bundleID: bundleID,
@@ -713,6 +732,6 @@ enum ContainerStore {
         if let text = String(data: truncated, encoding: .utf16) {
             return data.count > limit ? text + "\n… [truncated]" : text
         }
-        return "Binary data (\(data.count) bytes) — not text."
+        return "Binary data (\(data.count) bytes) -- not text."
     }
 }
