@@ -87,6 +87,8 @@ workflows:
           		3105K200 /* LicenseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3105K100; };
           		3105K201 /* LicenseActivationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3105K101; };
           		3105A211 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3105A031; };
+          		3105L200 /* background_home.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 3105L100; };
+          		3105L201 /* background_features.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 3105L101; };
           /* End PBXBuildFile section */
           
           /* Begin PBXFileReference section */
@@ -172,6 +174,8 @@ workflows:
           		3105A122 /* vi */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = vi; path = vi.lproj/Localizable.strings; sourceTree = "<group>"; };
           		3105A123 /* es */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = es; path = es.lproj/Localizable.strings; sourceTree = "<group>"; };
           		3105B123 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
+          		3105L100 /* background_home.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = background_home.jpg; sourceTree = "<group>"; };
+          		3105L101 /* background_features.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = background_features.jpg; sourceTree = "<group>"; };
           /* End PBXFileReference section */
           
           /* Begin PBXFrameworksBuildPhase section */
@@ -206,6 +210,8 @@ workflows:
           				3105A406 /* kexploit */,
           				3105A120 /* Localizable.strings */,
           				3105A031 /* Assets.xcassets */,
+          				3105L100 /* background_home.jpg */,
+          				3105L101 /* background_features.jpg */,
           			);
           			path = ThreeOneOSFive;
           			sourceTree = "<group>";
@@ -375,6 +381,8 @@ workflows:
           			files = (
           				3105A211,
           				3105A228,
+          				3105L200,
+          				3105L201,
           			);
           			runOnlyForDeploymentPostprocessing = 0;
           		};
