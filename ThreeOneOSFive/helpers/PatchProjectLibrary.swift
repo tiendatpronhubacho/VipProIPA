@@ -4,12 +4,16 @@ struct PatchLibraryItem: Identifiable {
     let summary: PatchPackageSummary
     var project: PatchProject?
     var contentKey: Data?
-    var packageURL: URL
+    let packageURL: URL
     let isAuthorCopy: Bool
     let origin: PatchPackageOrigin?
 
     var id: UUID { summary.packageID }
     var isLocked: Bool { project == nil }
+    
+    // Đã thêm displayName để fix lỗi
+    var displayName: String { project?.name ?? packageURL.lastPathComponent }
+
     var canInspectContents: Bool {
         guard let project else { return false }
         return PatchProjectAccessPolicy.canInspectContents(
@@ -66,7 +70,6 @@ enum PatchProjectLibrary {
               ) else { return [] }
 
         var byID: [UUID: PatchLibraryItem] = [:]
-        // Hỗ trợ cả 2 đuôi file
         for url in urls where ["3106", "3105"].contains(url.pathExtension.lowercased()) {
             do {
                 let data = try readPackage(at: url)
@@ -151,7 +154,6 @@ enum PatchProjectLibrary {
             }
             destination = candidate
         }
-        // Đã sửa lỗi cú pháp ở đây
         try data.write(to: destination, options: .atomic)
         return destination
     }

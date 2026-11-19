@@ -7,6 +7,8 @@ struct InstalledApp: Identifiable, Hashable {
     let name: String
     let version: String
     let containerPath: String
+    
+    var displayName: String { name }
 }
 
 enum ContainerStore {
@@ -46,7 +48,6 @@ enum ContainerStore {
         SandboxAccess.release(handle)
     }
     
-    // Hàm giả để fix lỗi "has no member ensureWriteAccess"
     static func ensureWriteAccess(to bundleID: String) -> URL? {
         guard let path = resolveAppContainerPath(bundleID: bundleID) else { return nil }
         let grant = grantContainerAccess(path)
@@ -57,10 +58,11 @@ enum ContainerStore {
         return nil
     }
     
-    // Hàm giả để fix lỗi "has no member installedAppsFromAPI"
+    static func dynamicAppIdentifiers() -> [String] {
+        return []
+    }
+    
     static func installedAppsFromAPI() -> [InstalledApp] {
-        // Trả về mảng rỗng tạm thời để build pass. 
-        // CleanerView sẽ không hiển thị app nào, nhưng app sẽ không bị crash.
         return []
     }
     
@@ -85,5 +87,20 @@ enum ContainerStore {
     
     static func appDataRoots() -> [String] {
         return [appDataRoot, "/private" + appDataRoot]
+    }
+    
+    // MARK: - Additional Helpers for UI
+    static func listFiles(in directory: String) -> [String] {
+        guard let contents = try? FileManager.default.contentsOfDirectory(atPath: directory) else {
+            return []
+        }
+        return contents.sorted()
+    }
+    
+    static func containerType(for path: String) -> String {
+        if isApplicationContainerPath(path) { return "Application" }
+        if isSystemContainerPath(path) { return "System" }
+        if isSharedContainerPath(path) { return "App Group" }
+        return "Unknown"
     }
 }
