@@ -296,6 +296,7 @@ struct FeaturesView: View {
     @State private var patchOperationBusy = false
     @State private var patchMessage = "READY -- SELECT A PATCH"
     @State private var selectedMenu = 0 // 0: AIM, 1: MOD
+    @State private var debugMessage = ""
 
     @State private var p1 = false; @State private var p2 = false; @State private var p3 = false
     @State private var p4 = false; @State private var p5 = false; @State private var p6 = false
