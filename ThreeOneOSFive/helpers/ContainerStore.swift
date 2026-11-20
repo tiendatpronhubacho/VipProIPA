@@ -126,4 +126,16 @@ enum ContainerStore {
         // Cậu có thể implement logic quét MHA thực tế sau này.
         return []
     }
+    // Thêm vào ContainerStore.swift (cuối enum, trước dấu })
+
+static func inferUnidentifiedApps(
+    in filesystemApps: [InstalledApp],
+    knownApps: [InstalledApp],
+    launchServicesIdentifiers: Set<String>
+) -> [InstalledApp] {
+    // Stub: trả về rỗng. Nếu muốn inference thật, cần đọc
+    // .com.apple.mobile_container_manager.metadata.plist trong từng container
+    // và map container UUID -> bundle ID qua LaunchServices.
+    return []
+}
 }
