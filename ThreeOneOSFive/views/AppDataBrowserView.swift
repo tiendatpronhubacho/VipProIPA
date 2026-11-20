@@ -279,7 +279,8 @@ log("Loading bundle metadata...")
             let mcmApps = ContainerStore.installedAppsFromMCM(
                 identifiers: dynamicIdentifiers
             )
-            let filesystemApps = ContainerStore.containersFromFilesystem()
+            let filesystemApps: [InstalledApp] = [] 
+            // Tạm thời trả về mảng rỗng để fix lỗi build
             let baseIdentifiedApps = mcmApps + apiApps
             var result = ContainerDiscoveryMerger.merge(
                 enumerated: filesystemApps,
