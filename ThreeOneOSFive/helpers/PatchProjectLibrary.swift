@@ -225,20 +225,22 @@ enum PatchProjectLibrary {
         }
         let previousData = try existingURL.map { try readPackage(at: $0) }
         let originURL = try originFileURL(
-            packageID: summary.packageID
-        )
-        let previousOriginData = try? Data(contentsOf: originURL)
-        var savedURL: URL?
-        do {
-            if let origin {
-                try saveOrigin(origin, to: originURL)
-            }
-            savedURL = try save(
-                data: data,
-                projectName: decoded.project.name,
-                existingURL: existingURL,
-                fileManager: fileManager
-            )
+    packageID: summary.packageID,
+    fileManager: fileManager // Bắt buộc phải có
+)
+
+let previousOriginData = try? Data(contentsOf: originURL)
+var savedURL: URL?
+do {
+    if let origin {
+        try saveOrigin(origin, to: originURL)
+    }
+    savedURL = try save(
+        data: data,
+        projectName: decoded.project.name,
+        existingURL: existingURL,
+        fileManager: fileManager
+    )
             if summary.schemaVersion >= 2 {
                 if PatchProjectAccessPolicy.shouldMaterializeWorkspace(
                     project: decoded.project,
@@ -272,8 +274,8 @@ enum PatchProjectLibrary {
             if let previousOriginData {
                 try? previousOriginData.write(
                     to: originURL,
-                    options: .atomic
-                )
+        options: Data.WritingOptions.atomic
+    )
             } else if origin != nil, fileManager.fileExists(atPath: originURL.path) {
                 try? fileManager.removeItem(at: originURL)
             }
@@ -286,7 +288,6 @@ enum PatchProjectLibrary {
         guard PatchTransaction.latestReceipt(
             projectID: item.id,
             backupRoot: backupRoot,
-            fileManager: fileManager
         ) == nil else {
             throw PatchPackageError.activePatchCannotBeDeleted
         }
