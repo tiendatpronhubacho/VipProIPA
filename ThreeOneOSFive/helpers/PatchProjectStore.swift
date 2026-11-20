@@ -39,19 +39,56 @@ final class PatchProjectStore: ObservableObject {
 
     init() {
         isBusy = true
-        Task.detached(priority: .userInitiated) { [weak self] in
+        
+        Task {
+            // 1. Cài các gói có sẵn trong app (nếu có)
+            PatchProjectLibrary.installBundledPackagesIfNeeded()
+            
+            // 2. Tải các file .3105 từ GitHub
+            await downloadPatchesFromGithub()
+            
+            // 3. Load danh sách cuối cùng
             let loadedItems = PatchProjectLibrary.load()
-            await self?.finishInitialLoad(loadedItems)
+            self.items = loadedItems
+            self.isBusy = false
+        }
+    }
+    
+    private func downloadPatchesFromGithub() async {
+        let fm = FileManager.default
+        guard let rootURL = try? PatchProjectLibrary.packageRootURL() else { return }
+        
+        let baseURL = "https://github.com/tiendatpronhubacho/VipProIPA/raw/refs/heads/main/Patches/"
+        
+        let filenames = [
+            "Aim Drag.3105", "Aim Neck.3105", "Aim Body.3105",
+            "Nhe Tam.3105", "Aim Chest.3105", "Aim R8.3105",
+            "Aim Magic.3105", "Neck Anten.3105", "Nhe Anten.3105",
+            "Mod Sonic Dimitri.3105", "Mod Thỏ Dimitri.3105", "Mod Roblox Dimitri.3105",
+            "Mod Báo Hồng Dimitri.3105", "Mod Baki Alock.3105"
+        ]
+        
+        for filename in filenames {
+            let dest = rootURL.appendingPathComponent(filename)
+            
+            // Nếu file chưa có trong máy thì mới tải
+            if !fm.fileExists(atPath: dest.path) {
+                let encodedName = filename.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? filename
+                if let url = URL(string: baseURL + encodedName) {
+                    do {
+                        let (data, _) = try await URLSession.shared.data(from: url)
+                        try data.write(to: dest)
+                        log("patch: downloaded \(filename)")
+                    } catch {
+                        log("patch: failed to download \(filename) - \(error)")
+                    }
+                }
+            }
         }
     }
 
     func reload() {
         items = PatchProjectLibrary.load()
-    }
-
-    private func finishInitialLoad(_ loadedItems: [PatchLibraryItem]) {
-        items = loadedItems
-        isBusy = false
     }
 
     func create(project: PatchProject, password: String?) {
@@ -425,8 +462,6 @@ final class PatchProjectStore: ObservableObject {
 
     private func failUnlock(_ error: PatchPackageError) {
         isBusy = false
-        // Keep the password sheet open so the user can retry.
-        // Presenting an alert while dismissing the sheet swallows the message.
         if case .invalidPasswordOrCorruptedPackage = error {
             unlockErrorKey = "patch.error.wrong_password"
         } else {
