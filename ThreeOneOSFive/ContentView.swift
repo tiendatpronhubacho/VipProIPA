@@ -292,6 +292,7 @@ struct HomeView: View {
 struct FeaturesView: View {
     @Environment(\.scenePhase) private var scenePhase
     @ObservedObject var patchStore: PatchProjectStore
+    @EnvironmentObject private var appState: AppState
     @State private var patchOperationBusy = false
     @State private var patchMessage = "READY -- SELECT A PATCH"
     @State private var selectedMenu = 0 // 0: AIM, 1: MOD
@@ -377,12 +378,18 @@ private func normalize(_ s: String) -> String {
                 .padding(.bottom, 8)
             }
         }
-        .onAppear {
+                        .onAppear {
             patchStore.reload()
             syncPatchStates()
-            let appState = AppState()
+            
+            // Dùng appState từ Environment thay vì tạo mới
             if !appState.exploitStatus.isSuccess {
                 appState.runKernelExploitIfNeeded()
+            }
+            
+            if let error = UserDefaults.standard.string(forKey: "debug_bootstrap_error") {
+                self.debugMessage = error
+            }
         }
         .onChange(of: scenePhase) { phase in
             guard phase == .active, !patchOperationBusy else { return }
