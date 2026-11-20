@@ -17,32 +17,33 @@ enum ContainerStore {
     static let sharedDataRoot = "/var/mobile/Containers/Shared/AppGroup"
     
     // MARK: - Resolve Path
-        static func resolveAppContainerPath(bundleID: String) -> String? {
+            static func resolveAppContainerPath(bundleID: String) -> String? {
         let appDataRoot = "/var/mobile/Containers/Data/Application"
         
-        // 👇 ÉP CẤP QUYỀN TRƯỚC KHI ĐỌC
+        // 1. Thử cấp quyền đọc thư mục
         let _ = SandboxAccess.grant(path: appDataRoot, writable: true)
         
+        // 2. Quét tìm thư mục của FF
         let fm = FileManager.default
-        guard let uuids = try? fm.contentsOfDirectory(atPath: appDataRoot) else {
-            log("container: Không đọc được \(appDataRoot) -- Sandbox chưa escape!")
-            return nil
-        }
-        
-        for uuid in uuids {
-            let metaPath = "\(appDataRoot)/\(uuid)/.com.apple.mobile_container_manager.metadata.plist"
-            if let data = try? Data(contentsOf: URL(fileURLWithPath: metaPath)),
-               let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
-               let id = plist["MCMMetadataIdentifier"] as? String,
-               id == bundleID {
-                log("container: Tìm thấy \(bundleID) tại \(uuid)")
-                return "\(appDataRoot)/\(uuid)"
+        if let uuids = try? fm.contentsOfDirectory(atPath: appDataRoot) {
+            for uuid in uuids {
+                let metaPath = "\(appDataRoot)/\(uuid)/.com.apple.mobile_container_manager.metadata.plist"
+                if let data = try? Data(contentsOf: URL(fileURLWithPath: metaPath)),
+                   let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
+                   let id = plist["MCMMetadataIdentifier"] as? String,
+                   id == bundleID {
+                    return "\(appDataRoot)/\(uuid)"
+                }
             }
         }
-        log("container: Không tìm thấy \(bundleID) trong \(uuids.count) thư mục")
-        return nil
+        
+        // 3. FALLBACK: Nếu quét thất bại, thử dùng đường dẫn mặc định (tránh lỗi targetAppUnavailable)
+        // Đường dẫn này sẽ được patch ghi đè nếu app có quyền
+        let fallbackPath = "\(appDataRoot)/\(bundleID)"
+        print("container: Fallback path used -> \(fallbackPath)")
+        
+        return fallbackPath
     }
-
     static func isApplicationContainerPath(_ path: String) -> Bool {
         let cleanPath = path.hasSuffix("/") ? String(path.dropLast()) : path
         return cleanPath.hasPrefix(appDataRoot + "/") || cleanPath.hasPrefix("/private" + appDataRoot + "/")

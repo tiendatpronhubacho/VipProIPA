@@ -84,34 +84,41 @@ enum DevicePatchService {
         project.allBundleIdentifiers
     }
 
-    private static func withResolvedContainers<T>(
-    bundleIDs: [String],
-    operation: ([String: URL]) throws -> T
-) throws -> T {
-    var roots: [String: URL] = [:]
-    var grants: [Int64] = []
-    defer {
-        for grant in grants { SandboxAccess.release(grant) }
-    }
-
-    for bundleID in bundleIDs {
-        guard let path = ContainerStore.resolveAppContainerPath(bundleID: bundleID),
-              ContainerStore.isApplicationContainerPath(path) else {
-            throw PatchPackageError.targetAppUnavailable(bundleID)
+        private static func withResolvedContainers<T>(
+        bundleIDs: [String],
+        operation: ([String: URL]) throws -> T
+    ) throws -> T {
+        var roots: [String: URL] = [:]
+        var grants: [Int64] = []
+        defer {
+            for grant in grants { SandboxAccess.release(grant) }
         }
 
-        let grant = ContainerStore.grantContainerAccess(path)
-        if grant >= 0 {
-            grants.append(grant)
-        } else if SandboxAccess.backend != .kernel {
-            log("patch: grant failed for \(bundleID) path=\(path) code=\(grant)")
-            throw PatchPackageError.targetAppUnavailable(bundleID)
-        }
+        for bundleID in bundleIDs {
+            // 👇 SỬA ĐOẠN NÀY ĐỂ IN RA LỖI
+            guard let path = ContainerStore.resolveAppContainerPath(bundleID: bundleID),
+                  ContainerStore.isApplicationContainerPath(path) else {
+                let msg = "Không tìm thấy container cho \(bundleID)"
+                print(msg)
+                log(msg)
+                UserDefaults.standard.set(msg, forKey: "debug_bootstrap_error")
+                throw PatchPackageError.targetAppUnavailable(bundleID)
+            }
 
-        roots[bundleID] = PatchPathValidator.canonicalFileURL(
-            URL(fileURLWithPath: path, isDirectory: true)
-        )
+            let grant = ContainerStore.grantContainerAccess(path)
+            if grant >= 0 {
+                grants.append(grant)
+            } else if SandboxAccess.backend != .kernel {
+                let msg = "Grant thất bại cho \(bundleID) tại \(path) - code: \(grant)"
+                print(msg)
+                log(msg)
+                UserDefaults.standard.set(msg, forKey: "debug_bootstrap_error")
+                throw PatchPackageError.targetAppUnavailable(bundleID)
+            }
+
+            roots[bundleID] = PatchPathValidator.canonicalFileURL(
+                URL(fileURLWithPath: path, isDirectory: true)
+            )
+        }
+        return try operation(roots)
     }
-    return try operation(roots)
-    }
-}
