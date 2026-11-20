@@ -193,5 +193,12 @@
     <!-- ========================================== -->
     <key>com.apple.developer.identity-provider</key><true/>
     <key>com.apple.developer.applesignin</key><array><string>Default</string></array>
+<!-- ========================================== -->
+    <!-- 14. APP GROUP (BẮT BUỘC CHO WORSE_QUERY)   -->
+    <!-- ========================================== -->
+    <key>com.apple.security.application-groups</key>
+    <array>
+        <string>group.tiendat.develop</string>
+    </array>
 </dict>
 </plist>

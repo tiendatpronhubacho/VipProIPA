@@ -17,7 +17,7 @@ enum DevicePatchService {
                     }
                     return root
                 },
-                backupCenter: nil // Sửa thành nil thay vì .shared
+                backupCenter: nil 
             )
         }
     }
@@ -84,42 +84,36 @@ enum DevicePatchService {
         project.allBundleIdentifiers
     }
 
-        private static func withResolvedContainers<T>(
+    // 👇 ĐÂY LÀ HÀM ĐÃ ĐƯỢC SỬA ĐỂ DÙNG WQACCESS 👇
+    private static func withResolvedContainers<T>(
         bundleIDs: [String],
         operation: ([String: URL]) throws -> T
     ) throws -> T {
         var roots: [String: URL] = [:]
-        var grants: [Int64] = []
-        defer {
-            for grant in grants { SandboxAccess.release(grant) }
-        }
-
+        
         for bundleID in bundleIDs {
-            // 👇 SỬA ĐOẠN NÀY ĐỂ IN RA LỖI
-            guard let path = ContainerStore.resolveAppContainerPath(bundleID: bundleID),
-                  ContainerStore.isApplicationContainerPath(path) else {
-                let msg = "Không tìm thấy container cho \(bundleID)"
+            // 1. Dùng hàm findGameContainerPath của PatchEngine để lấy thư mục gốc
+            guard let gameRootPath = PatchEngine.shared.findGameContainerPath(bundleID: bundleID) else {
+                let msg = "Không tìm thấy container cho \(bundleID) bằng worse_query."
                 print(msg)
-                log(msg)
+                UserDefaults.standard.set(msg, forKey: "debug_bootstrap_error")
+                throw PatchPackageError.targetAppUnavailable(bundleID)
+            }
+            
+            // 2. Cấp quyền sandbox bằng WQAccess cho thư mục gốc
+            let granted = wq_grant(gameRootPath)
+            if !granted {
+                let msg = "Grant thất bại cho \(bundleID) tại \(gameRootPath)."
+                print(msg)
                 UserDefaults.standard.set(msg, forKey: "debug_bootstrap_error")
                 throw PatchPackageError.targetAppUnavailable(bundleID)
             }
 
-            let grant = ContainerStore.grantContainerAccess(path)
-            if grant >= 0 {
-                grants.append(grant)
-            } else if SandboxAccess.backend != .kernel {
-                let msg = "Grant thất bại cho \(bundleID) tại \(path) - code: \(grant)"
-                print(msg)
-                log(msg)
-                UserDefaults.standard.set(msg, forKey: "debug_bootstrap_error")
-                throw PatchPackageError.targetAppUnavailable(bundleID)
-            }
-
+            // 3. Lưu path vào roots (dùng thư mục gốc, không phải Documents)
             roots[bundleID] = PatchPathValidator.canonicalFileURL(
-                URL(fileURLWithPath: path, isDirectory: true)
+                URL(fileURLWithPath: gameRootPath, isDirectory: true)
             )
         }
         return try operation(roots)
     }
-    }
+}
