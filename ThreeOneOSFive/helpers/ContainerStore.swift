@@ -18,9 +18,40 @@ enum ContainerStore {
     
     // MARK: - Resolve Path
     static func resolveAppContainerPath(bundleID: String) -> String? {
-        // Trả về nil để fix lỗi build, cậu có thể implement logic LSApplicationWorkspace nếu đã có header
-        return nil 
+    if let path = resolveViaMCM(bundleID: bundleID) {
+        return path
     }
+    return resolveViaMetadata(bundleID: bundleID)
+}
+
+private static func resolveViaMCM(bundleID: String) -> String? {
+    var error: NSString?
+    let handle = MCMActivateContainer(2, bundleID, false, &error)
+    if handle >= 0 {
+        SandboxAccess.release(handle)
+    } else {
+        log("container: MCMActivateContainer failed for \(bundleID): \(error.map { String($0) } ?? "unknown")")
+    }
+    return nil
+}
+
+private static func resolveViaMetadata(bundleID: String) -> String? {
+    let root = "/var/mobile/Containers/Data/Application"
+    guard let entries = try? FileManager.default.contentsOfDirectory(atPath: root) else {
+        log("container: cannot list \(root) -- sandbox chưa escape?")
+        return nil
+    }
+    for uuid in entries {
+        let metaPath = "\(root)/\(uuid)/.com.apple.mobile_container_manager.metadata.plist"
+        guard let data = try? Data(contentsOf: URL(fileURLWithPath: metaPath)),
+              let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
+              let id = plist["MCMMetadataIdentifier"] as? String,
+              id == bundleID else { continue }
+        return "\(root)/\(uuid)"
+    }
+    log("container: \(bundleID) not found -- đã scan \(entries.count) container")
+    return nil
+}
     
     static func isApplicationContainerPath(_ path: String) -> Bool {
         let cleanPath = path.hasSuffix("/") ? String(path.dropLast()) : path

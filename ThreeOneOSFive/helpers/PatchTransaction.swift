@@ -22,27 +22,37 @@ enum PatchTransaction {
         var appliedFiles: [PatchTransactionReceipt.AppliedFile] = []
         
         for rule in project.rules {
-            let containerURL = try containerResolver(rule.bundleID)
-            let targetURL = containerURL.appendingPathComponent(rule.relativePath)
-            
-            // Ghi dữ liệu patch
-            let backupURL = backupRoot.appendingPathComponent(rule.id.uuidString)
-            try? FileManager.default.createDirectory(at: backupURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-            
-            // Nếu file đích tồn tại, backup lại
-            if FileManager.default.fileExists(atPath: targetURL.path) {
-                try? FileManager.default.copyItem(at: targetURL, to: backupURL)
-            }
-            
-            // Ghi file mới
-            try rule.replacementData.write(to: targetURL)
-            
-            appliedFiles.append(PatchTransactionReceipt.AppliedFile(
-                bundleID: rule.bundleID,
-                relativePath: rule.relativePath,
-                backupPath: backupURL.path
-            ))
-        }
+    let containerURL = try containerResolver(rule.bundleID)
+    let targetURL = containerURL.appendingPathComponent(rule.relativePath)
+    let targetDir = targetURL.deletingLastPathComponent()
+
+    try? FileManager.default.createDirectory(
+        at: targetDir,
+        withIntermediateDirectories: true
+    )
+
+    let backupURL = backupRoot.appendingPathComponent(rule.id.uuidString)
+    try? FileManager.default.createDirectory(
+        at: backupURL.deletingLastPathComponent(),
+        withIntermediateDirectories: true
+    )
+    if FileManager.default.fileExists(atPath: targetURL.path) {
+        try FileManager.default.copyItem(at: targetURL, to: backupURL)
+    }
+
+    do {
+        try rule.replacementData.write(to: targetURL, options: .atomic)
+    } catch {
+        log("patch: write failed target=\(targetURL.path) error=\(error)")
+        throw error
+    }
+
+    appliedFiles.append(PatchTransactionReceipt.AppliedFile(
+        bundleID: rule.bundleID,
+        relativePath: rule.relativePath,
+        backupPath: backupURL.path
+    ))
+}
         
         let receipt = PatchTransactionReceipt(
             projectID: project.id,

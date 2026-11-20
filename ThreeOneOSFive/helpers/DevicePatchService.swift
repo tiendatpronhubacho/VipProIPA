@@ -85,26 +85,34 @@ enum DevicePatchService {
     }
 
     private static func withResolvedContainers<T>(
-        bundleIDs: [String],
-        operation: ([String: URL]) throws -> T
-    ) throws -> T {
-        var roots: [String: URL] = [:]
-        var grants: [Int64] = []
-        defer {
-            for grant in grants { SandboxAccess.release(grant) }
+    bundleIDs: [String],
+    operation: ([String: URL]) throws -> T
+) throws -> T {
+    var roots: [String: URL] = [:]
+    var grants: [Int64] = []
+    defer {
+        for grant in grants { SandboxAccess.release(grant) }
+    }
+
+    for bundleID in bundleIDs {
+        guard let path = ContainerStore.resolveAppContainerPath(bundleID: bundleID),
+              ContainerStore.isApplicationContainerPath(path) else {
+            throw PatchPackageError.targetAppUnavailable(bundleID)
         }
 
-        for bundleID in bundleIDs {
-            guard let path = ContainerStore.resolveAppContainerPath(bundleID: bundleID),
-                  ContainerStore.isApplicationContainerPath(path) else {
-                throw PatchPackageError.targetAppUnavailable(bundleID)
-            }
-            
-            let grant = ContainerStore.grantContainerAccess(path)
-            if grant >= 0 { grants.append(grant) }
-            
-            roots[bundleID] = PatchPathValidator.canonicalFileURL(URL(fileURLWithPath: path, isDirectory: true))
+        let grant = ContainerStore.grantContainerAccess(path)
+        if grant >= 0 {
+            grants.append(grant)
+        } else if SandboxAccess.backend != .kernel {
+            log("patch: grant failed for \(bundleID) path=\(path) code=\(grant)")
+            throw PatchPackageError.targetAppUnavailable(bundleID)
         }
-        return try operation(roots)
+
+        roots[bundleID] = PatchPathValidator.canonicalFileURL(
+            URL(fileURLWithPath: path, isDirectory: true)
+        )
+    }
+    return try operation(roots)
+}
     }
 }
