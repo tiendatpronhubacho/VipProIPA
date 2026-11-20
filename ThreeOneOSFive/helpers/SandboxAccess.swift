@@ -99,37 +99,33 @@ enum SandboxAccess {
     /// A lightweight activation probe used by the UI. It verifies the App Group
     /// exists for worse_query, and that the previous grant path is usable for
     /// bad_query.
-    static func probe() -> Bool {
+        static func probe() -> Bool {
         switch backend {
         case .kernel:
             return KernelExploit.hasKernelSandboxAccess()
         case .badQuery:
             let handle = grant(path: ContainerStore.appDataRoot)
-            if handle >= 0 {
-                release(handle)
-                return true
-            }
+            if handle >= 0 { release(handle); return true }
             return false
         case .worseQuery:
+            // Phải có App Group
             guard let group = appGroup,
-                  let groupURL = FileManager.default.containerURL(
-                    forSecurityApplicationGroupIdentifier: group
-                  ) else {
-                log("sandbox: no App Group entitlement -- worse_query cannot run")
+                  let groupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group) else {
+                log("sandbox: no App Group entitlement")
                 return false
             }
-            // Exercise the real query path on our own group container first;
-            // the parent container root is not grantable on every iOS 26 build.
-            // The writable grant runs the T-005 write probe, so a read-only
-            // token no longer passes activation (spec D-04).
-            if grant(path: groupURL.path, writable: true) >= 0 {
-                return true
-            }
-            let handle = grant(path: ContainerStore.appDataRoot, writable: true)
+            
+            // Ép cấp quyền cho thư mục Application (để đọc được game)
+            let targetPath = "/var/mobile/Containers/Data/Application"
+            let handle = grant(path: targetPath, writable: true)
+            
             if handle >= 0 {
+                log("sandbox: worse_query granted access to \(targetPath)")
+                // Lưu handle này lại, không release ngay để dùng cho các bước sau
                 return true
             }
-            log("sandbox: worse_query probe failed on the App Group and app-data root")
+            
+            log("sandbox: worse_query probe failed")
             return false
         case .unsupported:
             return false

@@ -17,9 +17,13 @@ enum ContainerStore {
     static let sharedDataRoot = "/var/mobile/Containers/Shared/AppGroup"
     
     // MARK: - Resolve Path
-    static func resolveAppContainerPath(bundleID: String) -> String? {
-        let fm = FileManager.default
+        static func resolveAppContainerPath(bundleID: String) -> String? {
+        let appDataRoot = "/var/mobile/Containers/Data/Application"
         
+        // 👇 ÉP CẤP QUYỀN TRƯỚC KHI ĐỌC
+        let _ = SandboxAccess.grant(path: appDataRoot, writable: true)
+        
+        let fm = FileManager.default
         guard let uuids = try? fm.contentsOfDirectory(atPath: appDataRoot) else {
             log("container: Không đọc được \(appDataRoot) -- Sandbox chưa escape!")
             return nil
