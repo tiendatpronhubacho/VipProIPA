@@ -563,12 +563,12 @@ struct FileBrowserView: View {
     }
 
     private var namePromptTitle: String {
-        switch namePrompt?.action {
+        guard let action = namePrompt?.action else { return "" }
+        switch action {
         case .createFile: return language.text("browser.new_file")
         case .createFolder: return language.text("browser.new_folder")
         case .rename: return language.text("browser.rename")
         case .archive: return language.text("browser.create_zip")
-        case nil: return ""
         }
     }
 
@@ -671,7 +671,7 @@ struct FileBrowserView: View {
     }
 
     private func toggleAllSelection() {
-        let visibleIDs = Set(filteredEntries.map(\.id))
+        let visibleIDs = Set(filteredEntries.map { $0.id })
         if !visibleIDs.isEmpty, visibleIDs.isSubset(of: selectedEntryIDs) {
             selectedEntryIDs.subtract(visibleIDs)
         } else {

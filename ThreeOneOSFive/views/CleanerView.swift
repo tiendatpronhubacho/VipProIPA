@@ -444,7 +444,6 @@ struct CleanerView: View {
                         name: record.application.name,
                         containerPath: record.containerPath,
                         version: record.application.version,
-                        icon: original?.icon
                     )
                     discoveredRecords.append(
                         CleanerAppRecord(app: resolvedApp, usage: record.usage)

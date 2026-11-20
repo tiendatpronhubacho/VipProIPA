@@ -217,7 +217,6 @@ enum PatchProjectLibrary {
         if let occupiedPath = overlappingTargetPath(
             in: decoded.project,
             excludingPackageID: summary.packageID,
-            fileManager: fileManager
         ) {
             if decoded.project.isPrivate, !authorCopy {
                 throw PatchPackageError.privateOperationFailed
