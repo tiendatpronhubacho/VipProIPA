@@ -682,7 +682,7 @@ struct FileBrowserView: View {
     }
 
     private func prepareTransfer(_ mode: FileTransferMode) {
-        prepareTransfer(entries: selectedEntries, mode: mode)
+        prepareTransfer(selectedEntries, mode: mode)
     }
 
     private func prepareTransfer(_ entries: [FileEntry], mode: FileTransferMode) {
@@ -1157,11 +1157,27 @@ struct FileBrowserView: View {
                     log("filebrowser: traversal grant \(path) -> \(handle)")
                 }
             }
-            let loadedEntries = ContainerStore.listFiles(at: path)
+            // Lấy mảng String từ ContainerStore
+            let loadedPaths = ContainerStore.listFiles(at: path)
+            
+            // Map từ [String] sang [FileEntry]
+            let loadedEntries = loadedPaths.map { filePath -> FileEntry in
+                let fileURL = URL(fileURLWithPath: filePath)
+                let resourceValues = try? fileURL.resourceValues(forKeys: [.isDirectoryKey, .fileSizeKey, .contentModificationDateKey])
+                
+                return FileEntry(
+                    name: fileURL.lastPathComponent,
+                    path: filePath,
+                    isDirectory: resourceValues?.isDirectory ?? false,
+                    size: Int64(resourceValues?.fileSize ?? 0),
+                    modificationDate: resourceValues?.contentModificationDate
+                )
+            }
+            
             DispatchQueue.main.async {
                 guard currentPath == path else { return }
                 entries = loadedEntries
-                selectedEntryIDs.formIntersection(Set(loadedEntries.map(\.id)))
+                selectedEntryIDs.formIntersection(Set(loadedEntries.map { $0.id }))
                 isLoadingEntries = false
             }
         }

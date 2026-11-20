@@ -225,8 +225,7 @@ enum PatchProjectLibrary {
         }
         let previousData = try existingURL.map { try readPackage(at: $0) }
         let originURL = try originFileURL(
-            packageID: summary.packageID,
-            fileManager: fileManager
+            packageID: summary.packageID
         )
         let previousOriginData = try? Data(contentsOf: originURL)
         var savedURL: URL?

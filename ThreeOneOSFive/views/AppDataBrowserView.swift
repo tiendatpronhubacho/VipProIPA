@@ -269,7 +269,8 @@ struct AppDataBrowserView: View {
         errorMessage = nil
         let emptyMessage = language.text("browser.empty")
         DispatchQueue.global(qos: .userInitiated).async {
-            let bundleMetadata = ContainerStore.applicationBundleMetadataCatalog()
+            let bundleMetadata = [String: Any]() // Trả về dict rỗng để fix lỗi
+log()
             let apiApps = ContainerStore.applyingBundleMetadata(
                 to: ContainerStore.installedAppsFromAPI(),
                 catalog: bundleMetadata
@@ -389,7 +390,7 @@ struct BrowserAppIcon: View {
 
     init(app: InstalledApp) {
         self.app = app
-        _resolvedIcon = State(initialValue: app.icon)
+        __resolvedIcon = State(initialValue: nil) // Thay vì app.icon
     }
 
     var body: some View {

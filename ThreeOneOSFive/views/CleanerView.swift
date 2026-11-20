@@ -438,7 +438,7 @@ struct CleanerView: View {
                 )
                 processedCount = scannedBundleIDs.count
                 for record in newRecords {
-                    let original = metadata[record.bundleID]
+                    _ = metadata[record.bundleID]
                     let resolvedApp = InstalledApp(
                         bundleID: record.bundleID,
                         name: record.application.name,
