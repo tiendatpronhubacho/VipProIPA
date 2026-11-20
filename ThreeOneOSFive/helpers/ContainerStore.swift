@@ -120,4 +120,12 @@ enum ContainerStore {
     static var researchAppIdentifiers: [String] {
         return []
     }
+    static func installedAppsFromMHACandidates(
+        identifiers: [String],
+        progressHandler: (([InstalledApp]) -> Void)? = nil
+    ) -> [InstalledApp] {
+        // Hàm giả lập để fix lỗi build. 
+        // Cậu có thể implement logic quét MHA thực tế sau này.
+        return []
+    }
 }
