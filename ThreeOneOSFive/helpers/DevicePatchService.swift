@@ -113,6 +113,5 @@ enum DevicePatchService {
         )
     }
     return try operation(roots)
-}
     }
 }
