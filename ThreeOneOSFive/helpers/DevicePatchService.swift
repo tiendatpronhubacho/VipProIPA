@@ -1,4 +1,32 @@
 import Foundation
+import UIKit // Cần cho các hàm xử lý file của iOS
+
+// Gộp PatchEngine vào đây để khỏi phải khai báo file mới trong project.pbxproj
+class PatchEngine {
+    static let shared = PatchEngine()
+    
+    func findGameContainerPath(bundleID: String) -> String? {
+        let parentDir = "/var/mobile/Containers/Data/Application"
+        
+        guard let uuids = wq_list(parentDir, nil) as? [String] else {
+            return nil
+        }
+        
+        for uuid in uuids {
+            let appDir = "\(parentDir)/\(uuid)"
+            let plistPath = "\(appDir)/.com.apple.mobile_container_manager.metadata.plist"
+            
+            if let data = wq_read(plistPath, 1024 * 1024, nil) as? Data {
+                if let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any] {
+                    if let id = plist["MCMMetadataIdentifier"] as? String, id == bundleID {
+                        return appDir // Trả về thư mục gốc
+                    }
+                }
+            }
+        }
+        return nil
+    }
+}
 
 struct PatchRestoreInspection {
     // Để trống
@@ -84,7 +112,6 @@ enum DevicePatchService {
         project.allBundleIdentifiers
     }
 
-    // 👇 ĐÂY LÀ HÀM ĐÃ ĐƯỢC SỬA ĐỂ DÙNG WQACCESS 👇
     private static func withResolvedContainers<T>(
         bundleIDs: [String],
         operation: ([String: URL]) throws -> T
@@ -92,7 +119,7 @@ enum DevicePatchService {
         var roots: [String: URL] = [:]
         
         for bundleID in bundleIDs {
-            // 1. Dùng hàm findGameContainerPath của PatchEngine để lấy thư mục gốc
+            // Gọi trực tiếp từ class PatchEngine đã gộp ở trên
             guard let gameRootPath = PatchEngine.shared.findGameContainerPath(bundleID: bundleID) else {
                 let msg = "Không tìm thấy container cho \(bundleID) bằng worse_query."
                 print(msg)
@@ -100,7 +127,6 @@ enum DevicePatchService {
                 throw PatchPackageError.targetAppUnavailable(bundleID)
             }
             
-            // 2. Cấp quyền sandbox bằng WQAccess cho thư mục gốc
             let granted = wq_grant(gameRootPath)
             if !granted {
                 let msg = "Grant thất bại cho \(bundleID) tại \(gameRootPath)."
@@ -109,7 +135,6 @@ enum DevicePatchService {
                 throw PatchPackageError.targetAppUnavailable(bundleID)
             }
 
-            // 3. Lưu path vào roots (dùng thư mục gốc, không phải Documents)
             roots[bundleID] = PatchPathValidator.canonicalFileURL(
                 URL(fileURLWithPath: gameRootPath, isDirectory: true)
             )
