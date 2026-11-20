@@ -2,9 +2,7 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <!-- ========================================== -->
-    <!-- QUYỀN CƠ BẢN (BẮT BUỘC)                    -->
-    <!-- ========================================== -->
+    <!-- THÔNG TIN CƠ BẢN -->
     <key>application-identifier</key>
     <string>$(AppIdentifierPrefix)$(CFBundleIdentifier)</string>
     <key>com.apple.developer.team-identifier</key>
@@ -12,17 +10,13 @@
     <key>get-task-allow</key>
     <true/>
 
-    <!-- ========================================== -->
-    <!-- QUYỀN APP GROUPS (CẦN CHO iOS 26.7+)       -->
-    <!-- ========================================== -->
+    <!-- APP GROUPS -->
     <key>com.apple.security.application-groups</key>
     <array>
         <string>group.com.tiendat.vip</string>
     </array>
 
-    <!-- ========================================== -->
-    <!-- QUYỀN SANDBOX & CONTAINER (CỰC KỲ QUAN TRỌNG)-->
-    <!-- ========================================== -->
+    <!-- QUYỀN SANDBOX & CONTAINER (QUAN TRỌNG NHẤT) -->
     <key>com.apple.private.security.no-sandbox</key>
     <true/>
     <key>com.apple.private.security.no-container</key>
@@ -46,15 +40,11 @@
     <key>com.apple.private.security.storage.SharedData</key>
     <true/>
 
-    <!-- ========================================== -->
-    <!-- QUYỀN CHẠY NHƯ APP HỆ THỐNG                -->
-    <!-- ========================================== -->
+    <!-- QUYỀN CHẠY APP HỆ THỐNG -->
     <key>platform-application</key>
     <true/>
-    
-    <!-- ========================================== -->
-    <!-- QUYỀN DEBUG & CHẠY TIẾN TRÌNH KHÁC         -->
-    <!-- ========================================== -->
+
+    <!-- QUYỀN DEBUG & CHẠY BINARY KHÁC -->
     <key>task_for_pid-allow</key>
     <true/>
     <key>com.apple.private.cs.debugger</key>
@@ -66,9 +56,7 @@
     <key>dynamic-codesigning</key>
     <true/>
 
-    <!-- ========================================== -->
-    <!-- QUYỀN MOBILE CONTAINER MANAGER (MCM)       -->
-    <!-- ========================================== -->
+    <!-- QUYỀN MOBILE CONTAINER MANAGER -->
     <key>com.apple.private.MobileContainerManager</key>
     <true/>
     <key>com.apple.private.MobileContainerManager.Tags</key>
@@ -80,19 +68,17 @@
         <string>system-group</string>
     </array>
 
-    <!-- ========================================== -->
-    <!-- QUYỀN GIAO TIẾP VỚI HỆ THỐNG (SPRINGBOARD, ETC)-->
-    <!-- ========================================== -->
+    <!-- GIAO TIẾP VỚI HỆ THỐNG -->
     <key>com.apple.security.exception.mach-lookup.global-name</key>
     <array>
         <string>com.apple.springboard</string>
         <string>com.apple.backboardd</string>
         <string>com.apple.UIKit</string>
+        <string>com.apple.healthkit</string>
+        <string>com.apple.homekit</string>
     </array>
-    
-    <!-- ========================================== -->
-    <!-- QUYỀN CÀI ĐẶT & GỠ BỎ (UPGRADE)            -->
-    <!-- ========================================== -->
+
+    <!-- QUYỀN CÀI ĐẶT & GỠ BỎ -->
     <key>com.apple.private.mobileinstall.upgrade-enabled</key>
     <true/>
     <key>com.apple.private.mobileinstall.allowedSPI</key>
@@ -100,6 +86,93 @@
         <string>Lookup</string>
         <string>Install</string>
         <string>Uninstall</string>
+    </array>
+
+    <!-- CÁC QUYỀN DỊCH VỤ HỆ THỐNG (GIỐNG EXPLOIT) -->
+    <key>aps-environment</key>
+    <string>production</string>
+    <key>com.apple.developer.associated-domains</key>
+    <array>
+        <string>*</string>
+    </array>
+    <key>com.apple.developer.healthkit</key>
+    <true/>
+    <key>com.apple.developer.homekit</key>
+    <true/>
+    <key>com.apple.developer.icloud-services</key>
+    <array>
+        <string>CloudKit</string>
+        <string>CloudDocuments</string>
+    </array>
+    <key>com.apple.developer.icloud-container-identifiers</key>
+    <array>
+        <string>iCloud.*</string>
+    </array>
+    <key>com.apple.developer.ubiquity-kvstore-identifier</key>
+    <string>$(TeamIdentifierPrefix)$(CFBundleIdentifier)</string>
+    <key>com.apple.developer.game-center</key>
+    <true/>
+    <key>com.apple.developer.in-app-payments</key>
+    <array>
+        <string>merchant.*</string>
+    </array>
+    <key>com.apple.developer.networking.multipath</key>
+    <true/>
+    <key>com.apple.developer.networking.networkextension</key>
+    <array>
+        <string>packet-tunnel-provider</string>
+    </array>
+    <key>com.apple.developer.networking.vpn.api</key>
+    <array>
+        <string>allow-vpn</string>
+    </array>
+    <key>com.apple.developer.networking.wifi-info</key>
+    <true/>
+    <key>com.apple.developer.nfc.readersession.formats</key>
+    <array>
+        <string>TAG</string>
+    </array>
+    <key>com.apple.developer.pass-type-identifiers</key>
+    <array>
+        <string>*</string>
+    </array>
+    <key>com.apple.developer.siri</key>
+    <true/>
+    <key>com.apple.developer.user-fonts</key>
+    <array>
+        <string>system-installed</string>
+    </array>
+    <key>com.apple.developer.usernotifications.communication</key>
+    <true/>
+    <key>com.apple.developer.usernotifications.time-sensitive</key>
+    <true/>
+    <key>com.apple.developer.weatherkit</key>
+    <true/>
+    <key>inter-app-audio</key>
+    <true/>
+    <key>keychain-access-groups</key>
+    <array>
+        <string>$(AppIdentifierPrefix)*</string>
+    </array>
+    
+    <!-- KERNEL QUYỀN -->
+    <key>kernel.extended-virtual-addressing</key>
+    <true/>
+    <key>kernel.increased-debug-memory-limit</key>
+    <true/>
+    <key>kernel.increased-memory-limit</key>
+    <true/>
+    <key>network.HotspotConfiguration</key>
+    <true/>
+    
+    <!-- QUYỀN ẨN DANH -->
+    <key>com.apple.developer.team-identifier</key>
+    <string>$(DEVELOPMENT_TEAM)</string>
+    <key>com.apple.developer.identity-provider</key>
+    <true/>
+    <key>com.apple.developer.applesignin</key>
+    <array>
+        <string>Default</string>
     </array>
 </dict>
 </plist>
