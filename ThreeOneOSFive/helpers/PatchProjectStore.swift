@@ -40,10 +40,7 @@ final class PatchProjectStore: ObservableObject {
     init() {
         isBusy = true
         
-        Task {
-            // 1. Cài các gói có sẵn trong app (nếu có)
-            PatchProjectLibrary.installBundledPackagesIfNeeded()
-            
+        Task {      
             // 2. Tải các file .3105 từ GitHub
             await downloadPatchesFromGithub()
             
