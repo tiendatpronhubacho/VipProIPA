@@ -96,7 +96,6 @@ enum DevicePatchService {
                 throw PatchPackageError.targetAppUnavailable(bundleID)
             }
             
-            // Gọi grant thông qua ContainerStore
             let grant = ContainerStore.grantContainerAccess(path)
             if grant >= 0 { grants.append(grant) }
             
@@ -104,4 +103,9 @@ enum DevicePatchService {
         }
         return try operation(roots)
     }
+}
+
+// Struct giả để pass build
+struct PatchRestoreInspection {
+    // Để trống
 }

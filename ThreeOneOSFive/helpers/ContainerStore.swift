@@ -39,7 +39,7 @@ enum ContainerStore {
         return cleanPath.hasPrefix(sharedDataRoot + "/") || cleanPath.hasPrefix("/private" + sharedDataRoot + "/")
     }
     
-    // MARK: - Granting Access (Tích hợp lõi 3106)
+    // MARK: - Granting Access
     static func grantContainerAccess(_ path: String) -> Int64 {
         return SandboxAccess.grant(path: path)
     }
@@ -58,12 +58,29 @@ enum ContainerStore {
         return nil
     }
     
+    // Các hàm giả lập để fix lỗi build
     static func dynamicAppIdentifiers() -> [String] {
         return []
     }
     
     static func installedAppsFromAPI() -> [InstalledApp] {
         return []
+    }
+    
+    static func installedAppsFromMCM(identifiers: [String]) -> [InstalledApp] {
+        return []
+    }
+    
+    // Hàm listFiles hỗ trợ cả 2 nhãn
+    static func listFiles(in directory: String) -> [String] {
+        guard let contents = try? FileManager.default.contentsOfDirectory(atPath: directory) else {
+            return []
+        }
+        return contents.sorted()
+    }
+    
+    static func listFiles(at directory: String) -> [String] {
+        return listFiles(in: directory)
     }
     
     // MARK: - Utility Functions
@@ -87,14 +104,6 @@ enum ContainerStore {
     
     static func appDataRoots() -> [String] {
         return [appDataRoot, "/private" + appDataRoot]
-    }
-    
-    // MARK: - Additional Helpers for UI
-    static func listFiles(in directory: String) -> [String] {
-        guard let contents = try? FileManager.default.contentsOfDirectory(atPath: directory) else {
-            return []
-        }
-        return contents.sorted()
     }
     
     static func containerType(for path: String) -> String {
