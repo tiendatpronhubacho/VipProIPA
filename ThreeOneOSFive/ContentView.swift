@@ -300,8 +300,14 @@ struct FeaturesView: View {
     @State private var p4 = false; @State private var p5 = false; @State private var p6 = false
     @State private var p7 = false; @State private var p8 = false; @State private var p9 = false
     @State private var p10 = false; @State private var p11 = false; @State private var p12 = false
-    @State private var p13 = false; @State private var p14 = false
-
+    @State private var p13 = false; @State private var p14 = false 
+private func normalize(_ s: String) -> String {
+    s.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+        .replacingOccurrences(of: " ", with: "")
+        .replacingOccurrences(of: "+", with: "")
+        .replacingOccurrences(of: ".3105", with: "")
+        .replacingOccurrences(of: ".3106", with: "")
+}
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
@@ -371,7 +377,10 @@ struct FeaturesView: View {
                 .padding(.bottom, 8)
             }
         }
-        .onAppear { syncPatchStates() }
+        .onAppear {
+            patchStore.reload()
+            syncPatchStates()
+        }
         .onChange(of: scenePhase) { phase in
             guard phase == .active, !patchOperationBusy else { return }
             syncPatchStates()
@@ -461,8 +470,10 @@ struct FeaturesView: View {
     }
 
     private func isPatchActive(_ packageFilename: String) -> Bool {
-        patchStore.items.first(where: { $0.packageURL.lastPathComponent.caseInsensitiveCompare(packageFilename) == .orderedSame })
-            .flatMap { DevicePatchService.latestReceipt(projectID: $0.id) } != nil
+        let target = normalize(packageFilename)
+        return patchStore.items.first(where: {
+            normalize($0.packageURL.lastPathComponent) == target
+        }).flatMap { DevicePatchService.latestReceipt(projectID: $0.id) } != nil
     }
 
     private func setPatchState(for packageFilename: String, enabled: Bool) {
@@ -487,8 +498,12 @@ struct FeaturesView: View {
 
     private func togglePatch(packageFilename: String, state: Binding<Bool>, isEnabling: Bool) {
         guard !patchOperationBusy else { return }
-        guard let item = patchStore.items.first(where: { $0.packageURL.lastPathComponent.caseInsensitiveCompare(packageFilename) == .orderedSame }) else {
-            patchMessage = "ERROR -- PACKAGE NOT FOUND"
+        
+        let target = normalize(packageFilename)
+        guard let item = patchStore.items.first(where: {
+            normalize($0.packageURL.lastPathComponent) == target
+        }) else {
+            patchMessage = "ERROR -- PACKAGE NOT FOUND (\(patchStore.items.count) items loaded)"
             state.wrappedValue = !isEnabling // Revert
             return
         }

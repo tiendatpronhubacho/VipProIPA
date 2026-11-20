@@ -62,12 +62,19 @@ enum PatchProjectLibrary {
     }
 
     static func load(fileManager: FileManager = .default) -> [PatchLibraryItem] {
-        guard let root = try? packageRootURL(fileManager: fileManager),
-              let urls = try? fileManager.contentsOfDirectory(
-                at: root,
-                includingPropertiesForKeys: [.contentModificationDateKey, .fileSizeKey],
-                options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants]
-              ) else { return [] }
+    guard let root = try? packageRootURL(fileManager: fileManager),
+          let urls = try? fileManager.contentsOfDirectory(
+            at: root,
+            includingPropertiesForKeys: [.contentModificationDateKey, .fileSizeKey],
+            options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants]
+          ) else {
+        log("patch: load FAILED -- cannot read PatchProjects dir")
+        return []
+    }
+    log("patch: load scanning \(root.path) -- \(urls.count) entries")
+    for u in urls {
+        log("patch: found entry \(u.lastPathComponent)")
+    }
 
         var byID: [UUID: PatchLibraryItem] = [:]
         for url in urls where ["3106", "3105"].contains(url.pathExtension.lowercased()) {
@@ -116,7 +123,7 @@ enum PatchProjectLibrary {
                 }
                 byID[summary.packageID] = item
             } catch {
-                log("patch: skipped invalid local package \(url.lastPathComponent)")
+                log("patch: skipped \(url.lastPathComponent) -- \(error)")
             }
         }
         return byID.values.sorted {
