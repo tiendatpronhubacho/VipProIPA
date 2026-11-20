@@ -1,6 +1,38 @@
 import Foundation
 import Darwin
+import Foundation
 
+struct FileEntry: Identifiable, Hashable {
+    let id: String
+    let name: String
+    let path: String
+    let isDirectory: Bool
+    let size: Int64
+    let modificationDate: Date?
+
+    var sizeText: String {
+        if isDirectory {
+            return "--"
+        }
+        return ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
+    }
+
+    init(
+        id: String? = nil,
+        name: String,
+        path: String,
+        isDirectory: Bool,
+        size: Int64 = 0,
+        modificationDate: Date? = nil
+    ) {
+        self.id = id ?? path
+        self.name = name
+        self.path = path
+        self.isDirectory = isDirectory
+        self.size = size
+        self.modificationDate = modificationDate
+    }
+}
 enum FileManagerOperationError: Error, Equatable, LocalizedError {
     case invalidName
     case nameTooLong

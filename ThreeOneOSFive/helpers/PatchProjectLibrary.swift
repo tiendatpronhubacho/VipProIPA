@@ -296,7 +296,7 @@ enum PatchProjectLibrary {
         }
         try? PatchWorkspaceService.deleteWorkspace(projectID: item.id, fileManager: fileManager)
         try? PatchKeyStore.delete(for: item.summary)
-        if let originURL = try? originFileURL(
+if let originURL = try? originFileURL(
             packageID: item.id,
             fileManager: fileManager
         ), fileManager.fileExists(atPath: originURL.path) {

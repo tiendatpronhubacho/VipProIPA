@@ -442,8 +442,8 @@ struct CleanerView: View {
                     let resolvedApp = InstalledApp(
                         bundleID: record.bundleID,
                         name: record.application.name,
-                        containerPath: record.containerPath,
                         version: record.application.version,
+                        containerPath: record.containerPath
                     )
                     discoveredRecords.append(
                         CleanerAppRecord(app: resolvedApp, usage: record.usage)

@@ -85,7 +85,9 @@ struct FileBrowserView: View {
                         fileRow(entry)
                     }
                 } header: {
-                    Text(language.text("browser.items_count", Int64(filteredEntries.count)))
+                    let count = filteredEntries.count
+                    let countInt = Int64(count)
+                    Text(language.text("browser.items_count", countInt))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .textCase(nil)
@@ -556,7 +558,7 @@ struct FileBrowserView: View {
     }
 
     private var selectionActionTitle: String {
-        let visibleIDs = Set(filteredEntries.map(\.id))
+        let visibleIDs = Set(filteredEntries.map { $0.id })
         return !visibleIDs.isEmpty && visibleIDs.isSubset(of: selectedEntryIDs)
             ? language.text("patch.deselect_all")
             : language.text("patch.select_all")
@@ -680,7 +682,7 @@ struct FileBrowserView: View {
     }
 
     private func prepareTransfer(_ mode: FileTransferMode) {
-        prepareTransfer(selectedEntries, mode: mode)
+        prepareTransfer(entries: selectedEntries, mode: mode)
     }
 
     private func prepareTransfer(_ entries: [FileEntry], mode: FileTransferMode) {
