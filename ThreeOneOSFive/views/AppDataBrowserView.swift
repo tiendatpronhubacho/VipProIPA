@@ -271,17 +271,13 @@ struct AppDataBrowserView: View {
         DispatchQueue.global(qos: .userInitiated).async {
             let bundleMetadata = [String: Any]() // Trả về dict rỗng để fix lỗi
 log("Loading bundle metadata...")
-            let apiApps = ContainerStore.applyingBundleMetadata(
-                to: ContainerStore.installedAppsFromAPI(),
-                catalog: bundleMetadata
-            )
+            let apiApps = ContainerStore.installedAppsFromAPI()
             if apiApps.isEmpty {
                 log("browser: installed-app API unavailable; trying MCM class-2 enumeration...")
             }
             let dynamicIdentifiers = ContainerStore.dynamicAppIdentifiers()
             let mcmApps = ContainerStore.installedAppsFromMCM(
-                identifiers: dynamicIdentifiers,
-                bundleMetadata: bundleMetadata
+                identifiers: dynamicIdentifiers
             )
             let filesystemApps = ContainerStore.containersFromFilesystem()
             let baseIdentifiedApps = mcmApps + apiApps
