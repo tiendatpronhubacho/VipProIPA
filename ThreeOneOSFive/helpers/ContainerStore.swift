@@ -17,18 +17,14 @@ enum ContainerStore {
     static let sharedDataRoot = "/var/mobile/Containers/Shared/AppGroup"
     
     // MARK: - Resolve Path
-        static func resolveAppContainerPath(bundleID: String) -> String? {
-        // 1. Quét thư mục chứa app trên máy
-        let appDataRoot = "/var/mobile/Containers/Data/Application"
+    static func resolveAppContainerPath(bundleID: String) -> String? {
         let fm = FileManager.default
         
-        // Cần có quyền đọc thư mục này (sandbox escape hoặc MCM)
         guard let uuids = try? fm.contentsOfDirectory(atPath: appDataRoot) else {
-            log("container: Không thể đọc \(appDataRoot) - Sandbox chưa escape?")
+            log("container: Không đọc được \(appDataRoot) -- Sandbox chưa escape!")
             return nil
         }
         
-        // 2. Duyệt qua từng thư mục UUID để tìm file metadata
         for uuid in uuids {
             let metaPath = "\(appDataRoot)/\(uuid)/.com.apple.mobile_container_manager.metadata.plist"
             if let data = try? Data(contentsOf: URL(fileURLWithPath: metaPath)),
@@ -39,29 +35,10 @@ enum ContainerStore {
                 return "\(appDataRoot)/\(uuid)"
             }
         }
-        
-        log("container: Không tìm thấy \(bundleID) trong \(appDataRoot)")
+        log("container: Không tìm thấy \(bundleID) trong \(uuids.count) thư mục")
         return nil
     }
 
-private static func resolveViaMetadata(bundleID: String) -> String? {
-    let root = "/var/mobile/Containers/Data/Application"
-    guard let entries = try? FileManager.default.contentsOfDirectory(atPath: root) else {
-        log("container: cannot list \(root) -- sandbox chưa escape?")
-        return nil
-    }
-    for uuid in entries {
-        let metaPath = "\(root)/\(uuid)/.com.apple.mobile_container_manager.metadata.plist"
-        guard let data = try? Data(contentsOf: URL(fileURLWithPath: metaPath)),
-              let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
-              let id = plist["MCMMetadataIdentifier"] as? String,
-              id == bundleID else { continue }
-        return "\(root)/\(uuid)"
-    }
-    log("container: \(bundleID) not found -- đã scan \(entries.count) container")
-    return nil
-}
-    
     static func isApplicationContainerPath(_ path: String) -> Bool {
         let cleanPath = path.hasSuffix("/") ? String(path.dropLast()) : path
         return cleanPath.hasPrefix(appDataRoot + "/") || cleanPath.hasPrefix("/private" + appDataRoot + "/")
@@ -162,20 +139,14 @@ private static func resolveViaMetadata(bundleID: String) -> String? {
         identifiers: [String],
         progressHandler: (([InstalledApp]) -> Void)? = nil
     ) -> [InstalledApp] {
-        // Hàm giả lập để fix lỗi build. 
-        // Cậu có thể implement logic quét MHA thực tế sau này.
         return []
     }
-    // Thêm vào ContainerStore.swift (cuối enum, trước dấu })
 
-static func inferUnidentifiedApps(
-    in filesystemApps: [InstalledApp],
-    knownApps: [InstalledApp],
-    launchServicesIdentifiers: Set<String>
-) -> [InstalledApp] {
-    // Stub: trả về rỗng. Nếu muốn inference thật, cần đọc
-    // .com.apple.mobile_container_manager.metadata.plist trong từng container
-    // và map container UUID -> bundle ID qua LaunchServices.
-    return []
-}
+    static func inferUnidentifiedApps(
+        in filesystemApps: [InstalledApp],
+        knownApps: [InstalledApp],
+        launchServicesIdentifiers: Set<String>
+    ) -> [InstalledApp] {
+        return []
+    }
 }

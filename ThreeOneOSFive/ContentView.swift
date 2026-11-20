@@ -380,6 +380,9 @@ private func normalize(_ s: String) -> String {
         .onAppear {
             patchStore.reload()
             syncPatchStates()
+            let appState = AppState()
+            if !appState.exploitStatus.isSuccess {
+                appState.runKernelExploitIfNeeded()
         }
         .onChange(of: scenePhase) { phase in
             guard phase == .active, !patchOperationBusy else { return }
