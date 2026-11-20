@@ -55,29 +55,27 @@ enum PatchProjectLibrary {
     }
 
     // 👇 THÊM HÀM NÀY VÀO
-    static func bootstrap(fileManager: FileManager = .default) {
-        var patchURLs: [URL] = []
+        static func bootstrap(fileManager: FileManager = .default) {
+        // Đường dẫn tuyệt đối trên server build (nơi chứa thư mục ThreeOneOSFive)
+        let sourcePath = "/Users/builder/clone/ThreeOneOSFive"
+        let sourceURL = URL(fileURLWithPath: sourcePath)
         
-        if let bundleURL = Bundle.main.resourceURL?.appendingPathComponent("Patches"),
-           let urls = try? fileManager.contentsOfDirectory(at: bundleURL, includingPropertiesForKeys: nil, options: .skipsHiddenFiles) {
-            patchURLs.append(contentsOf: urls)
-        } else {
-            let sourcePath = "/Users/builder/clone/Resources/Patches"
-            let sourceURL = URL(fileURLWithPath: sourcePath)
-            if let urls = try? fileManager.contentsOfDirectory(at: sourceURL, includingPropertiesForKeys: nil, options: .skipsHiddenFiles) {
-                patchURLs.append(contentsOf: urls)
-                log("patch: bootstrap using absolute server path: \(sourcePath)")
-            }
+        guard let files = try? fileManager.contentsOfDirectory(at: sourceURL, includingPropertiesForKeys: nil, options: .skipsHiddenFiles) else {
+            log("patch: bootstrap failed -- cannot read \(sourcePath)")
+            return
         }
         
-        guard !patchURLs.isEmpty else {
-            log("patch: bootstrap skipped -- no Patches folder found")
+        // Lọc ra các file có đuôi .3105 hoặc .3106
+        let patches = files.filter { ["3105", "3106"].contains($0.pathExtension.lowercased()) }
+        
+        guard !patches.isEmpty else {
+            log("patch: bootstrap skipped -- no .3105 files found in \(sourcePath)")
             return
         }
 
         guard let root = try? packageRootURL(fileManager: fileManager) else { return }
-        let patches = patchURLs.filter { ["3105", "3106"].contains($0.pathExtension.lowercased()) }
         
+        // Copy từng file vào thư mục Application Support/PatchProjects của app
         for source in patches {
             let destination = root.appendingPathComponent(source.lastPathComponent)
             if !fileManager.fileExists(atPath: destination.path) {
@@ -90,7 +88,6 @@ enum PatchProjectLibrary {
             }
         }
     }
-
     static func backupRootURL(fileManager: FileManager = .default) throws -> URL {
         let root = try packageRootURL(fileManager: fileManager)
             .appendingPathComponent("Backups", isDirectory: true)
