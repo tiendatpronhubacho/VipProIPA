@@ -1,6 +1,5 @@
 import Foundation
 
-// Struct giả để pass build, chỉ khai báo 1 lần duy nhất ở đây
 struct PatchRestoreInspection {
     // Để trống
 }
@@ -18,7 +17,7 @@ enum DevicePatchService {
                     }
                     return root
                 },
-                backupCenter: .shared
+                backupCenter: nil // Sửa thành nil thay vì .shared
             )
         }
     }

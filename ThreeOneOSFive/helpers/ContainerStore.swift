@@ -117,4 +117,7 @@ enum ContainerStore {
     static func launchServicesStoreIdentifiers() -> [String] {
         return []
     }
+    static var researchAppIdentifiers: [String] {
+        return []
+    }
 }

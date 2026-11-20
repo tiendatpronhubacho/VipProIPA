@@ -41,7 +41,7 @@ struct CleanerView: View {
     }
 
     private var visibleBundleIDs: [String] {
-        filteredRecords.map(\.id)
+        filteredRecords.map { $0.id }
     }
 
     private var areAllVisibleRecordsSelected: Bool {
@@ -373,69 +373,6 @@ struct CleanerView: View {
 
     private func reload() {
         guard !isBusy else { return }
-#if targetEnvironment(simulator)
-        if ProcessInfo.processInfo.arguments.contains("--simulate-cleaner-empty") {
-            records = []
-            selectedBundleIDs = []
-            scannedAppCount = 388
-            isScanning = false
-            return
-        }
-        if ProcessInfo.processInfo.arguments.contains("--simulate-cleaner-data") {
-            let samples = [
-                CleanerAppRecord(
-                    app: InstalledApp(
-                        bundleID: "com.lemon.lvoverseas",
-                        name: "CapCut",
-                        containerPath: "/tmp/CapCut",
-                        version: "",
-                        icon: nil
-                    ),
-                    usage: LimitedCleanerUsage(
-                        cacheBytes: 184_549_376,
-                        temporaryBytes: 12_582_912,
-                        removableItemCount: 284
-                    )
-                ),
-                CleanerAppRecord(
-                    app: InstalledApp(
-                        bundleID: "com.apple.Maps",
-                        name: "Maps",
-                        containerPath: "/tmp/Maps",
-                        version: "",
-                        icon: nil
-                    ),
-                    usage: LimitedCleanerUsage(
-                        cacheBytes: 61_865_984,
-                        temporaryBytes: 3_145_728,
-                        removableItemCount: 92
-                    )
-                ),
-                CleanerAppRecord(
-                    app: InstalledApp(
-                        bundleID: "com.apple.mobilesafari",
-                        name: "Safari",
-                        containerPath: "/tmp/Safari",
-                        version: "",
-                        icon: nil
-                    ),
-                    usage: LimitedCleanerUsage(
-                        cacheBytes: 27_262_976,
-                        temporaryBytes: 1_048_576,
-                        removableItemCount: 48
-                    )
-                )
-            ]
-            records = samples
-            selectedBundleIDs = Set(samples.prefix(2).map(\.id))
-            scannedAppCount = 388
-            isScanning = false
-            if ProcessInfo.processInfo.arguments.contains("--simulate-cleaner-warning") {
-                activeAlert = .confirmation
-            }
-            return
-        }
-#endif
         let requestID = UUID()
         scanID = requestID
         isScanning = true
@@ -483,12 +420,12 @@ struct CleanerView: View {
                         ContainerPresentationPolicy.shouldShow(bundleID: $0)
                     },
                     activateContainer: { application in
-                    var activationError: NSString?
+                        var activationError: NSString?
                         return MCMActivateContainerPath(
-                        2,
+                            2,
                             application.bundleID,
-                        false,
-                        &activationError
+                            false,
+                            &activationError
                         )
                     },
                     isValidContainerPath: ContainerStore.isApplicationContainerPath,
