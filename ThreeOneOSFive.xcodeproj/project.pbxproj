@@ -156,6 +156,7 @@
 		3105A123 /* es */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = es; path = es.lproj/Localizable.strings; sourceTree = "<group>"; };
 		3105B123 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		99887766554433221100AABB /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
+		AAAA1111BBBB2222CCCC3333 /* PatchEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatchEngine.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -182,6 +183,7 @@
 		3105A401 /* ThreeOneOSFive */ = {
 			isa = PBXGroup;
 			children = (
+			AAAA1111BBBB2222CCCC3333 /* PatchEngine.swift */,
 				3105A050 /* ThreeOneOSFive-Bridging-Header.h */,
 				3105A060 /* Info.plist */,
 				3105A020 /* App.swift */,
@@ -385,6 +387,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+			AAAA1111BBBB2222CCCC3333 /* PatchEngine.swift in Sources */,
 				3105A200, 3105A201, 3105A203, 3105A204,
 				3105A205, 3105A206, 3105A207, 3105A209,
 				3105A210, 3105A220, 3105A221, 3105A222, 3105A223,
