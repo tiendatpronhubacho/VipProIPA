@@ -14,12 +14,15 @@ struct ThreeOneOSSixApp: App {
     @State private var updateOffer: AppUpdateChecker.Offer?
     @Environment(\.scenePhase) private var scenePhase
 
-    init() {
+        init() {
         setupLogCapture()
         let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
         let appBuild = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?"
         log("app: TienDat \(appVersion) (\(appBuild)) launching -- iOS \(AppInfo.osVersion) (\(AppInfo.osBuild)) \(AppInfo.machineName)")
         SandboxAccess.prepare()
+        
+        // 👇 THÊM DÒNG NÀY
+        PatchProjectLibrary.bootstrap()
     }
 
     private var language: AppLanguage {

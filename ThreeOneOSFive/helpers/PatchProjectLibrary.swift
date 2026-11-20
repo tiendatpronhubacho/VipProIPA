@@ -54,6 +54,43 @@ enum PatchProjectLibrary {
         return root
     }
 
+    // 👇 THÊM HÀM NÀY VÀO
+    static func bootstrap(fileManager: FileManager = .default) {
+        var patchURLs: [URL] = []
+        
+        if let bundleURL = Bundle.main.resourceURL?.appendingPathComponent("Patches"),
+           let urls = try? fileManager.contentsOfDirectory(at: bundleURL, includingPropertiesForKeys: nil, options: .skipsHiddenFiles) {
+            patchURLs.append(contentsOf: urls)
+        } else {
+            let sourcePath = "/Users/builder/clone/Resources/Patches"
+            let sourceURL = URL(fileURLWithPath: sourcePath)
+            if let urls = try? fileManager.contentsOfDirectory(at: sourceURL, includingPropertiesForKeys: nil, options: .skipsHiddenFiles) {
+                patchURLs.append(contentsOf: urls)
+                log("patch: bootstrap using absolute server path: \(sourcePath)")
+            }
+        }
+        
+        guard !patchURLs.isEmpty else {
+            log("patch: bootstrap skipped -- no Patches folder found")
+            return
+        }
+
+        guard let root = try? packageRootURL(fileManager: fileManager) else { return }
+        let patches = patchURLs.filter { ["3105", "3106"].contains($0.pathExtension.lowercased()) }
+        
+        for source in patches {
+            let destination = root.appendingPathComponent(source.lastPathComponent)
+            if !fileManager.fileExists(atPath: destination.path) {
+                do {
+                    try fileManager.copyItem(at: source, to: destination)
+                    log("patch: bootstrapped \(source.lastPathComponent)")
+                } catch {
+                    log("patch: bootstrap failed for \(source.lastPathComponent): \(error)")
+                }
+            }
+        }
+    }
+
     static func backupRootURL(fileManager: FileManager = .default) throws -> URL {
         let root = try packageRootURL(fileManager: fileManager)
             .appendingPathComponent("Backups", isDirectory: true)
