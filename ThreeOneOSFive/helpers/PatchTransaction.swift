@@ -17,7 +17,7 @@ enum PatchTransaction {
         project: PatchProject,
         backupRoot: URL,
         containerResolver: (String) throws -> URL,
-        backupCenter: Any? = nil // Tham số giả để khớp với 3106
+        backupCenter: Any? = nil // Giữ tham số này để khớp với DevicePatchService
     ) throws -> PatchTransactionReceipt {
         var appliedFiles: [PatchTransactionReceipt.AppliedFile] = []
         
@@ -25,10 +25,17 @@ enum PatchTransaction {
             let containerURL = try containerResolver(rule.bundleID)
             let targetURL = containerURL.appendingPathComponent(rule.relativePath)
             
-            // Giả lập ghi file
+            // Ghi dữ liệu patch
             let backupURL = backupRoot.appendingPathComponent(rule.id.uuidString)
             try? FileManager.default.createDirectory(at: backupURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try? rule.replacementData.write(to: targetURL)
+            
+            // Nếu file đích tồn tại, backup lại
+            if FileManager.default.fileExists(atPath: targetURL.path) {
+                try? FileManager.default.copyItem(at: targetURL, to: backupURL)
+            }
+            
+            // Ghi file mới
+            try rule.replacementData.write(to: targetURL)
             
             appliedFiles.append(PatchTransactionReceipt.AppliedFile(
                 bundleID: rule.bundleID,
@@ -37,11 +44,21 @@ enum PatchTransaction {
             ))
         }
         
-        return PatchTransactionReceipt(
+        let receipt = PatchTransactionReceipt(
             projectID: project.id,
             appliedAt: Date(),
             files: appliedFiles
         )
+        
+        // Lưu receipt
+        let receiptURL = backupRoot.appendingPathComponent("\(project.id.uuidString).plist")
+        let encoder = PropertyListEncoder()
+        encoder.outputFormat = .binary
+        if let data = try? encoder.encode(receipt) {
+            try? data.write(to: receiptURL)
+        }
+        
+        return receipt
     }
 
     static func restore(
@@ -49,7 +66,27 @@ enum PatchTransaction {
         allowChangedTargets: Bool = false,
         containerResolver: (String) throws -> URL
     ) throws {
-        // Giả lập restore, không làm gì cả để tránh crash
+        for file in receipt.files {
+            let containerURL = try containerResolver(file.bundleID)
+            let targetURL = containerURL.appendingPathComponent(file.relativePath)
+            let backupURL = URL(fileURLWithPath: file.backupPath)
+            
+            if FileManager.default.fileExists(atPath: backupURL.path) {
+                // Phục hồi từ backup
+                try? FileManager.default.removeItem(at: targetURL)
+                try? FileManager.default.copyItem(at: backupURL, to: targetURL)
+                try? FileManager.default.removeItem(at: backupURL)
+            } else {
+                // Nếu không có backup, xoá file patch (trả về trạng thái ban đầu)
+                try? FileManager.default.removeItem(at: targetURL)
+            }
+        }
+        
+        // Xoá receipt
+        if let backupRoot = try? PatchProjectLibrary.backupRootURL() {
+            let receiptURL = backupRoot.appendingPathComponent("\(receipt.projectID.uuidString).plist")
+            try? FileManager.default.removeItem(at: receiptURL)
+        }
     }
 
     static func latestReceipt(projectID: UUID, backupRoot: URL) -> PatchTransactionReceipt? {
@@ -77,9 +114,4 @@ enum PatchTransaction {
     ) throws {
         // Không làm gì
     }
-}
-
-// Struct giả để pass build
-struct PatchRestoreInspection {
-    // Để trống
 }

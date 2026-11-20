@@ -1,5 +1,10 @@
 import Foundation
 
+// Struct giả để pass build, chỉ khai báo 1 lần duy nhất ở đây
+struct PatchRestoreInspection {
+    // Để trống
+}
+
 enum DevicePatchService {
     static func apply(project: PatchProject) throws -> PatchTransactionReceipt {
         let bundleIDs = orderedBundleIdentifiers(in: project)
@@ -103,9 +108,4 @@ enum DevicePatchService {
         }
         return try operation(roots)
     }
-}
-
-// Struct giả để pass build
-struct PatchRestoreInspection {
-    // Để trống
 }
