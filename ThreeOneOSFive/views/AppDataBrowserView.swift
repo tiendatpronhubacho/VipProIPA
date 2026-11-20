@@ -312,7 +312,7 @@ log("Loading bundle metadata...")
                 "LaunchServices=\(launchServicesIdentifiers.count) -> \(mhaIdentifiers.count) candidates"
             )
             let mhaApps = ContainerStore.installedAppsFromMHACandidates(
-                identifiers: candidates
+                identifiers: mhaIdentifiers
             ) { discoveredApps in
                 var progressiveResult = AppDataCatalogMerger.merge(
                     identified: discoveredApps + baseIdentifiedApps,
