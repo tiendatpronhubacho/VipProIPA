@@ -17,23 +17,32 @@ enum ContainerStore {
     static let sharedDataRoot = "/var/mobile/Containers/Shared/AppGroup"
     
     // MARK: - Resolve Path
-    static func resolveAppContainerPath(bundleID: String) -> String? {
-    if let path = resolveViaMCM(bundleID: bundleID) {
-        return path
+        static func resolveAppContainerPath(bundleID: String) -> String? {
+        // 1. Quét thư mục chứa app trên máy
+        let appDataRoot = "/var/mobile/Containers/Data/Application"
+        let fm = FileManager.default
+        
+        // Cần có quyền đọc thư mục này (sandbox escape hoặc MCM)
+        guard let uuids = try? fm.contentsOfDirectory(atPath: appDataRoot) else {
+            log("container: Không thể đọc \(appDataRoot) - Sandbox chưa escape?")
+            return nil
+        }
+        
+        // 2. Duyệt qua từng thư mục UUID để tìm file metadata
+        for uuid in uuids {
+            let metaPath = "\(appDataRoot)/\(uuid)/.com.apple.mobile_container_manager.metadata.plist"
+            if let data = try? Data(contentsOf: URL(fileURLWithPath: metaPath)),
+               let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
+               let id = plist["MCMMetadataIdentifier"] as? String,
+               id == bundleID {
+                log("container: Tìm thấy \(bundleID) tại \(uuid)")
+                return "\(appDataRoot)/\(uuid)"
+            }
+        }
+        
+        log("container: Không tìm thấy \(bundleID) trong \(appDataRoot)")
+        return nil
     }
-    return resolveViaMetadata(bundleID: bundleID)
-}
-
-private static func resolveViaMCM(bundleID: String) -> String? {
-    var error: NSString?
-    let handle = MCMActivateContainer(2, bundleID, false, &error)
-    if handle >= 0 {
-        SandboxAccess.release(handle)
-    } else {
-        log("container: MCMActivateContainer failed for \(bundleID): \(error.map { String($0) } ?? "unknown")")
-    }
-    return nil
-}
 
 private static func resolveViaMetadata(bundleID: String) -> String? {
     let root = "/var/mobile/Containers/Data/Application"

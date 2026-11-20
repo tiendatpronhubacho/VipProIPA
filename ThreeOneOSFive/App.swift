@@ -23,6 +23,8 @@ struct ThreeOneOSSixApp: App {
         
         // 👇 THÊM DÒNG NÀY
         PatchProjectLibrary.bootstrap()
+        let appState = AppState()
+        appState.runKernelExploitIfNeeded()
     }
 
     private var language: AppLanguage {
