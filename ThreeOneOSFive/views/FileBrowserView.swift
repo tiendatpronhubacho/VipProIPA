@@ -1162,7 +1162,7 @@ struct FileBrowserView: View {
             
             // Map từ [String] sang [FileEntry]
             let loadedEntries = loadedPaths.map { filePath -> FileEntry in
-                let fileURL = URL(fileURLWithPath: filePath)
+                let fileURL = URL(fileURLWithPath: filePath.path)
                 let resourceValues = try? fileURL.resourceValues(forKeys: [.isDirectoryKey, .fileSizeKey, .contentModificationDateKey])
                 
                 return FileEntry(
