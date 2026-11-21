@@ -101,8 +101,8 @@ struct HomeView: View {
             }
             .ignoresSafeArea()
             
-            // Lớp phủ đen
-            Color.black.opacity(0.1).ignoresSafeArea()
+            // Lớp phủ đen (Đã giảm xuống 0.0)
+            Color.black.opacity(0.0).ignoresSafeArea()
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 18) {
@@ -146,7 +146,7 @@ struct HomeView: View {
             statusRow(icon: "checkmark.seal.fill", title: "Support", value: appState.isSupported ? "SUPPORTED" : "UNSUPPORTED", color: appState.isSupported ? .green : .red)
         }
         .padding(16)
-        .background(Color.black.opacity(0.2), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .background(Color.black.opacity(0.65), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(AppTheme.accent.opacity(0.4), lineWidth: 0.5))
     }
 
@@ -185,7 +185,7 @@ struct HomeView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 13)
-        .background(Color.black.opacity(0.2), in: Capsule())
+        .background(Color.black.opacity(0.65), in: Capsule())
         .overlay(Capsule().stroke(AppTheme.accent.opacity(0.3), lineWidth: 0.5))
     }
 
@@ -303,13 +303,15 @@ struct FeaturesView: View {
     @State private var p7 = false; @State private var p8 = false; @State private var p9 = false
     @State private var p10 = false; @State private var p11 = false; @State private var p12 = false
     @State private var p13 = false; @State private var p14 = false 
-private func normalize(_ s: String) -> String {
-    s.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
-        .replacingOccurrences(of: " ", with: "")
-        .replacingOccurrences(of: "+", with: "")
-        .replacingOccurrences(of: ".3105", with: "")
-        .replacingOccurrences(of: ".3106", with: "")
-}
+
+    private func normalize(_ s: String) -> String {
+        s.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+            .replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: "+", with: "")
+            .replacingOccurrences(of: ".3105", with: "")
+            .replacingOccurrences(of: ".3106", with: "")
+    }
+    
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
@@ -322,7 +324,7 @@ private func normalize(_ s: String) -> String {
                     .clipped()
             }
             .ignoresSafeArea()
-            .overlay(Color.black.opacity(0.2))
+            .overlay(Color.black.opacity(0.0)) // Đã sửa thành 0.0
 
             VStack(spacing: 16) {
                 // Custom Tab Bar (AIM / MOD)
@@ -379,7 +381,7 @@ private func normalize(_ s: String) -> String {
                 .padding(.bottom, 8)
             }
         }
-                        .onAppear {
+        .onAppear {
             patchStore.reload()
             syncPatchStates()
             
