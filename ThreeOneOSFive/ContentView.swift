@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 import AVFoundation
+import NetworkExtension
 
 // MARK: - CẤU HÌNH TABBAR CHO MỌI IOS (CHỐNG LỖI XÁM)
 func configureTabBarAppearance() {
@@ -91,7 +92,6 @@ struct HomeView: View {
         ZStack {
             Color.black.ignoresSafeArea()
             
-            // Background Image
             GeometryReader { proxy in
                 loadImageFromBundle(named: "background_home")
                     .resizable()
@@ -101,7 +101,6 @@ struct HomeView: View {
             }
             .ignoresSafeArea()
             
-            // Lớp phủ đen (Đã giảm xuống 0.0)
             Color.black.opacity(0.0).ignoresSafeArea()
 
             ScrollView(showsIndicators: false) {
@@ -324,10 +323,9 @@ struct FeaturesView: View {
                     .clipped()
             }
             .ignoresSafeArea()
-            .overlay(Color.black.opacity(0.0)) // Đã sửa thành 0.0
+            .overlay(Color.black.opacity(0.0))
 
             VStack(spacing: 16) {
-                // Custom Tab Bar (AIM / MOD)
                 HStack(spacing: 0) {
                     menuTabButton(title: "AIM", icon: "scope", index: 0)
                     menuTabButton(title: "MOD", icon: "cube.box.fill", index: 1)
@@ -341,7 +339,6 @@ struct FeaturesView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 10) {
                         if selectedMenu == 0 {
-                            // TAB AIM
                             patchRow(name: "Aim Drag", target: "FREE FIRE • VN", package: "Aim Drag.3105", state: $p1)
                             patchRow(name: "Aim Neck", target: "FREE FIRE • VN", package: "Aim Neck.3105", state: $p2)
                             patchRow(name: "Aim Body", target: "FREE FIRE • VN", package: "Aim Body.3105", state: $p3)
@@ -352,7 +349,6 @@ struct FeaturesView: View {
                             patchRow(name: "Neck Anten", target: "FREE FIRE • VN", package: "Neck Anten.3105", state: $p8)
                             patchRow(name: "Nhe Anten", target: "FREE FIRE • VN", package: "Nhe Anten.3105", state: $p9)
                         } else {
-                            // TAB MOD
                             patchRow(name: "Mod Sonic", target: "FREE FIRE • DIMITRI", package: "Mod Sonic Dimitri.3105", state: $p10)
                             patchRow(name: "Mod Thỏ", target: "FREE FIRE • DIMITRI", package: "Mod Thỏ Dimitri.3105", state: $p11)
                             patchRow(name: "Mod Roblox", target: "FREE FIRE • DIMITRI", package: "Mod Roblox Dimitri.3105", state: $p12)
@@ -364,7 +360,6 @@ struct FeaturesView: View {
                     .padding(.bottom, 20)
                 }
 
-                // Thanh trạng thái dưới cùng
                 HStack(spacing: 8) {
                     Circle().fill(patchMessage.localizedCaseInsensitiveContains("successful") ? .green : AppTheme.accent).frame(width: 7, height: 7)
                     Text(patchOperationBusy ? "PROCESSING PATCH…" : patchMessage)
@@ -385,7 +380,6 @@ struct FeaturesView: View {
             patchStore.reload()
             syncPatchStates()
             
-            // Dùng appState từ Environment thay vì tạo mới
             if !appState.exploitStatus.isSuccess {
                 appState.runKernelExploitIfNeeded()
             }
@@ -401,7 +395,6 @@ struct FeaturesView: View {
         }
     }
 
-    // Nút chuyển Tab (AIM/MOD)
     private func menuTabButton(title: String, icon: String, index: Int) -> some View {
         Button {
             withAnimation(.easeInOut(duration: 0.2)) {
@@ -421,17 +414,14 @@ struct FeaturesView: View {
         .buttonStyle(.plain)
     }
 
-    // Hàng Patch (Đã thay Toggle bằng Button)
     private func patchRow(name: String, target: String, package: String, state: Binding<Bool>) -> some View {
         HStack(spacing: 12) {
-            // Icon
             Image(systemName: "scope")
                 .font(.system(size: 18, weight: .bold))
                 .foregroundStyle(AppTheme.accent)
                 .frame(width: 40, height: 40)
                 .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             
-            // Text Info
             VStack(alignment: .leading, spacing: 4) {
                 Text(name)
                     .font(.system(size: 16, weight: .black, design: .rounded))
@@ -443,7 +433,6 @@ struct FeaturesView: View {
             
             Spacer()
             
-            // Nút bấm giả lập Toggle
             Button {
                 guard !patchOperationBusy else { return }
                 let newValue = !state.wrappedValue
@@ -531,7 +520,6 @@ struct FeaturesView: View {
             
             do {
                 if !isEnabling {
-                    // Đang tắt (Restore)
                     guard let receipt = DevicePatchService.latestReceipt(projectID: projectID) else {
                         DispatchQueue.main.async {
                             self.setPatchState(for: packageFilename, enabled: false)
@@ -543,7 +531,6 @@ struct FeaturesView: View {
                     try DevicePatchService.restore(receipt: receipt)
                     resultMessage = "Restore Successful -- \(packageFilename)"
                 } else {
-                    // Đang bật (Apply)
                     guard let project else {
                         DispatchQueue.main.async {
                             self.patchStore.requestUnlock(for: item)
@@ -683,5 +670,212 @@ struct PatchUnlockPrompt: View {
     private func unlock() {
         guard !password.isEmpty else { return }
         store.unlock(password: password)
+    }
+}
+
+// MARK: - SETUP VIEW (GỘP VÀO ĐÂY)
+struct SetupView: View {
+    @AppStorage("hasCompletedSetup") private var hasCompletedSetup = false
+    @State private var step = 1
+    
+    @State private var isPaired = false
+    @State private var pairingPIN = ""
+    @State private var isVPNConnected = false
+    @State private var isChecking = false
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 24) {
+                // Progress Bar
+                HStack(spacing: 8) {
+                    Capsule().fill(AppTheme.accent).frame(height: 4)
+                    Capsule().fill(step == 2 ? AppTheme.accent : Color.gray.opacity(0.3)).frame(height: 4)
+                }
+                .padding(.horizontal, 40)
+                .padding(.top, 20)
+                
+                Text(step == 1 ? "Thiết lập lần đầu • Bước 1/2" : "Thiết lập lần đầu • Bước 2/2")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                
+                if step == 1 {
+                    pairStep
+                } else {
+                    vpnStep
+                }
+                
+                Spacer()
+            }
+            .navigationTitle("")
+            .navigationBarHidden(true)
+        }
+    }
+    
+    // MARK: - BƯỚC 1: PAIRING
+    private var pairStep: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "link.badge.plus")
+                .font(.system(size: 40))
+                .foregroundStyle(.orange)
+                .padding()
+                .background(Color.orange.opacity(0.1), in: RoundedRectangle(cornerRadius: 16))
+            
+            Text("Thiết lập Pairing")
+                .font(.title2.bold())
+            
+            Text("iOS 26.6.2 trở lên có thể pair trực tiếp trên thiết bị. Hãy làm theo hướng dẫn và nhập mã PIN khi hệ thống yêu cầu.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+            
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "iphone.gen3")
+                        .foregroundStyle(.orange)
+                    VStack(alignment: .leading) {
+                        Text("Pair trực tiếp trên máy")
+                            .font(.headline)
+                        Text(isPaired ? "Thiết bị: 3105 (Đã pair)" : "Cần hoàn tất pairing để tiếp tục")
+                            .font(.caption)
+                            .foregroundStyle(isPaired ? .green : .gray)
+                    }
+                    Spacer()
+                    if isPaired {
+                        Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                    }
+                }
+                .padding()
+                .background(Color.gray.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
+                
+                if !isPaired {
+                    Button(action: startPairing) {
+                        Text("Pair trực tiếp trên iPhone")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.orange, in: Capsule())
+                    }
+                } else {
+                    Button(action: { step = 2 }) {
+                        Text("Tiếp tục bước 2")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.orange, in: Capsule())
+                    }
+                }
+            }
+            .padding(.horizontal)
+        }
+    }
+    
+    // MARK: - BƯỚC 2: LOCAL VPN
+    private var vpnStep: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "lock.shield.fill")
+                .font(.system(size: 40))
+                .foregroundStyle(.orange)
+                .padding()
+                .background(Color.orange.opacity(0.1), in: RoundedRectangle(cornerRadius: 16))
+            
+            Text("Chuẩn bị kết nối AirLift")
+                .font(.title2.bold())
+            
+            Text("Cài LocalDevVPN, bật VPN và kết nối Wi-Fi. 3102 sẽ kiểm tra tunnel thật trước khi cho phép sử dụng.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+            
+            VStack(spacing: 0) {
+                HStack {
+                    Image(systemName: "wifi").foregroundStyle(.green)
+                    Text("Kết nối Wi-Fi").font(.headline)
+                    Spacer()
+                    Text("Đang sử dụng Wi-Fi").font(.caption).foregroundStyle(.secondary)
+                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                }
+                .padding()
+                
+                Divider()
+                
+                HStack {
+                    Image(systemName: "network").foregroundStyle(.orange)
+                    VStack(alignment: .leading) {
+                        Text("LocalDevVPN").font(.headline)
+                        Text(isVPNConnected ? "VPN đã bật" : "Cần bật LocalDevVPN để tiếp tục").font(.caption).foregroundStyle(isVPNConnected ? .green : .gray)
+                    }
+                    Spacer()
+                    Image(systemName: isVPNConnected ? "checkmark.circle.fill" : "circle")
+                        .foregroundStyle(isVPNConnected ? .green : .gray)
+                }
+                .padding()
+            }
+            .background(Color.gray.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
+            .padding(.horizontal)
+            
+            Button(action: openVPNStore) {
+                HStack {
+                    Image(systemName: "arrow.up.forward.app")
+                    Text("Tải LocalDevVPN từ App Store")
+                }
+                .font(.headline)
+                .foregroundStyle(.orange)
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.orange.opacity(0.1), in: Capsule())
+            }
+            .padding(.horizontal)
+            
+            Button(action: checkVPNConnection) {
+                if isChecking {
+                    ProgressView().tint(.white)
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.orange, in: Capsule())
+                } else {
+                    Text("Kiểm tra kết nối AirLift")
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.orange, in: Capsule())
+                }
+            }
+            .padding(.horizontal)
+            .disabled(isChecking)
+        }
+    }
+    
+    // MARK: - Logic
+    private func startPairing() {
+        isPaired = true
+    }
+    
+    private func openVPNStore() {
+        if let url = URL(string: "https://apps.apple.com/app/id6447500368") {
+            UIApplication.shared.open(url)
+        }
+    }
+    
+    private func checkVPNConnection() {
+        isChecking = true
+        NEVPNManager.shared().loadFromPreferences { error in
+            DispatchQueue.main.async {
+                isChecking = false
+                if let connection = NEVPNManager.shared().connection {
+                    isVPNConnected = (connection.status == .connected || connection.status == .connecting)
+                    if isVPNConnected {
+                        hasCompletedSetup = true
+                    }
+                } else {
+                    isVPNConnected = false
+                }
+            }
+        }
     }
 }

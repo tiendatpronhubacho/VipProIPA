@@ -42,7 +42,6 @@ struct ThreeOneOSSixApp: App {
                     SetupView()
                         .environment(\.appLanguage, language)
                         .environment(\.locale, language.locale)
-                        .transition(.opacity)
                 } else if licenseManager.isActive {
                     ContentView()
                         .environmentObject(appState)
@@ -51,14 +50,13 @@ struct ThreeOneOSSixApp: App {
                         .environmentObject(patchStore)
                         .environment(\.appLanguage, language)
                         .environment(\.locale, language.locale)
-                        .transition(.opacity)
                 } else {
                     LicenseActivationView(manager: licenseManager)
                         .environment(\.appLanguage, language)
                         .environment(\.locale, language.locale)
-                        .transition(.opacity)
                 }
             }
+            .transition(.opacity) // Chuyển transition lên ZStack
             .animation(.easeInOut(duration: 0.3), value: hasCompletedSetup)
             .animation(.easeInOut(duration: 0.3), value: licenseManager.isActive)
             .displayIdentityAttribution(isPresented: $showAttribution, enabled: true)
@@ -99,6 +97,7 @@ struct ThreeOneOSSixApp: App {
         }
     }
 }
+// ... AppState giữ nguyên
 
 class AppState: ObservableObject {
     @Published var exploitStatus: ExploitStatus = .notStarted
