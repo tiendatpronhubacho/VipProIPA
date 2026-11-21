@@ -19,15 +19,32 @@ enum ContainerStore {
     
     // MARK: - Resolve Path
     static func resolveAppContainerPath(bundleID: String) -> String? {
-        // 1. Xin quyền đọc thư mục Application
+        // Nếu là kernel backend, không cần xin quyền, đọc trực tiếp
+        if SandboxAccess.backend == .kernel {
+            let fm = FileManager.default
+            guard let uuids = try? fm.contentsOfDirectory(atPath: appDataRoot) else {
+                UserDefaults.standard.set("Lỗi: Không đọc được Application (kernel)", forKey: "debug_bootstrap_error")
+                return nil
+            }
+            
+            for uuid in uuids {
+                let metaPath = "\(appDataRoot)/\(uuid)/.com.apple.mobile_container_manager.metadata.plist"
+                if let data = try? Data(contentsOf: URL(fileURLWithPath: metaPath)),
+                   let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
+                   let id = plist["MCMMetadataIdentifier"] as? String,
+                   id == bundleID {
+                    return "\(appDataRoot)/\(uuid)"
+                }
+            }
+            return nil
+        }
+        
+        // Logic cũ cho badQuery / worseQuery
         let handle = SandboxAccess.grant(path: appDataRoot, writable: false)
         guard handle >= 0 else {
             UserDefaults.standard.set("Lỗi: Không xin được quyền đọc Application", forKey: "debug_bootstrap_error")
             return nil
         }
-        
-        // Không release handle ở đây, để nó mở cho các thao tác sau
-        // (Handle này sẽ được DevicePatchService quản lý và release sau)
         
         let fm = FileManager.default
         guard let uuids = try? fm.contentsOfDirectory(atPath: appDataRoot) else {
@@ -48,7 +65,6 @@ enum ContainerStore {
         UserDefaults.standard.set("Lỗi: Không tìm thấy \(bundleID)", forKey: "debug_bootstrap_error")
         return nil
     }
-    
     static func isApplicationContainerPath(_ path: String) -> Bool {
         let cleanPath = path.hasSuffix("/") ? String(path.dropLast()) : path
         return cleanPath.hasPrefix(appDataRoot + "/") || cleanPath.hasPrefix("/private" + appDataRoot + "/")

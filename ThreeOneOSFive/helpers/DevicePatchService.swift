@@ -81,23 +81,25 @@ enum DevicePatchService {
         operation: ([String: URL]) throws -> T
     ) throws -> T {
         var roots: [String: URL] = [:]
-        var grants: [Int64] = [] // SỬA: Đổi thành var để có thể append
+        var grants: [Int64] = []
         defer {
             for grant in grants { SandboxAccess.release(grant) }
         }
 
         for bundleID in bundleIDs {
             var finalPath: String? = nil
-            var currentGrant: Int64 = -1
             
-            // 1. Thử dùng ContainerStore (BadQuery)
+            // 1. Thử dùng ContainerStore (BadQuery/Kernel)
             if let path = ContainerStore.resolveAppContainerPath(bundleID: bundleID) {
                 finalPath = path
-                // SỬA: Lưu lại handle nếu ContainerStore có xin quyền (dù nó tự release)
-                // Nhưng vì ContainerStore tự release nên ta không cần lưu ở đây.
+                // Nếu là kernel, không cần lưu grant vì nó trả về -1
+                if SandboxAccess.backend != .kernel {
+                    let handle = SandboxAccess.grant(path: path, writable: true)
+                    if handle >= 0 { grants.append(handle) }
+                }
             }
             
-            // 2. Nếu ContainerStore thất bại, thử dùng WQFiles
+            // 2. Nếu ContainerStore thất bại, thử dùng WQFiles (worseQuery)
             if finalPath == nil {
                 let version = ProcessInfo.processInfo.operatingSystemVersion
                 let isWorseQueryOS = (version.majorVersion == 26 && version.minorVersion >= 7) || version.majorVersion >= 27
@@ -106,8 +108,8 @@ enum DevicePatchService {
                     if let wqPath = PatchEngine.shared.findGameContainerPath(bundleID: bundleID) {
                         if wq_grant(wqPath) {
                             finalPath = wqPath
-                            // SỬA: Lưu handle để release sau
-                            currentGrant = SandboxAccess.grant(path: wqPath, writable: true)
+                            let currentGrant = SandboxAccess.grant(path: wqPath, writable: true)
+                            if currentGrant >= 0 { grants.append(currentGrant) }
                         }
                     }
                 }
@@ -119,14 +121,9 @@ enum DevicePatchService {
                 throw PatchPackageError.targetAppUnavailable(bundleID)
             }
 
-            if currentGrant >= 0 {
-                grants.append(currentGrant)
-            }
-
             roots[bundleID] = PatchPathValidator.canonicalFileURL(
                 URL(fileURLWithPath: gameRootPath, isDirectory: true)
             )
         }
         return try operation(roots)
     }
-}
