@@ -7,50 +7,58 @@ class PatchEngine {
     func findGameContainerPath(bundleID: String) -> String? {
         let parentDir = "/var/mobile/Containers/Data/Application"
         
-        // 1. Xin quyền cho thư mục mẹ
-        _ = wq_grant(parentDir)
-        
-        // 2. Lấy danh sách thư mục
-        guard let uuids = wq_list(parentDir, nil) as? [String] else {
+        // 1. Xin quyền cho thư mục mẹ (Bắt buộc để đọc danh sách)
+        if !wq_grant(parentDir) {
+            let msg = "Grant failed for \(parentDir). Hãy kiểm tra App Group hoặc bật VPN."
+            print("[PatchEngine] \(msg)")
+            UserDefaults.standard.set(msg, forKey: "debug_bootstrap_error")
             return nil
         }
         
+        // 2. Lấy danh sách thư mục UUID
+        var errorText: NSString? = nil
+        guard let uuids = wq_list(parentDir, &errorText) as? [String] else {
+            let msg = "wq_list failed: \(errorText ?? "Unknown")"
+            print("[PatchEngine] \(msg)")
+            UserDefaults.standard.set(msg, forKey: "debug_bootstrap_error")
+            return nil
+        }
+        
+        // 3. Duyệt và tìm Bundle ID
         for uuid in uuids {
             let appDir = "\(parentDir)/\(uuid)"
             
-            // Lấy tên app thông qua metadata (cách app trên ảnh làm)
-            if let id = getBundleIDFromXattr(appDir) {
-                if id == bundleID {
-                    return appDir
-                }
+            // Cách 1: Đọc xattr (Nhanh, không bị iOS 26/27 chặn)
+            if let id = wq_get_container_identifier(appDir), id == bundleID {
+                print("[PatchEngine] Tìm thấy game bằng xattr: \(appDir)")
+                return appDir
+            }
+            
+            // Cách 2: Đọc file plist (Fallback)
+            let plistPath = "\(appDir)/.com.apple.mobile_container_manager.metadata.plist"
+            if let data = wq_read(plistPath, 1024 * 1024, nil) as? Data,
+               let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any],
+               let id = plist["MCMMetadataIdentifier"] as? String, id == bundleID {
+                print("[PatchEngine] Tìm thấy game bằng plist: \(appDir)")
+                return appDir
             }
         }
-        return nil
-    }
-
-    // Hàm phụ: Đọc thẳng Bundle ID từ file metadata của iOS
-    private func getBundleIDFromXattr(_ path: String) -> String? {
-        // Cố gắng đọc thông qua API của Objective-C
-        if let identifier = wq_get_container_identifier(path) {
-            return identifier as String
-        }
         
-        // Nếu hàm C không chạy, thử dùng cách của Foundation
-        let metadataPath = "\(path)/.com.apple.mobile_container_manager.metadata.plist"
-        if let data = try? Data(contentsOf: URL(fileURLWithPath: metadataPath)),
-           let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any] {
-            return plist["MCMMetadataIdentifier"] as? String
-        }
-        
+        let msg = "Không tìm thấy bundle ID \(bundleID) trong \(uuids.count) thư mục."
+        print("[PatchEngine] \(msg)")
+        UserDefaults.standard.set(msg, forKey: "debug_bootstrap_error")
         return nil
     }
     
     func grantAccessToContainer(_ containerPath: String) -> Bool {
+        // Cấp quyền cho gốc
         let rootGranted = wq_grant(containerPath)
+        
+        // Cấp quyền cho các thư mục con để đảm bảo có thể ghi file patch
         let subDirs = ["Documents", "Library", "tmp", "Library/Caches", "Library/Preferences"]
         for sub in subDirs {
             let path = "\(containerPath)/\(sub)"
-            _ = wq_grant(path) 
+            _ = wq_grant(path)
         }
         return rootGranted
     }
@@ -156,7 +164,7 @@ enum DevicePatchService {
             
             let granted = PatchEngine.shared.grantAccessToContainer(gameRootPath)
             if !granted {
-                let msg = "Grant thất bại cho \(bundleID) tại \(gameRootPath)."
+                let msg = "Grant thất bại cho \(bundleID) tại \(gameRootPath). Hãy bật VPN hoặc kiểm tra App Group."
                 print(msg)
                 UserDefaults.standard.set(msg, forKey: "debug_bootstrap_error")
                 throw PatchPackageError.targetAppUnavailable(bundleID)
