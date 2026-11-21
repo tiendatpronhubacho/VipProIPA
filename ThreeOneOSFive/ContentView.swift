@@ -867,15 +867,13 @@ struct SetupView: View {
         NEVPNManager.shared().loadFromPreferences { error in
             DispatchQueue.main.async {
                 isChecking = false
-                if let connection = NEVPNManager.shared().connection {
-                    isVPNConnected = (connection.status == .connected || connection.status == .connecting)
-                    if isVPNConnected {
-                        hasCompletedSetup = true
-                    }
-                } else {
-                    isVPNConnected = false
+                // SỬA DÒNG DƯỚI ĐÂY: Bỏ "if let connection =" vì nó không phải Optional
+                let connection = NEVPNManager.shared().connection
+                
+                isVPNConnected = (connection.status == .connected || connection.status == .connecting)
+                if isVPNConnected {
+                    hasCompletedSetup = true
                 }
-            }
         }
     }
-}
+} 
