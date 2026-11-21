@@ -451,8 +451,13 @@ enum ContainerStore {
             guard fm.fileExists(atPath: full, isDirectory: &isDir) else { continue }
             let attributes = try? fm.attributesOfItem(atPath: full)
             let size = isDir.boolValue ? -1 : (attributes?[.size] as? NSNumber)?.int64Value ?? 0
-            entries.append(FileEntry(name: item, path: full, isDirectory: isDir.boolValue, size: size, modifiedAt: attributes?[.modificationDate] as? Date, childCount: nil))
-        }
+            entries.append(FileEntry(
+    name: item,
+    path: full,
+    isDirectory: isDir.boolValue,
+    size: size,
+    modificationDate: attributes?[.modificationDate] as? Date
+))
         return entries.sorted {
             if $0.isDirectory != $1.isDirectory { return $0.isDirectory }
             return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending

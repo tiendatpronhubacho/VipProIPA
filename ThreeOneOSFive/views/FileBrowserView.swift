@@ -1157,22 +1157,8 @@ struct FileBrowserView: View {
                     log("filebrowser: traversal grant \(path) -> \(handle)")
                 }
             }
-            // Lấy mảng String từ ContainerStore
-            let loadedPaths = ContainerStore.listFiles(at: path)
-            
-            // Map từ [String] sang [FileEntry]
-            let loadedEntries = loadedPaths.map { filePath -> FileEntry in
-                let fileURL = URL(fileURLWithPath: filePath.path)
-                let resourceValues = try? fileURL.resourceValues(forKeys: [.isDirectoryKey, .fileSizeKey, .contentModificationDateKey])
-                
-                return FileEntry(
-                    name: fileURL.lastPathComponent,
-                    path: filePath,
-                    isDirectory: resourceValues?.isDirectory ?? false,
-                    size: Int64(resourceValues?.fileSize ?? 0),
-                    modificationDate: resourceValues?.contentModificationDate
-                )
-            }
+            // ContainerStore đã trả về [FileEntry]
+let loadedEntries = ContainerStore.listFiles(at: path)
             
             DispatchQueue.main.async {
                 guard currentPath == path else { return }
