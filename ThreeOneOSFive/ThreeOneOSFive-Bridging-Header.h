@@ -22,5 +22,3 @@
 #import "helpers/AppIconHelper.h"
 #import "helpers/DisplayIdentity.h"
 #import "WQAccess.h"
-#import "WQApps.h"
-#import "WQLaunchServices.h"
