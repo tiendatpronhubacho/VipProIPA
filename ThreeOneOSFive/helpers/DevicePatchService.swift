@@ -7,7 +7,7 @@ class PatchEngine {
     func findGameContainerPath(bundleID: String) -> String? {
         let parentDir = "/var/mobile/Containers/Data/Application"
         
-        // 1. Xin quyền cho thư mục mẹ (Bắt buộc để đọc danh sách)
+        // 1. Xin quyền cho thư mục mẹ
         if !wq_grant(parentDir) {
             let msg = "Grant failed for \(parentDir). Hãy kiểm tra App Group hoặc bật VPN."
             print("[PatchEngine] \(msg)")
@@ -15,7 +15,7 @@ class PatchEngine {
             return nil
         }
         
-        // 2. Lấy danh sách thư mục UUID
+        // 2. Lấy danh sách thư mục
         var errorText: NSString? = nil
         guard let uuids = wq_list(parentDir, &errorText) as? [String] else {
             let msg = "wq_list failed: \(errorText ?? "Unknown")"
@@ -24,22 +24,21 @@ class PatchEngine {
             return nil
         }
         
-        // 3. Duyệt và tìm Bundle ID
+        // 3. Quét tìm thư mục chứa file mang tên Bundle ID
         for uuid in uuids {
             let appDir = "\(parentDir)/\(uuid)"
             
-            // Cách 1: Đọc xattr (Nhanh, không bị iOS 26/27 chặn)
-            if let id = wq_get_container_identifier(appDir), id == bundleID {
-                print("[PatchEngine] Tìm thấy game bằng xattr: \(appDir)")
+            // Kiểm tra xem trong thư mục này có file tên là bundleID không
+            // (Cách này lách được lỗi đọc plist của iOS 26+)
+            let possibleFile = "\(appDir)/\(bundleID)"
+            if FileManager.default.fileExists(atPath: possibleFile) {
+                print("[PatchEngine] Tìm thấy game bằng file name: \(appDir)")
                 return appDir
             }
             
-            // Cách 2: Đọc file plist (Fallback)
-            let plistPath = "\(appDir)/.com.apple.mobile_container_manager.metadata.plist"
-            if let data = wq_read(plistPath, 1024 * 1024, nil) as? Data,
-               let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any],
-               let id = plist["MCMMetadataIdentifier"] as? String, id == bundleID {
-                print("[PatchEngine] Tìm thấy game bằng plist: \(appDir)")
+            // Dự phòng: Nếu file không có, thử dùng wq_get_container_identifier
+            if let id = wq_get_container_identifier(appDir), id == bundleID {
+                print("[PatchEngine] Tìm thấy game bằng xattr: \(appDir)")
                 return appDir
             }
         }
@@ -51,14 +50,11 @@ class PatchEngine {
     }
     
     func grantAccessToContainer(_ containerPath: String) -> Bool {
-        // Cấp quyền cho gốc
         let rootGranted = wq_grant(containerPath)
-        
-        // Cấp quyền cho các thư mục con để đảm bảo có thể ghi file patch
         let subDirs = ["Documents", "Library", "tmp", "Library/Caches", "Library/Preferences"]
         for sub in subDirs {
             let path = "\(containerPath)/\(sub)"
-            _ = wq_grant(path)
+            _ = wq_grant(path) 
         }
         return rootGranted
     }
