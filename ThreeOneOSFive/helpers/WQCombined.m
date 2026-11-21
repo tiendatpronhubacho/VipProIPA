@@ -128,13 +128,6 @@ static int64_t wq_query_token(NSString *group, BOOL altFlags) {
 static NSMutableDictionary<NSString *, NSNumber *> *gGrants;
 static NSRecursiveLock *gGrantLock;
 
-static void wq_release_handle(int64_t handle) {
-    typedef int (*ext_release_fn)(int64_t);
-    static ext_release_fn release;
-    if (!release) release = (ext_release_fn)dlsym(RTLD_DEFAULT, "sandbox_extension_release");
-    if (release && handle >= 0) release(handle);
-}
-
 BOOL wq_grant(NSString *path) {
     static dispatch_once_t once;
     dispatch_once(&once, ^{
@@ -202,4 +195,35 @@ NSData *wq_read(NSString *path, NSUInteger maxBytes, NSString **errorText) {
     }
     close(fd);
     return data;
+}
+
+// Hàm lấy bundle ID trực tiếp từ thuộc tính mở rộng (xattr) của thư mục
+NSString *wq_get_container_identifier(NSString *path) {
+    const char *cpath = path.fileSystemRepresentation;
+    const char *xattrName = "com.apple.mobile_container_manager.metadata.plist";
+    
+    ssize_t size = getxattr(cpath, xattrName, NULL, 0, 0, 0);
+    if (size <= 0) return nil;
+
+    char *buffer = malloc(size + 1);
+    if (!buffer) return nil;
+    
+    size = getxattr(cpath, xattrName, buffer, size, 0, 0);
+    if (size <= 0) {
+        free(buffer);
+        return nil;
+    }
+    buffer[size] = '\0';
+    
+    NSData *data = [NSData dataWithBytes:buffer length:size];
+    free(buffer);
+    
+    if (!data) return nil;
+    
+    NSDictionary *plist = [NSPropertyListSerialization propertyListWithData:data options:0 format:NULL error:NULL];
+    if ([plist isKindOfClass:[NSDictionary class]]) {
+        NSString *identifier = plist[@"MCMMetadataIdentifier"];
+        return identifier;
+    }
+    return nil;
 }

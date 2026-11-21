@@ -4,42 +4,53 @@ import UIKit
 class PatchEngine {
     static let shared = PatchEngine()
     
-    // 1. Hàm lấy đường dẫn gốc của game
     func findGameContainerPath(bundleID: String) -> String? {
         let parentDir = "/var/mobile/Containers/Data/Application"
         
-        guard let uuids = wq_list(parentDir, nil) as? [String] else {
+        // 1. Xin quyền cho thư mục cha
+        if !wq_grant(parentDir) {
+            let msg = "Grant failed for \(parentDir)"
+            print("[PatchEngine] \(msg)")
+            UserDefaults.standard.set(msg, forKey: "debug_bootstrap_error")
             return nil
         }
         
+        // 2. Lấy danh sách các thư mục UUID
+        var errorText: NSString? = nil
+        guard let uuids = wq_list(parentDir, &errorText) as? [String] else {
+            let msg = "wq_list failed: \(errorText ?? "Unknown")"
+            print("[PatchEngine] \(msg)")
+            UserDefaults.standard.set(msg, forKey: "debug_bootstrap_error")
+            return nil
+        }
+        
+        print("[PatchEngine] Tìm thấy \(uuids.count) thư mục app.")
+        
+        // 3. Duyệt và lấy xattr (không đọc file plist nữa)
         for uuid in uuids {
             let appDir = "\(parentDir)/\(uuid)"
-            let plistPath = "\(appDir)/.com.apple.mobile_container_manager.metadata.plist"
             
-            if let data = wq_read(plistPath, 1024 * 1024, nil) as? Data {
-                if let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any] {
-                    if let id = plist["MCMMetadataIdentifier"] as? String, id == bundleID {
-                        return appDir
-                    }
+            if let id = wq_get_container_identifier(appDir) {
+                if id == bundleID {
+                    print("[PatchEngine] Đã tìm thấy game \(bundleID) tại \(appDir)")
+                    return appDir
                 }
             }
         }
+        
+        let msg = "Không tìm thấy bundle ID \(bundleID) trong \(uuids.count) thư mục."
+        print("[PatchEngine] \(msg)")
+        UserDefaults.standard.set(msg, forKey: "debug_bootstrap_error")
         return nil
     }
     
-    // 2. Hàm cấp quyền cho gốc VÀ các thư mục con (Documents, Library, tmp)
     func grantAccessToContainer(_ containerPath: String) -> Bool {
-        // Cấp quyền cho thư mục gốc
         let rootGranted = wq_grant(containerPath)
-        
-        // Cấp quyền cho các thư mục con quan trọng
         let subDirs = ["Documents", "Library", "tmp", "Library/Caches", "Library/Preferences"]
         for sub in subDirs {
             let path = "\(containerPath)/\(sub)"
-            // Cố gắng grant, nếu thư mục không tồn tại thì bỏ qua
             _ = wq_grant(path) 
         }
-        
         return rootGranted
     }
 }
@@ -142,7 +153,6 @@ enum DevicePatchService {
                 throw PatchPackageError.targetAppUnavailable(bundleID)
             }
             
-            // Gọi hàm cấp quyền cho cả gốc lẫn thư mục con
             let granted = PatchEngine.shared.grantAccessToContainer(gameRootPath)
             if !granted {
                 let msg = "Grant thất bại cho \(bundleID) tại \(gameRootPath)."
