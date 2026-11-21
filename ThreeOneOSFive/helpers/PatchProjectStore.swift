@@ -27,6 +27,14 @@ final class PatchProjectStore: ObservableObject {
     @Published var passwordRequest: PatchPasswordRequest?
     @Published var alert: PatchStoreAlert?
     @Published var unlockErrorKey: String?
+    
+    // Lưu trạng thái các patch đang bật
+    @Published var activePatchIDs: Set<UUID> = [] {
+        didSet {
+            let ids = activePatchIDs.map { $0.uuidString }
+            UserDefaults.standard.set(ids, forKey: "com.tiendat.develop.activePatchIDs")
+        }
+    }
 
     private struct PendingUnlock {
         let data: Data
@@ -36,15 +44,18 @@ final class PatchProjectStore: ObservableObject {
     }
 
     private var pendingUnlock: PendingUnlock?
+    private let receiptKeyPrefix = "com.tiendat.develop.receipt."
 
     init() {
+        if let saved = UserDefaults.standard.array(forKey: "com.tiendat.develop.activePatchIDs") as? [String] {
+            self.activePatchIDs = Set(saved.compactMap { UUID(uuidString: $0) })
+        }
+        
         isBusy = true
+        PatchProjectLibrary.bootstrap() // Gọi hàm copy file nếu có
         
         Task {      
-            // 2. Tải các file .3105 từ GitHub
             await downloadPatchesFromGithub()
-            
-            // 3. Load danh sách cuối cùng
             let loadedItems = PatchProjectLibrary.load()
             self.items = loadedItems
             self.isBusy = false
@@ -67,8 +78,6 @@ final class PatchProjectStore: ObservableObject {
         
         for filename in filenames {
             let dest = rootURL.appendingPathComponent(filename)
-            
-            // Nếu file chưa có trong máy thì mới tải
             if !fm.fileExists(atPath: dest.path) {
                 let encodedName = filename.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? filename
                 if let url = URL(string: baseURL + encodedName) {
@@ -87,6 +96,72 @@ final class PatchProjectStore: ObservableObject {
     func reload() {
         items = PatchProjectLibrary.load()
     }
+
+    // MARK: - Apply & Restore (SỬ DỤNG DEVICEPATCHSERVICE)
+
+    func applyPatch(_ item: PatchLibraryItem) {
+        guard !isBusy else { return }
+        guard let project = item.project else {
+            present(.invalidProject)
+            return
+        }
+        
+        isBusy = true
+        Task.detached(priority: .userInitiated) { [weak self] in
+            do {
+                _ = try DevicePatchService.apply(project: project)
+                await MainActor.run {
+                    self?.activePatchIDs.insert(item.id)
+                    self?.isBusy = false
+                    self?.alert = PatchStoreAlert(titleKey: "common.done", messageKey: "patch.applied_message")
+                }
+            } catch let error as PatchPackageError {
+                await MainActor.run {
+                    self?.isBusy = false
+                    self?.present(error)
+                }
+            } catch {
+                await MainActor.run {
+                    self?.isBusy = false
+                    self?.present(.applyFailed)
+                }
+            }
+        }
+    }
+
+    func restorePatch(_ item: PatchLibraryItem) {
+        guard !isBusy else { return }
+        let itemID = item.id
+        
+        guard let receipt = DevicePatchService.latestReceipt(projectID: itemID) else {
+            activePatchIDs.remove(itemID)
+            return
+        }
+        
+        isBusy = true
+        Task.detached(priority: .userInitiated) { [weak self] in
+            do {
+                try DevicePatchService.restore(receipt: receipt)
+                await MainActor.run {
+                    self?.activePatchIDs.remove(itemID)
+                    self?.isBusy = false
+                    self?.alert = PatchStoreAlert(titleKey: "common.done", messageKey: "patch.restored_message")
+                }
+            } catch let error as PatchPackageError {
+                await MainActor.run {
+                    self?.isBusy = false
+                    self?.present(error)
+                }
+            } catch {
+                await MainActor.run {
+                    self?.isBusy = false
+                    self?.present(.restoreFailed)
+                }
+            }
+        }
+    }
+
+    // MARK: - CRUD (Giữ nguyên như file gốc của bạn)
 
     func create(project: PatchProject, password: String?) {
         runOperation(successMessageKey: "patch.created_message") {
@@ -203,18 +278,14 @@ final class PatchProjectStore: ObservableObject {
 
     func importPackage(from source: PatchImportSource) {
         switch source {
-        case .file(let url):
-            importPackage(at: url)
-        case .remote(let url):
-            importPackage(fromRemoteURL: url)
-        case .invalid:
-            present(.invalidImportLink)
+        case .file(let url): importPackage(at: url)
+        case .remote(let url): importPackage(fromRemoteURL: url)
+        case .invalid: present(.invalidImportLink)
         }
     }
 
     private func importPackage(fromRemoteURL remoteURL: URL) {
-        guard !isBusy,
-              PatchImportRoute.validatedRemoteURL(remoteURL) != nil else {
+        guard !isBusy, PatchImportRoute.validatedRemoteURL(remoteURL) != nil else {
             if !isBusy { present(.invalidImportLink) }
             return
         }

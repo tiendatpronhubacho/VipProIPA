@@ -17,42 +17,42 @@ enum PatchTransaction {
         project: PatchProject,
         backupRoot: URL,
         containerResolver: (String) throws -> URL,
-        backupCenter: Any? = nil // Giữ tham số này để khớp với DevicePatchService
+        backupCenter: Any? = nil
     ) throws -> PatchTransactionReceipt {
         var appliedFiles: [PatchTransactionReceipt.AppliedFile] = []
         
         for rule in project.rules {
-    let containerURL = try containerResolver(rule.bundleID)
-    let targetURL = containerURL.appendingPathComponent(rule.relativePath)
-    let targetDir = targetURL.deletingLastPathComponent()
+            let containerURL = try containerResolver(rule.bundleID)
+            let targetURL = containerURL.appendingPathComponent(rule.relativePath)
+            let targetDir = targetURL.deletingLastPathComponent()
 
-    try? FileManager.default.createDirectory(
-        at: targetDir,
-        withIntermediateDirectories: true
-    )
+            try? FileManager.default.createDirectory(
+                at: targetDir,
+                withIntermediateDirectories: true
+            )
 
-    let backupURL = backupRoot.appendingPathComponent(rule.id.uuidString)
-    try? FileManager.default.createDirectory(
-        at: backupURL.deletingLastPathComponent(),
-        withIntermediateDirectories: true
-    )
-    if FileManager.default.fileExists(atPath: targetURL.path) {
-        try FileManager.default.copyItem(at: targetURL, to: backupURL)
-    }
+            let backupURL = backupRoot.appendingPathComponent(rule.id.uuidString)
+            try? FileManager.default.createDirectory(
+                at: backupURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            if FileManager.default.fileExists(atPath: targetURL.path) {
+                try FileManager.default.copyItem(at: targetURL, to: backupURL)
+            }
 
-    do {
-        try rule.replacementData.write(to: targetURL, options: .atomic)
-    } catch {
-        log("patch: write failed target=\(targetURL.path) error=\(error)")
-        throw error
-    }
+            do {
+                try rule.replacementData.write(to: targetURL, options: .atomic)
+            } catch {
+                log("patch: write failed target=\(targetURL.path) error=\(error)")
+                throw error
+            }
 
-    appliedFiles.append(PatchTransactionReceipt.AppliedFile(
-        bundleID: rule.bundleID,
-        relativePath: rule.relativePath,
-        backupPath: backupURL.path
-    ))
-}
+            appliedFiles.append(PatchTransactionReceipt.AppliedFile(
+                bundleID: rule.bundleID,
+                relativePath: rule.relativePath,
+                backupPath: backupURL.path
+            ))
+        }
         
         let receipt = PatchTransactionReceipt(
             projectID: project.id,
@@ -60,7 +60,6 @@ enum PatchTransaction {
             files: appliedFiles
         )
         
-        // Lưu receipt
         let receiptURL = backupRoot.appendingPathComponent("\(project.id.uuidString).plist")
         let encoder = PropertyListEncoder()
         encoder.outputFormat = .binary
@@ -82,17 +81,14 @@ enum PatchTransaction {
             let backupURL = URL(fileURLWithPath: file.backupPath)
             
             if FileManager.default.fileExists(atPath: backupURL.path) {
-                // Phục hồi từ backup
                 try? FileManager.default.removeItem(at: targetURL)
                 try? FileManager.default.copyItem(at: backupURL, to: targetURL)
                 try? FileManager.default.removeItem(at: backupURL)
             } else {
-                // Nếu không có backup, xoá file patch (trả về trạng thái ban đầu)
                 try? FileManager.default.removeItem(at: targetURL)
             }
         }
         
-        // Xoá receipt
         if let backupRoot = try? PatchProjectLibrary.backupRootURL() {
             let receiptURL = backupRoot.appendingPathComponent("\(receipt.projectID.uuidString).plist")
             try? FileManager.default.removeItem(at: receiptURL)
@@ -109,7 +105,6 @@ enum PatchTransaction {
         return Array(Set(receipt.files.map { $0.bundleID }))
     }
 
-    // MARK: - CÁC HÀM GIẢ ĐỂ FIX LỖI DEVICEPATCHSERVICE
     static func inspectRestore(
         receipt: PatchTransactionReceipt,
         containerResolver: (String) throws -> URL
