@@ -157,6 +157,7 @@
 		3105B123 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		99887766554433221100AABB /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
 		AAAA1111BBBB2222CCCC3333 /* PatchEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PatchEngine.swift; path = helpers/PatchEngine.swift; sourceTree = "<group>"; };
+		DDDD1111EEEE2222FFFF3333 /* WQCombined.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = WQCombined.m; path = helpers/WQCombined.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 /* Begin PBXFrameworksBuildPhase section */
 		3105A300 /* Frameworks */ = {
@@ -242,7 +243,9 @@
 		3105A405 /* helpers */ = {
 			isa = PBXGroup;
 			children = (
-			AAAA1111BBBB2222CCCC3333 /* PatchEngine.swift */,
+			AAAA1111BBBB2222CCCC3333 /* 
+PatchEngine.swift */,
+            DDDD1111EEEE2222FFFF3333 /* WQCombined.m */,
 				3105A099 /* Localization.swift */,
 				3105A104 /* ContainerStore.swift */,
 				3105A108 /* ContainerIdentityResolver.swift */,
@@ -388,6 +391,7 @@
 			buildActionMask = 2147483647;
 			files = (
 			AAAA1111BBBB2222CCCC3333 /* PatchEngine.swift in Sources */,
+			DDDD1111EEEE2222FFFF3333 /* WQCombined.m in Sources */,
 				3105A200, 3105A201, 3105A203, 3105A204,
 				3105A205, 3105A206, 3105A207, 3105A209,
 				3105A210, 3105A220, 3105A221, 3105A222, 3105A223,

@@ -1,10 +1,10 @@
 import Foundation
-import UIKit // Cần cho các hàm xử lý file của iOS
+import UIKit
 
-// Gộp PatchEngine vào đây để khỏi phải khai báo file mới trong project.pbxproj
 class PatchEngine {
     static let shared = PatchEngine()
     
+    // 1. Hàm lấy đường dẫn gốc của game
     func findGameContainerPath(bundleID: String) -> String? {
         let parentDir = "/var/mobile/Containers/Data/Application"
         
@@ -19,12 +19,28 @@ class PatchEngine {
             if let data = wq_read(plistPath, 1024 * 1024, nil) as? Data {
                 if let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any] {
                     if let id = plist["MCMMetadataIdentifier"] as? String, id == bundleID {
-                        return appDir // Trả về thư mục gốc
+                        return appDir
                     }
                 }
             }
         }
         return nil
+    }
+    
+    // 2. Hàm cấp quyền cho gốc VÀ các thư mục con (Documents, Library, tmp)
+    func grantAccessToContainer(_ containerPath: String) -> Bool {
+        // Cấp quyền cho thư mục gốc
+        let rootGranted = wq_grant(containerPath)
+        
+        // Cấp quyền cho các thư mục con quan trọng
+        let subDirs = ["Documents", "Library", "tmp", "Library/Caches", "Library/Preferences"]
+        for sub in subDirs {
+            let path = "\(containerPath)/\(sub)"
+            // Cố gắng grant, nếu thư mục không tồn tại thì bỏ qua
+            _ = wq_grant(path) 
+        }
+        
+        return rootGranted
     }
 }
 
@@ -119,7 +135,6 @@ enum DevicePatchService {
         var roots: [String: URL] = [:]
         
         for bundleID in bundleIDs {
-            // Gọi trực tiếp từ class PatchEngine đã gộp ở trên
             guard let gameRootPath = PatchEngine.shared.findGameContainerPath(bundleID: bundleID) else {
                 let msg = "Không tìm thấy container cho \(bundleID) bằng worse_query."
                 print(msg)
@@ -127,7 +142,8 @@ enum DevicePatchService {
                 throw PatchPackageError.targetAppUnavailable(bundleID)
             }
             
-            let granted = wq_grant(gameRootPath)
+            // Gọi hàm cấp quyền cho cả gốc lẫn thư mục con
+            let granted = PatchEngine.shared.grantAccessToContainer(gameRootPath)
             if !granted {
                 let msg = "Grant thất bại cho \(bundleID) tại \(gameRootPath)."
                 print(msg)
