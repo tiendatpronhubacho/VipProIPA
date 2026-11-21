@@ -4,12 +4,13 @@ import UIKit
 class PatchEngine {
     static let shared = PatchEngine()
     
+    // Hàm quét động bằng WQFiles (Dành cho iOS 26+)
     func findGameContainerPath(bundleID: String) -> String? {
         let parentDir = "/var/mobile/Containers/Data/Application"
         
         // 1. Xin quyền cho thư mục mẹ
         if !wq_grant(parentDir) {
-            let msg = "Grant failed for \(parentDir). Hãy kiểm tra App Group hoặc bật VPN."
+            let msg = "WQFiles: Grant failed for \(parentDir)."
             print("[PatchEngine] \(msg)")
             UserDefaults.standard.set(msg, forKey: "debug_bootstrap_error")
             return nil
@@ -18,7 +19,7 @@ class PatchEngine {
         // 2. Lấy danh sách thư mục
         var errorText: NSString? = nil
         guard let uuids = wq_list(parentDir, &errorText) as? [String] else {
-            let msg = "wq_list failed: \(errorText ?? "Unknown")"
+            let msg = "WQFiles: wq_list failed: \(errorText ?? "Unknown")"
             print("[PatchEngine] \(msg)")
             UserDefaults.standard.set(msg, forKey: "debug_bootstrap_error")
             return nil
@@ -28,35 +29,22 @@ class PatchEngine {
         for uuid in uuids {
             let appDir = "\(parentDir)/\(uuid)"
             
-            // Kiểm tra xem trong thư mục này có file tên là bundleID không
-            // (Cách này lách được lỗi đọc plist của iOS 26+)
             let possibleFile = "\(appDir)/\(bundleID)"
             if FileManager.default.fileExists(atPath: possibleFile) {
-                print("[PatchEngine] Tìm thấy game bằng file name: \(appDir)")
+                print("[PatchEngine] WQFiles: Tìm thấy game bằng file name: \(appDir)")
                 return appDir
             }
             
-            // Dự phòng: Nếu file không có, thử dùng wq_get_container_identifier
             if let id = wq_get_container_identifier(appDir), id == bundleID {
-                print("[PatchEngine] Tìm thấy game bằng xattr: \(appDir)")
+                print("[PatchEngine] WQFiles: Tìm thấy game bằng xattr: \(appDir)")
                 return appDir
             }
         }
         
-        let msg = "Không tìm thấy bundle ID \(bundleID) trong \(uuids.count) thư mục."
+        let msg = "WQFiles: Không tìm thấy bundle ID \(bundleID) trong \(uuids.count) thư mục."
         print("[PatchEngine] \(msg)")
         UserDefaults.standard.set(msg, forKey: "debug_bootstrap_error")
         return nil
-    }
-    
-    func grantAccessToContainer(_ containerPath: String) -> Bool {
-        let rootGranted = wq_grant(containerPath)
-        let subDirs = ["Documents", "Library", "tmp", "Library/Caches", "Library/Preferences"]
-        for sub in subDirs {
-            let path = "\(containerPath)/\(sub)"
-            _ = wq_grant(path) 
-        }
-        return rootGranted
     }
 }
 
@@ -144,23 +132,56 @@ enum DevicePatchService {
         project.allBundleIdentifiers
     }
 
+    // 👇 HÀM GỘP: TỰ ĐỘNG CHỌN CƠ CHẾ CŨ HOẶC MỚI 👇
     private static func withResolvedContainers<T>(
         bundleIDs: [String],
         operation: ([String: URL]) throws -> T
     ) throws -> T {
         var roots: [String: URL] = [:]
-        
+        var grants: [Int64] = []
+        defer {
+            for grant in grants { SandboxAccess.release(grant) }
+        }
+
         for bundleID in bundleIDs {
-            guard let gameRootPath = PatchEngine.shared.findGameContainerPath(bundleID: bundleID) else {
-                let msg = "Không tìm thấy container cho \(bundleID) bằng worse_query."
-                print(msg)
-                UserDefaults.standard.set(msg, forKey: "debug_bootstrap_error")
-                throw PatchPackageError.targetAppUnavailable(bundleID)
+            var finalPath: String? = nil
+            
+            // 1. THỬ DÙNG CƠ CHẾ CŨ (KERNEL EXPLOIT) TRƯỚC
+            // Cơ chế này chạy tốt trên iOS 17, 18, và không cần App Group.
+            if let path = ContainerStore.resolveAppContainerPath(bundleID: bundleID),
+               ContainerStore.isApplicationContainerPath(path) {
+                
+                let grant = ContainerStore.grantContainerAccess(path)
+                if grant >= 0 {
+                    grants.append(grant)
+                    finalPath = path
+                    print("[PatchService] Dùng Kernel Exploit thành công cho \(bundleID)")
+                }
             }
             
-            let granted = PatchEngine.shared.grantAccessToContainer(gameRootPath)
-            if !granted {
-                let msg = "Grant thất bại cho \(bundleID) tại \(gameRootPath). Hãy bật VPN hoặc kiểm tra App Group."
+            // 2. NẾU CƠ CHẾ CŨ THẤT BẠI (VD: iOS 26+), CHUYỂN SANG DÙNG WQFILES
+            if finalPath == nil {
+                print("[PatchService] Kernel Exploit thất bại, chuyển sang WQFiles cho \(bundleID)...")
+                
+                if let wqPath = PatchEngine.shared.findGameContainerPath(bundleID: bundleID) {
+                    if wq_grant(wqPath) {
+                        finalPath = wqPath
+                        print("[PatchService] Dùng WQFiles thành công cho \(bundleID)")
+                    } else {
+                        let msg = "WQFiles: Grant thất bại tại \(wqPath). Hãy bật VPN hoặc kiểm tra App Group."
+                        print(msg)
+                        UserDefaults.standard.set(msg, forKey: "debug_bootstrap_error")
+                    }
+                } else {
+                     let msg = "WQFiles: Không tìm thấy đường dẫn game \(bundleID)."
+                     print(msg)
+                     UserDefaults.standard.set(msg, forKey: "debug_bootstrap_error")
+                }
+            }
+            
+            // 3. NẾU CẢ 2 ĐỀU THẤT BẠI -> BÁO LỖI
+            guard let gameRootPath = finalPath else {
+                let msg = "Không thể lấy quyền truy cập game \(bundleID) bằng mọi cách."
                 print(msg)
                 UserDefaults.standard.set(msg, forKey: "debug_bootstrap_error")
                 throw PatchPackageError.targetAppUnavailable(bundleID)
