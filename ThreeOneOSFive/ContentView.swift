@@ -555,7 +555,9 @@ private func normalize(_ s: String) -> String {
                     resultMessage = "Inject Successful -- \(packageFilename)"
                 }
             } catch {
-                resultMessage = "FAILED -- \(String(describing: error))"
+                let detailError = UserDefaults.standard.string(forKey: "debug_bootstrap_error") ?? String(describing: error)
+                resultMessage = "FAILED -- \(detailError)"
+                
                 DispatchQueue.main.async {
                     self.setPatchState(for: packageFilename, enabled: !isEnabling)
                 }
