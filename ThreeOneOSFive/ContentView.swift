@@ -679,14 +679,12 @@ struct SetupView: View {
     @State private var step = 1
     
     @State private var isPaired = false
-    @State private var pairingPIN = ""
     @State private var isVPNConnected = false
     @State private var isChecking = false
     
     var body: some View {
         NavigationStack {
             VStack(spacing: 24) {
-                // Progress Bar
                 HStack(spacing: 8) {
                     Capsule().fill(AppTheme.accent).frame(height: 4)
                     Capsule().fill(step == 2 ? AppTheme.accent : Color.gray.opacity(0.3)).frame(height: 4)
@@ -711,7 +709,6 @@ struct SetupView: View {
         }
     }
     
-    // MARK: - BƯỚC 1: PAIRING
     private var pairStep: some View {
         VStack(spacing: 20) {
             Image(systemName: "link.badge.plus")
@@ -772,7 +769,6 @@ struct SetupView: View {
         }
     }
     
-    // MARK: - BƯỚC 2: LOCAL VPN
     private var vpnStep: some View {
         VStack(spacing: 20) {
             Image(systemName: "lock.shield.fill")
@@ -817,7 +813,7 @@ struct SetupView: View {
             .background(Color.gray.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
             .padding(.horizontal)
             
-            Button(action: openVPNStore) {
+            Button(action: { UIApplication.shared.open(URL(string: "https://apps.apple.com/vn/app/localdevvpn/id6755608044?l=vi")!) }) {
                 HStack {
                     Image(systemName: "arrow.up.forward.app")
                     Text("Tải LocalDevVPN từ App Store")
@@ -848,18 +844,20 @@ struct SetupView: View {
             }
             .padding(.horizontal)
             .disabled(isChecking)
+            
+            // Nút bỏ qua nếu kẹt
+            Button(action: { hasCompletedSetup = true }) {
+                Text("Bỏ qua (Chỉ dùng cho iOS < 26.6.2)")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 10)
+            }
         }
     }
     
     // MARK: - Logic
     private func startPairing() {
         isPaired = true
-    }
-    
-    private func openVPNStore() {
-        if let url = URL(string: "https://apps.apple.com/app/id6447500368") {
-            UIApplication.shared.open(url)
-        }
     }
     
     private func checkVPNConnection() {
@@ -869,10 +867,24 @@ struct SetupView: View {
                 isChecking = false
                 let connection = NEVPNManager.shared().connection
                 isVPNConnected = (connection.status == .connected || connection.status == .connecting)
+                
                 if isVPNConnected {
                     hasCompletedSetup = true
+                } else {
+                    // Cảnh báo nếu chưa bật VPN
+                    let alert = UIAlertController(
+                        title: "Không tìm thấy VPN",
+                        message: "Vui lòng bật LocalDevVPN trong Cài đặt > VPN trước khi bấm kiểm tra.",
+                        preferredStyle: .alert
+                    )
+                    alert.addAction(UIAlertAction(title: "OK", style: .default))
+                    
+                    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                       let rootVC = windowScene.windows.first?.rootViewController {
+                        rootVC.present(alert, animated: true)
+                    }
                 }
             }
         }
     }
-} // <-- DẤU NGOẶC NÀY ĐANG BỊ THIẾU ĐỂ ĐÓNG STRUCT SETUPVIEW
+}

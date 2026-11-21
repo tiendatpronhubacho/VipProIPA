@@ -15,6 +15,17 @@ struct ThreeOneOSSixApp: App {
     @State private var updateOffer: AppUpdateChecker.Offer?
     @Environment(\.scenePhase) private var scenePhase
 
+    // Hàm kiểm tra iOS có cần Setup (Pair + VPN) không
+    private var needsSetup: Bool {
+        let v = ProcessInfo.processInfo.operatingSystemVersion
+        if v.majorVersion > 26 { return true }
+        if v.majorVersion == 26 {
+            if v.minorVersion > 6 { return true }
+            if v.minorVersion == 6 && v.patchVersion >= 2 { return true }
+        }
+        return false
+    }
+
     init() {
         setupLogCapture()
         let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
@@ -38,7 +49,8 @@ struct ThreeOneOSSixApp: App {
     var body: some Scene {
         WindowGroup {
             ZStack {
-                if !hasCompletedSetup {
+                // CHỈ GỌI SETUP NẾU THỎA MÃN ĐIỀU KIỆN VÀ CHƯA SETUP XONG
+                if needsSetup && !hasCompletedSetup {
                     SetupView()
                         .environment(\.appLanguage, language)
                         .environment(\.locale, language.locale)
@@ -56,7 +68,7 @@ struct ThreeOneOSSixApp: App {
                         .environment(\.locale, language.locale)
                 }
             }
-            .transition(.opacity) // Chuyển transition lên ZStack
+            .transition(.opacity)
             .animation(.easeInOut(duration: 0.3), value: hasCompletedSetup)
             .animation(.easeInOut(duration: 0.3), value: licenseManager.isActive)
             .displayIdentityAttribution(isPresented: $showAttribution, enabled: true)
@@ -97,7 +109,6 @@ struct ThreeOneOSSixApp: App {
         }
     }
 }
-// ... AppState giữ nguyên
 
 class AppState: ObservableObject {
     @Published var exploitStatus: ExploitStatus = .notStarted
