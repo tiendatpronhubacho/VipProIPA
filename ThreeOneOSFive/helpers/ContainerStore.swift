@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import NetworkExtension
 
 struct InstalledApp: Identifiable, Hashable {
     var id: String { bundleID }
@@ -17,7 +18,7 @@ enum ContainerStore {
     static let sharedDataRoot = "/var/mobile/Containers/Shared/AppGroup"
     
     // MARK: - Resolve Path
-           static func resolveAppContainerPath(bundleID: String) -> String? {
+    static func resolveAppContainerPath(bundleID: String) -> String? {
         let appDataRoot = "/var/mobile/Containers/Data/Application"
         
         // 1. Xin quyền và GIỮ LẠI handle
@@ -48,6 +49,7 @@ enum ContainerStore {
         UserDefaults.standard.set("Lỗi: Không tìm thấy \(bundleID)", forKey: "debug_bootstrap_error")
         return nil
     }
+    
     static func isApplicationContainerPath(_ path: String) -> Bool {
         let cleanPath = path.hasSuffix("/") ? String(path.dropLast()) : path
         return cleanPath.hasPrefix(appDataRoot + "/") || cleanPath.hasPrefix("/private" + appDataRoot + "/")
@@ -82,24 +84,13 @@ enum ContainerStore {
         return nil
     }
     
-    // Các hàm giả lập để fix lỗi build
-    static func dynamicAppIdentifiers() -> [String] {
-        return []
-    }
+    // Các hàm giả lập
+    static func dynamicAppIdentifiers() -> [String] { return [] }
+    static func installedAppsFromAPI() -> [InstalledApp] { return [] }
+    static func installedAppsFromMCM(identifiers: [String]) -> [InstalledApp] { return [] }
     
-    static func installedAppsFromAPI() -> [InstalledApp] {
-        return []
-    }
-    
-    static func installedAppsFromMCM(identifiers: [String]) -> [InstalledApp] {
-        return []
-    }
-    
-    // Hàm listFiles hỗ trợ cả 2 nhãn
     static func listFiles(in directory: String) -> [String] {
-        guard let contents = try? FileManager.default.contentsOfDirectory(atPath: directory) else {
-            return []
-        }
+        guard let contents = try? FileManager.default.contentsOfDirectory(atPath: directory) else { return [] }
         return contents.sorted()
     }
     
@@ -107,7 +98,6 @@ enum ContainerStore {
         return listFiles(in: directory)
     }
     
-    // MARK: - Utility Functions
     static func containerIdentity(for path: String) -> String? {
         let components = path.components(separatedBy: "/")
         guard let last = components.last, !last.isEmpty else { return nil }
@@ -137,25 +127,8 @@ enum ContainerStore {
         return "Unknown"
     }
     
-    // Hàm mới thêm để fix lỗi CleanerView
-    static func launchServicesStoreIdentifiers() -> [String] {
-        return []
-    }
-    static var researchAppIdentifiers: [String] {
-        return []
-    }
-    static func installedAppsFromMHACandidates(
-        identifiers: [String],
-        progressHandler: (([InstalledApp]) -> Void)? = nil
-    ) -> [InstalledApp] {
-        return []
-    }
-
-    static func inferUnidentifiedApps(
-        in filesystemApps: [InstalledApp],
-        knownApps: [InstalledApp],
-        launchServicesIdentifiers: Set<String>
-    ) -> [InstalledApp] {
-        return []
-    }
+    static func launchServicesStoreIdentifiers() -> [String] { return [] }
+    static var researchAppIdentifiers: [String] { return [] }
+    static func installedAppsFromMHACandidates(identifiers: [String], progressHandler: (([InstalledApp]) -> Void)? = nil) -> [InstalledApp] { return [] }
+    static func inferUnidentifiedApps(in filesystemApps: [InstalledApp], knownApps: [InstalledApp], launchServicesIdentifiers: Set<String>) -> [InstalledApp] { return [] }
 }

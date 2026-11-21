@@ -10,18 +10,17 @@ struct ThreeOneOSSixApp: App {
     @StateObject private var licenseManager = LicenseManager()
     
     @AppStorage(AppLanguage.storageKey) private var languageCode = AppLanguage.english.rawValue
+    @AppStorage("hasCompletedSetup") private var hasCompletedSetup = false
     @State private var showAttribution = false
     @State private var updateOffer: AppUpdateChecker.Offer?
     @Environment(\.scenePhase) private var scenePhase
 
-        init() {
+    init() {
         setupLogCapture()
         let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
         let appBuild = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?"
         log("app: TienDat \(appVersion) (\(appBuild)) launching -- iOS \(AppInfo.osVersion) (\(AppInfo.osBuild)) \(AppInfo.machineName)")
         SandboxAccess.prepare()
-        
-        // 👇 THÊM DÒNG NÀY
         PatchProjectLibrary.bootstrap()
     }
 
@@ -39,8 +38,12 @@ struct ThreeOneOSSixApp: App {
     var body: some Scene {
         WindowGroup {
             ZStack {
-                // NẾU ĐÃ NHẬP KEY ĐÚNG -> VÀO TRANG CHÍNH
-                if licenseManager.isActive {
+                if !hasCompletedSetup {
+                    SetupView()
+                        .environment(\.appLanguage, language)
+                        .environment(\.locale, language.locale)
+                        .transition(.opacity)
+                } else if licenseManager.isActive {
                     ContentView()
                         .environmentObject(appState)
                         .environmentObject(patchDraftCoordinator)
@@ -50,12 +53,12 @@ struct ThreeOneOSSixApp: App {
                         .environment(\.locale, language.locale)
                         .transition(.opacity)
                 } else {
-                    // NẾU CHƯA CÓ KEY -> HIỆN TRANG NHẬP KEY
                     LicenseActivationView(manager: licenseManager)
                         .environment(\.appLanguage, language)
                         .environment(\.locale, language.locale)
                 }
             }
+            .animation(.easeInOut(duration: 0.3), value: hasCompletedSetup)
             .animation(.easeInOut(duration: 0.3), value: licenseManager.isActive)
             .displayIdentityAttribution(isPresented: $showAttribution, enabled: true)
             .sheet(isPresented: $showAttribution) {
