@@ -7,40 +7,41 @@ class PatchEngine {
     func findGameContainerPath(bundleID: String) -> String? {
         let parentDir = "/var/mobile/Containers/Data/Application"
         
-        // 1. Xin quyền cho thư mục cha
-        if !wq_grant(parentDir) {
-            let msg = "Grant failed for \(parentDir)"
-            print("[PatchEngine] \(msg)")
-            UserDefaults.standard.set(msg, forKey: "debug_bootstrap_error")
+        // 1. Xin quyền cho thư mục mẹ
+        _ = wq_grant(parentDir)
+        
+        // 2. Lấy danh sách thư mục
+        guard let uuids = wq_list(parentDir, nil) as? [String] else {
             return nil
         }
         
-        // 2. Lấy danh sách các thư mục UUID
-        var errorText: NSString? = nil
-        guard let uuids = wq_list(parentDir, &errorText) as? [String] else {
-            let msg = "wq_list failed: \(errorText ?? "Unknown")"
-            print("[PatchEngine] \(msg)")
-            UserDefaults.standard.set(msg, forKey: "debug_bootstrap_error")
-            return nil
-        }
-        
-        print("[PatchEngine] Tìm thấy \(uuids.count) thư mục app.")
-        
-        // 3. Duyệt và lấy xattr (không đọc file plist nữa)
         for uuid in uuids {
             let appDir = "\(parentDir)/\(uuid)"
             
-            if let id = wq_get_container_identifier(appDir) {
+            // Lấy tên app thông qua metadata (cách app trên ảnh làm)
+            if let id = getBundleIDFromXattr(appDir) {
                 if id == bundleID {
-                    print("[PatchEngine] Đã tìm thấy game \(bundleID) tại \(appDir)")
                     return appDir
                 }
             }
         }
+        return nil
+    }
+
+    // Hàm phụ: Đọc thẳng Bundle ID từ file metadata của iOS
+    private func getBundleIDFromXattr(_ path: String) -> String? {
+        // Cố gắng đọc thông qua API của Objective-C
+        if let identifier = wq_get_container_identifier(path) {
+            return identifier as String
+        }
         
-        let msg = "Không tìm thấy bundle ID \(bundleID) trong \(uuids.count) thư mục."
-        print("[PatchEngine] \(msg)")
-        UserDefaults.standard.set(msg, forKey: "debug_bootstrap_error")
+        // Nếu hàm C không chạy, thử dùng cách của Foundation
+        let metadataPath = "\(path)/.com.apple.mobile_container_manager.metadata.plist"
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: metadataPath)),
+           let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any] {
+            return plist["MCMMetadataIdentifier"] as? String
+        }
+        
         return nil
     }
     
