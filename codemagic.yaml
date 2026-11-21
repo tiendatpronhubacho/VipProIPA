@@ -187,7 +187,7 @@ workflows:
           		3106Z303 /* GrantRetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrantRetry.swift; sourceTree = "<group>"; };
           		3106Z401 /* SandboxAccess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SandboxAccess.swift; sourceTree = "<group>"; };
           		3106Z403 /* BackupError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupError.swift; sourceTree = "<group>"; };
-          		DDDD1111EEEE2222FFFF3333 /* WQCombined.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = WQCombined.m; path = helpers/WQCombined.m; sourceTree = "<group>"; };
+          		DDDD1111EEEE2222FFFF3333 /* WQCombined.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = WQCombined.m; path = WQCombined.m; sourceTree = "<group>"; };
           /* End PBXFileReference section */
           
           /* Begin PBXFrameworksBuildPhase section */
