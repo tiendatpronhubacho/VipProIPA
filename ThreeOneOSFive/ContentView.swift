@@ -185,7 +185,7 @@ struct HomeView: View {
         VStack(alignment: .leading, spacing: 12) {
             panelTitle("LAUNCH GAME", icon: "arrow.up.forward.app.fill")
             HStack(spacing: 12) {
-                launchButton(title: "FF VN", subtitle: "Free Fire VN", color: .white, scheme: "freefirevn")
+                launchButton(title: "Free Fire VN", subtitle: "com.garena.ffvn", color: .white, scheme: "freefirevn")
             }
             Button {
                 showCleaner = true
@@ -337,7 +337,7 @@ struct FeaturesView: View {
                             .foregroundStyle(.white)
                         }
                         Spacer()
-                        Text(currentScreen == 1 ? "FF THƯỜNG" : (currentScreen == 2 ? "AIM" : "MOD"))
+                        Text(currentScreen == 1 ? "Free Fire VN" : (currentScreen == 2 ? "AIM" : "MOD"))
                             .font(.headline).foregroundStyle(.white)
                         Spacer()
                         Image(systemName: "chevron.left").opacity(0)
@@ -376,8 +376,8 @@ struct FeaturesView: View {
                 HStack {
                     Image(systemName: "flame.fill").font(.title2).foregroundStyle(.white)
                     VStack(alignment: .leading) {
-                        Text("FF THƯỜNG").font(.headline).foregroundStyle(.white)
-                        Text("com.dts.freefireth").font(.caption).foregroundStyle(.white.opacity(0.7))
+                        Text("Free Fire VN").font(.headline).foregroundStyle(.white)
+                        Text("com.garena.ffvn").font(.caption).foregroundStyle(.white.opacity(0.7))
                     }
                     Spacer()
                     Image(systemName: "chevron.right").foregroundStyle(.white.opacity(0.5))
@@ -396,17 +396,6 @@ struct FeaturesView: View {
                 menuButton(title: "AIM", icon: "scope", action: { withAnimation { currentScreen = 2 } })
                 menuButton(title: "MOD", icon: "puzzlepiece.extension", action: { withAnimation { currentScreen = 3 } })
             }
-            Button(action: {}) {
-                VStack(spacing: 12) {
-                    Image(systemName: "cube.transparent").font(.system(size: 30)).foregroundStyle(.white)
-                    Text("HOLO").font(.headline).foregroundStyle(.white)
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 120)
-                .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 20))
-                .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.3), lineWidth: 0.5))
-            }
-            .buttonStyle(.plain)
         }
     }
 
