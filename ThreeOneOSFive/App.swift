@@ -148,16 +148,21 @@ class AppState: ObservableObject {
             return
         }
 
-        let applicable = KernelExploit.isApplicable(
-            major: v.major,
-            minor: v.minor,
-            patch: v.patch,
-            build: AppInfo.osBuild
-        )
-        guard applicable else { return }
+        // Nếu là iOS 17/18 (kernel backend), phải chạy exploit ngay
+        if SandboxAccess.backend == .kernel {
+            if !KernelExploit.hasKernelSandboxAccess() {
+                runKernelExploitIfNeeded()
+            } else {
+                exploitStatus = .success(method: "kernel")
+            }
+            return
+        }
 
-        refreshKernelExploitStatus()
-        maybeAutoRunKernelExploit()
+        // Với bad_query hoặc worse_query, kiểm tra probe
+        if KernelExploit.isApplicable(major: v.major, minor: v.minor, patch: v.patch, build: AppInfo.osBuild) {
+            refreshKernelExploitStatus()
+            maybeAutoRunKernelExploit()
+        }
     }
 
     private func maybeAutoRunKernelExploit() {
@@ -166,7 +171,7 @@ class AppState: ObservableObject {
               !exploitStatus.isFailed,
               !autoRunAttempted else { return }
         autoRunAttempted = true
-        log("app: starting kernel exploit automatically")
+        log("app: starting sandbox backend automatically")
         runKernelExploitIfNeeded()
     }
 
