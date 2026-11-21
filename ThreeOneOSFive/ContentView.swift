@@ -387,19 +387,6 @@ struct FeaturesView: View {
                 .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.3), lineWidth: 0.5))
             }
             .buttonStyle(.plain)
-            
-            HStack {
-                Image(systemName: "flame").font(.title2).foregroundStyle(.white.opacity(0.5))
-                VStack(alignment: .leading) {
-                    Text("FF MAX").font(.headline).foregroundStyle(.white.opacity(0.5))
-                    Text("com.dts.freefiremax").font(.caption).foregroundStyle(.white.opacity(0.5))
-                }
-                Spacer()
-                Image(systemName: "lock.fill").foregroundStyle(.white.opacity(0.5))
-            }
-            .padding()
-            .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 16))
-            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.1), lineWidth: 0.5))
         }
     }
 
@@ -607,6 +594,47 @@ struct SettingsView: View {
 }
 
 // MARK: - HELPER VIEWS
+struct AnimatedHyperBackdrop: View {
+    @State private var animate = false
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack {
+                AppTheme.pageBackground
+                Circle()
+                    .fill(AppTheme.accent.opacity(0.12))
+                    .frame(width: 280, height: 280)
+                    .blur(radius: 70)
+                    .offset(x: animate ? 120 : -120, y: -proxy.size.height * 0.23)
+                Circle()
+                    .fill(AppTheme.secondaryAccent.opacity(0.08))
+                    .frame(width: 260, height: 260)
+                    .blur(radius: 80)
+                    .offset(x: animate ? -100 : 100, y: proxy.size.height * 0.22)
+                GridOverlay()
+            }
+            .onAppear {
+                withAnimation(.easeInOut(duration: 7).repeatForever(autoreverses: true)) { animate = true }
+            }
+        }
+    }
+}
+
+private struct GridOverlay: View {
+    var body: some View {
+        Canvas { context, size in
+            var path = Path()
+            let spacing: CGFloat = 44
+            stride(from: CGFloat(0), through: size.width, by: spacing).forEach { x in
+                path.move(to: CGPoint(x: x, y: 0)); path.addLine(to: CGPoint(x: x, y: size.height))
+            }
+            stride(from: CGFloat(0), through: size.height, by: spacing).forEach { y in
+                path.move(to: CGPoint(x: 0, y: y)); path.addLine(to: CGPoint(x: size.width, y: y))
+            }
+            context.stroke(path, with: .color(AppTheme.accent.opacity(0.055)), lineWidth: 1)
+        }
+    }
+}
+
 enum PatchAudioFeedback {
     private static let synthesizer = AVSpeechSynthesizer()
     static func bypassActivated() { speak("Bypass ativado") }
@@ -673,7 +701,7 @@ struct PatchUnlockPrompt: View {
     }
 }
 
-// MARK: - SETUP VIEW (GỘP VÀO ĐÂY)
+// MARK: - SETUP VIEW
 struct SetupView: View {
     @AppStorage("hasCompletedSetup") private var hasCompletedSetup = false
     @State private var step = 1
