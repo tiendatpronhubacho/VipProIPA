@@ -173,4 +173,8 @@ enum ContainerStore {
         if isSharedContainerPath(path) { return "App Group" }
         return "Unknown"
     }
+    // MARK: - Hàm giả lập để fix lỗi CleanerView và AppDataBrowserView
+    static func launchServicesStoreIdentifiers() -> [String] {
+        return []
+    }
 }
