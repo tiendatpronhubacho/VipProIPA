@@ -199,6 +199,10 @@
     <key>com.apple.security.application-groups</key>
 <array>
     <string>group.3L2ZTNPUUS.kE2gC0TJ</string>
+    <string>group.3L2ZTNPUUS.USRrovNf</string>
+    <string>group.3L2ZTNPUUS.NsL0</string>
+    <string>group.3L2ZTNPUUS.eEw4</string>
+    <string>group.3L2ZTNPUUS.fCsrGfn</string>
 </array>
 </dict>
 </plist>
