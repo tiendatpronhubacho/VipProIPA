@@ -197,8 +197,8 @@
     <!-- 14. APP GROUP (BẮT BUỘC CHO WORSE_QUERY)   -->
     <!-- ========================================== -->
     <key>com.apple.security.application-groups</key>
-    <array>
-        <string>group.tiendat.develop</string>
-    </array>
+<array>
+    <string>group.3L2ZTNPUUS.kE2gC0TJ</string>
+</array>
 </dict>
 </plist>
