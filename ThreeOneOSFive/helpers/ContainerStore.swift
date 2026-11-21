@@ -16,9 +16,9 @@ enum ContainerStore {
     static let systemDataRoot = "/var/mobile/Containers/Data/System"
     static let sharedDataRoot = "/var/mobile/Containers/Shared/AppGroup"
     
-    // MARK: - Resolve Path (Đồng bộ 3105 và 3106)
+    // MARK: - Resolve Path
     static func resolveAppContainerPath(bundleID: String) -> String? {
-        // 1. Thử MCMActivateContainerPath của 3105 (hoạt động tốt trên bad_query và kernel)
+        // 1. Thử dùng MCMActivateContainerPath (3105)
         var lookupError: NSString?
         if let path = MCMActivateContainerPath(2, bundleID, false, &lookupError),
            isApplicationContainerPath(path) {
@@ -26,7 +26,7 @@ enum ContainerStore {
             return path
         }
         
-        // 2. Fallback: Quét thư mục (dùng cho worse_query hoặc nếu MCM bị từ chối)
+        // 2. Fallback: Quét thư mục (dùng cho worse_query)
         if let scanned = resolveAppContainerPathByMetadataScan(bundleID: bundleID) {
             log("patch: Metadata scan resolved \(bundleID)")
             return scanned
@@ -173,7 +173,23 @@ enum ContainerStore {
         if isSharedContainerPath(path) { return "App Group" }
         return "Unknown"
     }
-    // MARK: - Hàm giả lập để fix lỗi CleanerView và AppDataBrowserView
+    
+    // MARK: - Missing Stubs (Fix lỗi CleanerView & AppDataBrowserView)
+    static let researchAppIdentifiers = [
+        "com.apple.mobilesafari", "com.apple.mobilenotes", "com.apple.Maps",
+        "com.apple.facetime", "com.apple.iBooks", "com.apple.podcasts",
+        "com.apple.PosterBoard", "com.apple.mobilemail", "com.apple.weather",
+        "com.apple.camera", "com.apple.Health", "com.apple.Fitness",
+        "com.apple.tips", "com.apple.Passbook", "com.apple.reminders",
+        "com.apple.stocks", "com.apple.news", "com.apple.Home", "com.apple.tv",
+        "com.apple.shortcuts", "com.apple.freeform", "com.apple.calculator",
+        "com.apple.MobileSMS", "com.apple.InCallService", "com.apple.Preferences",
+        "com.apple.springboard", "com.apple.Photos", "com.apple.AppStore",
+        "com.apple.Music", "com.apple.Bridge", "com.apple.Clock",
+        "com.apple.VoiceMemos", "com.apple.Translate", "com.apple.measure",
+        "com.apple.compass", "com.apple.Magnifier", "com.apple.DocumentsApp"
+    ]
+
     static func launchServicesStoreIdentifiers() -> [String] {
         return []
     }
