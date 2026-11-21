@@ -9,7 +9,7 @@ struct InstalledApp: Identifiable, Hashable {
     let name: String
     let containerPath: String
     let version: String
-    let icon: UIImage?
+    var icon: UIImage? = nil // Thêm = nil để không bắt buộc truyền vào
 
     var id: String { bundleID }
     var displayName: String {
@@ -18,48 +18,6 @@ struct InstalledApp: Identifiable, Hashable {
 
     static func == (lhs: InstalledApp, rhs: InstalledApp) -> Bool { lhs.id == rhs.id }
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
-}
-
-struct FileEntry: Identifiable, Hashable {
-    let name: String
-    let path: String
-    let isDirectory: Bool
-    let size: Int64
-    let modifiedAt: Date?
-    let childCount: Int?
-
-    var id: String { path }
-    var sizeText: String {
-        guard size >= 0 else { return "--" }
-        return ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
-    }
-
-    init(
-        name: String,
-        path: String,
-        isDirectory: Bool,
-        size: Int64,
-        modifiedAt: Date? = nil,
-        childCount: Int? = nil
-    ) {
-        self.name = name
-        self.path = path
-        self.isDirectory = isDirectory
-        self.size = size
-        self.modifiedAt = modifiedAt
-        self.childCount = childCount
-    }
-
-    func withDirectorySummary(_ summary: FileBrowserDirectorySummary?) -> FileEntry {
-        FileEntry(
-            name: name,
-            path: path,
-            isDirectory: isDirectory,
-            size: summary?.byteCount ?? -2,
-            modifiedAt: modifiedAt,
-            childCount: summary?.childCount
-        )
-    }
 }
 
 // MARK: - Store
