@@ -88,6 +88,8 @@ workflows:
           		3105A211 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3105A031; };
           		3105L200 /* background_home.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 3105L100; };
           		3105L201 /* background_features.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 3105L101; };
+          		3105L202 /* background_settings.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 3105L102; };
+          		3105L301 /* background_music.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 3105L300; };
           		3106Z200 /* worse_query.m in Sources */ = {isa = PBXBuildFile; fileRef = 3106Z100; };
           		3106Z300 /* SandboxDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3106Z301; };
           		3106Z302 /* GrantRetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3106Z303; };
@@ -181,6 +183,8 @@ workflows:
           		3105B123 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
           		3105L100 /* background_home.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = background_home.jpg; sourceTree = "<group>"; };
           		3105L101 /* background_features.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = background_features.jpg; sourceTree = "<group>"; };
+          		3105L102 /* background_settings.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = background_settings.jpg; sourceTree = "<group>"; };
+          		3105L300 /* background_music.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = background_music.mp3; sourceTree = "<group>"; };
           		3106Z100 /* worse_query.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = worse_query.m; sourceTree = "<group>"; };
           		3106Z101 /* worse_query.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = worse_query.h; sourceTree = "<group>"; };
           		3106Z301 /* SandboxDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SandboxDiagnostics.swift; sourceTree = "<group>"; };
@@ -224,6 +228,8 @@ workflows:
           				3105A031 /* Assets.xcassets */,
           				3105L100 /* background_home.jpg */,
           				3105L101 /* background_features.jpg */,
+          				3105L102 /* background_settings.jpg */,
+          				3105L300 /* background_music.mp3 */,
           			);
           			path = ThreeOneOSFive;
           			sourceTree = "<group>";
@@ -402,6 +408,8 @@ workflows:
           				3105A228,
           				3105L200,
           				3105L201,
+          				3105L202,
+          				3105L301,
           			);
           			runOnlyForDeploymentPostprocessing = 0;
           		};

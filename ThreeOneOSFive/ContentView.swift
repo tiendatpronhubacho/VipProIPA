@@ -3,7 +3,45 @@ import UIKit
 import AVFoundation
 import NetworkExtension
 
-// MARK: - CẤU HÌNH TABBAR CHO MỌI IOS (CHỐNG LỖI XÁM)
+// MARK: - QUẢN LÝ NHẠC NỀN
+class AudioManager: ObservableObject {
+    static let shared = AudioManager()
+    private var player: AVAudioPlayer?
+    
+    @Published var isPlaying: Bool = UserDefaults.standard.bool(forKey: "background_music_enabled") {
+        didSet {
+            UserDefaults.standard.set(isPlaying, forKey: "background_music_enabled")
+            if isPlaying { play() } else { stop() }
+        }
+    }
+    
+    init() {
+        if isPlaying { play() }
+    }
+    
+    func play() {
+        guard let url = Bundle.main.url(forResource: "background_music", withExtension: "mp3") else {
+            print("Không tìm thấy file nhạc background_music.mp3")
+            return
+        }
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.mixWithOthers])
+            try AVAudioSession.sharedInstance().setActive(true)
+            
+            player = try AVAudioPlayer(contentsOf: url)
+            player?.numberOfLoops = -1
+            player?.play()
+        } catch {
+            print("Lỗi phát nhạc: \(error)")
+        }
+    }
+    
+    func stop() {
+        player?.stop()
+    }
+}
+
+// MARK: - CẤU HÌNH TABBAR (MÀU TỐI)
 func configureTabBarAppearance() {
     let appearance = UITabBarAppearance()
     appearance.configureWithOpaqueBackground()
@@ -12,8 +50,8 @@ func configureTabBarAppearance() {
     let itemAppearance = UITabBarItemAppearance()
     itemAppearance.normal.iconColor = UIColor.white.withAlphaComponent(0.5)
     itemAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor.white.withAlphaComponent(0.5)]
-    itemAppearance.selected.iconColor = UIColor(AppTheme.accent)
-    itemAppearance.selected.titleTextAttributes = [.foregroundColor: UIColor(AppTheme.accent)]
+    itemAppearance.selected.iconColor = UIColor.white
+    itemAppearance.selected.titleTextAttributes = [.foregroundColor: UIColor.white]
     
     appearance.stackedLayoutAppearance = itemAppearance
     appearance.inlineLayoutAppearance = itemAppearance
@@ -41,7 +79,7 @@ func loadImageFromBundle(named name: String) -> Image {
     return Image(systemName: "photo")
 }
 
-// MARK: - MAIN CONTENT VIEW (TAB NAVIGATION)
+// MARK: - MAIN CONTENT VIEW
 struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var appState: AppState
@@ -52,24 +90,18 @@ struct ContentView: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             HomeView(patchStore: patchStore)
-                .tabItem {
-                    Label("Trang chủ", systemImage: "house.fill")
-                }
+                .tabItem { Label("Trang chủ", systemImage: "house.fill") }
                 .tag(0)
             
             FeaturesView(patchStore: patchStore)
-                .tabItem {
-                    Label("Chức năng", systemImage: "cube.fill")
-                }
+                .tabItem { Label("Chức năng", systemImage: "cube.fill") }
                 .tag(1)
             
             SettingsView()
-                .tabItem {
-                    Label("Cài đặt", systemImage: "gearshape.fill")
-                }
+                .tabItem { Label("Cài đặt", systemImage: "gearshape.fill") }
                 .tag(2)
         }
-        .accentColor(AppTheme.accent)
+        .accentColor(.white)
         .preferredColorScheme(.dark)
         .toolbarBackground(.visible, for: .tabBar)
         .toolbarBackground(Color.black, for: .tabBar)
@@ -101,7 +133,7 @@ struct HomeView: View {
             }
             .ignoresSafeArea()
             
-            Color.black.opacity(0.0).ignoresSafeArea()
+            Color.black.opacity(0.2).ignoresSafeArea()
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 18) {
@@ -131,7 +163,7 @@ struct HomeView: View {
                 Text("PATCH CONTROL CENTER")
                     .font(.system(size: 10, weight: .bold, design: .rounded))
                     .tracking(1.7)
-                    .foregroundStyle(AppTheme.accent)
+                    .foregroundStyle(.white.opacity(0.8))
             }
             Spacer()
         }
@@ -140,21 +172,20 @@ struct HomeView: View {
     private var devicePanel: some View {
         VStack(spacing: 0) {
             panelTitle("DEVICE STATUS", icon: "shield.lefthalf.filled")
-            statusRow(icon: "apple.logo", title: "iOS", value: AppInfo.osVersion, color: AppTheme.secondaryAccent)
-            statusRow(icon: "iphone", title: "Device", value: AppInfo.displayMachineName, color: AppTheme.secondaryAccent)
+            statusRow(icon: "apple.logo", title: "iOS", value: AppInfo.osVersion, color: .white)
+            statusRow(icon: "iphone", title: "Device", value: AppInfo.displayMachineName, color: .white)
             statusRow(icon: "checkmark.seal.fill", title: "Support", value: appState.isSupported ? "SUPPORTED" : "UNSUPPORTED", color: appState.isSupported ? .green : .red)
         }
         .padding(16)
-        .background(Color.black.opacity(0.65), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(AppTheme.accent.opacity(0.4), lineWidth: 0.5))
+        .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(Color.white.opacity(0.3), lineWidth: 0.5))
     }
 
     private var gameLaunchPanel: some View {
         VStack(alignment: .leading, spacing: 12) {
             panelTitle("LAUNCH GAME", icon: "arrow.up.forward.app.fill")
             HStack(spacing: 12) {
-                launchButton(title: "FF VN", subtitle: "Free Fire VN", color: AppTheme.accent, scheme: "freefirevn")
-                lockedLaunchButton(title: "FF MAX", subtitle: "Locked • Coming Soon", color: AppTheme.secondaryAccent)
+                launchButton(title: "FF VN", subtitle: "Free Fire VN", color: .white, scheme: "freefirevn")
             }
             Button {
                 showCleaner = true
@@ -163,8 +194,8 @@ struct HomeView: View {
                     .font(.system(size: 13, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity, minHeight: 52)
-                    .background(Color.black.opacity(0.65), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(AppTheme.accent.opacity(0.5), lineWidth: 0.5))
+                    .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.white.opacity(0.3), lineWidth: 0.5))
             }
             .buttonStyle(.plain)
         }
@@ -180,12 +211,12 @@ struct HomeView: View {
             Spacer()
             Text("TIENDAT • PRONTO")
                 .font(.system(size: 9, weight: .bold, design: .rounded))
-                .foregroundStyle(AppTheme.accent.opacity(0.8))
+                .foregroundStyle(.white.opacity(0.8))
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 13)
-        .background(Color.black.opacity(0.65), in: Capsule())
-        .overlay(Capsule().stroke(AppTheme.accent.opacity(0.3), lineWidth: 0.5))
+        .background(Color.white.opacity(0.1), in: Capsule())
+        .overlay(Capsule().stroke(Color.white.opacity(0.3), lineWidth: 0.5))
     }
 
     private var developerCredits: some View {
@@ -196,7 +227,7 @@ struct HomeView: View {
                 .multilineTextAlignment(.center)
             Text("Zalo TienDat")
                 .font(.system(size: 10, weight: .semibold, design: .rounded))
-                .foregroundStyle(AppTheme.secondaryAccent.opacity(0.85))
+                .foregroundStyle(.white.opacity(0.85))
             HStack(spacing: 10) {
                 channelButton(title: "Zalo", url: "https://zalo.me/0986321175")
             }
@@ -216,8 +247,8 @@ struct HomeView: View {
                 .foregroundStyle(.white)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 9)
-                .background(AppTheme.accent.opacity(0.18), in: Capsule())
-                .overlay(Capsule().stroke(AppTheme.accent.opacity(0.42), lineWidth: 0.5))
+                .background(Color.white.opacity(0.1), in: Capsule())
+                .overlay(Capsule().stroke(Color.white.opacity(0.3), lineWidth: 0.5))
         }
         .buttonStyle(.plain)
     }
@@ -226,7 +257,7 @@ struct HomeView: View {
         Label(title, systemImage: icon)
             .font(.system(size: 12, weight: .black, design: .rounded))
             .tracking(1.4)
-            .foregroundStyle(AppTheme.accent)
+            .foregroundStyle(.white)
     }
 
     private func statusRow(icon: String, title: String, value: String, color: Color) -> some View {
@@ -254,29 +285,10 @@ struct HomeView: View {
             }
             .frame(maxWidth: .infinity, minHeight: 82, alignment: .leading)
             .padding(.horizontal, 14)
-            .background(Color.black.opacity(0.65), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(color.opacity(0.4), lineWidth: 0.5))
+            .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Color.white.opacity(0.3), lineWidth: 0.5))
         }
         .buttonStyle(.plain)
-    }
-
-    private func lockedLaunchButton(title: String, subtitle: String, color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 7) {
-            Image(systemName: "lock.fill")
-                .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(color.opacity(0.72))
-            Text(title)
-                .font(.system(size: 13, weight: .black, design: .rounded))
-                .foregroundStyle(.white.opacity(0.72))
-            Text(subtitle)
-                .font(.system(size: 10, weight: .bold, design: .rounded))
-                .foregroundStyle(color.opacity(0.72))
-        }
-        .frame(maxWidth: .infinity, minHeight: 82, alignment: .leading)
-        .padding(.horizontal, 14)
-        .background(Color.black.opacity(0.45), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(color.opacity(0.3), lineWidth: 0.5))
-        .opacity(0.72)
     }
 
     private func openGame(scheme: String) {
@@ -294,23 +306,9 @@ struct FeaturesView: View {
     @EnvironmentObject private var appState: AppState
     @State private var patchOperationBusy = false
     @State private var patchMessage = "READY -- SELECT A PATCH"
-    @State private var selectedMenu = 0 // 0: AIM, 1: MOD
-    @State private var debugMessage = ""
-
-    @State private var p1 = false; @State private var p2 = false; @State private var p3 = false
-    @State private var p4 = false; @State private var p5 = false; @State private var p6 = false
-    @State private var p7 = false; @State private var p8 = false; @State private var p9 = false
-    @State private var p10 = false; @State private var p11 = false; @State private var p12 = false
-    @State private var p13 = false; @State private var p14 = false 
-
-    private func normalize(_ s: String) -> String {
-        s.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
-            .replacingOccurrences(of: " ", with: "")
-            .replacingOccurrences(of: "+", with: "")
-            .replacingOccurrences(of: ".3105", with: "")
-            .replacingOccurrences(of: ".3106", with: "")
-    }
     
+    @State private var currentScreen = 0 
+
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
@@ -323,290 +321,292 @@ struct FeaturesView: View {
                     .clipped()
             }
             .ignoresSafeArea()
-            .overlay(Color.black.opacity(0.0))
+            .overlay(Color.black.opacity(0.4))
 
-            VStack(spacing: 16) {
-                HStack(spacing: 0) {
-                    menuTabButton(title: "AIM", icon: "scope", index: 0)
-                    menuTabButton(title: "MOD", icon: "cube.box.fill", index: 1)
+            VStack(spacing: 0) {
+                if currentScreen > 0 {
+                    HStack {
+                        Button {
+                            withAnimation { currentScreen -= 1 }
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "chevron.left")
+                                Text(currentScreen == 1 ? "Chức năng" : "Menu")
+                            }
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundStyle(.white)
+                        }
+                        Spacer()
+                        Text(currentScreen == 1 ? "FF THƯỜNG" : (currentScreen == 2 ? "AIM" : "MOD"))
+                            .font(.headline).foregroundStyle(.white)
+                        Spacer()
+                        Image(systemName: "chevron.left").opacity(0)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 10)
+                    .padding(.bottom, 20)
                 }
-                .padding(4)
-                .background(Color.black.opacity(0.6), in: Capsule())
-                .overlay(Capsule().stroke(AppTheme.accent.opacity(0.5), lineWidth: 0.5))
-                .padding(.horizontal, 18)
-                .padding(.top, 18)
 
                 ScrollView(showsIndicators: false) {
-                    VStack(spacing: 10) {
-                        if selectedMenu == 0 {
-                            patchRow(name: "Aim Drag", target: "FREE FIRE • VN", package: "Aim Drag.3105", state: $p1)
-                            patchRow(name: "Aim Neck", target: "FREE FIRE • VN", package: "Aim Neck.3105", state: $p2)
-                            patchRow(name: "Aim Body", target: "FREE FIRE • VN", package: "Aim Body.3105", state: $p3)
-                            patchRow(name: "Nhe Tam", target: "FREE FIRE • VN", package: "Nhe Tam.3105", state: $p4)
-                            patchRow(name: "Aim Chest", target: "FREE FIRE • VN", package: "Aim Chest.3105", state: $p5)
-                            patchRow(name: "Aim R8", target: "FREE FIRE • VN", package: "Aim R8.3105", state: $p6)
-                            patchRow(name: "Aim Magic", target: "FREE FIRE • VN", package: "Aim Magic.3105", state: $p7)
-                            patchRow(name: "Neck Anten", target: "FREE FIRE • VN", package: "Neck Anten.3105", state: $p8)
-                            patchRow(name: "Nhe Anten", target: "FREE FIRE • VN", package: "Nhe Anten.3105", state: $p9)
-                        } else {
-                            patchRow(name: "Mod Sonic", target: "FREE FIRE • DIMITRI", package: "Mod Sonic Dimitri.3105", state: $p10)
-                            patchRow(name: "Mod Thỏ", target: "FREE FIRE • DIMITRI", package: "Mod Thỏ Dimitri.3105", state: $p11)
-                            patchRow(name: "Mod Roblox", target: "FREE FIRE • DIMITRI", package: "Mod Roblox Dimitri.3105", state: $p12)
-                            patchRow(name: "Mod Báo Hồng", target: "FREE FIRE • DIMITRI", package: "Mod Báo Hồng Dimitri.3105", state: $p13)
-                            patchRow(name: "Mod Baki", target: "FREE FIRE • ALOCK", package: "Mod Baki Alock.3105", state: $p14)
+                    VStack(spacing: 16) {
+                        if currentScreen == 0 {
+                            mainAppSelection
+                        } else if currentScreen == 1 {
+                            menuSelection
+                        } else if currentScreen == 2 {
+                            patchList(isAim: true)
+                        } else if currentScreen == 3 {
+                            patchList(isAim: false)
                         }
                     }
                     .padding(.horizontal, 18)
                     .padding(.bottom, 20)
                 }
-
-                HStack(spacing: 8) {
-                    Circle().fill(patchMessage.localizedCaseInsensitiveContains("successful") ? .green : AppTheme.accent).frame(width: 7, height: 7)
-                    Text(patchOperationBusy ? "PROCESSING PATCH…" : patchMessage)
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.8))
-                        .lineLimit(2)
-                    Spacer()
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
-                .background(Color.black.opacity(0.7), in: Capsule())
-                .overlay(Capsule().stroke(AppTheme.accent.opacity(0.4), lineWidth: 0.5))
-                .padding(.horizontal, 18)
-                .padding(.bottom, 8)
-            }
-        }
-        .onAppear {
-            patchStore.reload()
-            syncPatchStates()
-            
-            if !appState.exploitStatus.isSuccess {
-                appState.runKernelExploitIfNeeded()
-            }
-            
-            if let error = UserDefaults.standard.string(forKey: "debug_bootstrap_error") {
-                self.debugMessage = error
             }
         }
         .onChange(of: scenePhase) { phase in
             guard phase == .active, !patchOperationBusy else { return }
-            syncPatchStates()
             patchMessage = "READY -- SELECT A PATCH"
         }
     }
 
-    private func menuTabButton(title: String, icon: String, index: Int) -> some View {
-        Button {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                selectedMenu = index
+    private var mainAppSelection: some View {
+        VStack(spacing: 16) {
+            Button { withAnimation { currentScreen = 1 } } label: {
+                HStack {
+                    Image(systemName: "flame.fill").font(.title2).foregroundStyle(.white)
+                    VStack(alignment: .leading) {
+                        Text("FF THƯỜNG").font(.headline).foregroundStyle(.white)
+                        Text("com.dts.freefireth").font(.caption).foregroundStyle(.white.opacity(0.7))
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right").foregroundStyle(.white.opacity(0.5))
+                }
+                .padding()
+                .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 16))
+                .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.3), lineWidth: 0.5))
             }
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                Text(title)
+            .buttonStyle(.plain)
+            
+            HStack {
+                Image(systemName: "flame").font(.title2).foregroundStyle(.white.opacity(0.5))
+                VStack(alignment: .leading) {
+                    Text("FF MAX").font(.headline).foregroundStyle(.white.opacity(0.5))
+                    Text("com.dts.freefiremax").font(.caption).foregroundStyle(.white.opacity(0.5))
+                }
+                Spacer()
+                Image(systemName: "lock.fill").foregroundStyle(.white.opacity(0.5))
             }
-            .font(.system(size: 14, weight: .black, design: .rounded))
-            .foregroundStyle(selectedMenu == index ? .white : .white.opacity(0.5))
+            .padding()
+            .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 16))
+            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.1), lineWidth: 0.5))
+        }
+    }
+
+    private var menuSelection: some View {
+        VStack(spacing: 16) {
+            HStack(spacing: 16) {
+                menuButton(title: "AIM", icon: "scope", action: { withAnimation { currentScreen = 2 } })
+                menuButton(title: "MOD", icon: "puzzlepiece.extension", action: { withAnimation { currentScreen = 3 } })
+            }
+            Button(action: {}) {
+                VStack(spacing: 12) {
+                    Image(systemName: "cube.transparent").font(.system(size: 30)).foregroundStyle(.white)
+                    Text("HOLO").font(.headline).foregroundStyle(.white)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 120)
+                .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 20))
+                .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.3), lineWidth: 0.5))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func menuButton(title: String, icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 12) {
+                Image(systemName: icon).font(.system(size: 30)).foregroundStyle(.white)
+                Text(title).font(.headline).foregroundStyle(.white)
+            }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 10)
-            .background(selectedMenu == index ? AppTheme.accent.opacity(0.8) : Color.clear, in: Capsule())
+            .frame(height: 120)
+            .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 20))
+            .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.3), lineWidth: 0.5))
         }
         .buttonStyle(.plain)
     }
 
-    private func patchRow(name: String, target: String, package: String, state: Binding<Bool>) -> some View {
-        HStack(spacing: 12) {
+    private func patchList(isAim: Bool) -> some View {
+        VStack(spacing: 10) {
+            if isAim {
+                patchRow(name: "Aim Drag", target: "FREE FIRE • VN", package: "Aim Drag.3105")
+                patchRow(name: "Aim Neck", target: "FREE FIRE • VN", package: "Aim Neck.3105")
+                patchRow(name: "Aim Body", target: "FREE FIRE • VN", package: "Aim Body.3105")
+                patchRow(name: "Nhe Tam", target: "FREE FIRE • VN", package: "Nhe Tam.3105")
+                patchRow(name: "Aim Chest", target: "FREE FIRE • VN", package: "Aim Chest.3105")
+                patchRow(name: "Aim R8", target: "FREE FIRE • VN", package: "Aim R8.3105")
+                patchRow(name: "Aim Magic", target: "FREE FIRE • VN", package: "Aim Magic.3105")
+                patchRow(name: "Neck Anten", target: "FREE FIRE • VN", package: "Neck Anten.3105")
+                patchRow(name: "Nhe Anten", target: "FREE FIRE • VN", package: "Nhe Anten.3105")
+            } else {
+                patchRow(name: "Mod Sonic", target: "FREE FIRE • DIMITRI", package: "Mod Sonic Dimitri.3105")
+                patchRow(name: "Mod Thỏ", target: "FREE FIRE • DIMITRI", package: "Mod Thỏ Dimitri.3105")
+                patchRow(name: "Mod Roblox", target: "FREE FIRE • DIMITRI", package: "Mod Roblox Dimitri.3105")
+                patchRow(name: "Mod Báo Hồng", target: "FREE FIRE • DIMITRI", package: "Mod Báo Hồng Dimitri.3105")
+                patchRow(name: "Mod Baki", target: "FREE FIRE • ALOCK", package: "Mod Baki Alock.3105")
+            }
+            
+            HStack(spacing: 8) {
+                Circle().fill(patchMessage.localizedCaseInsensitiveContains("successful") ? .green : .white.opacity(0.5)).frame(width: 7, height: 7)
+                Text(patchOperationBusy ? "PROCESSING PATCH…" : patchMessage)
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.8))
+                Spacer()
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(Color.white.opacity(0.1), in: Capsule())
+            .overlay(Capsule().stroke(Color.white.opacity(0.3), lineWidth: 0.5))
+            .padding(.top, 10)
+        }
+    }
+
+    private func patchRow(name: String, target: String, package: String) -> some View {
+        let item = patchStore.items.first(where: { $0.packageURL.lastPathComponent.caseInsensitiveCompare(package) == .orderedSame })
+        let isEnabled = item.flatMap { patchStore.activePatchIDs.contains($0.id) } ?? false
+        
+        return HStack(spacing: 12) {
             Image(systemName: "scope")
                 .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(AppTheme.accent)
+                .foregroundStyle(.white)
                 .frame(width: 40, height: 40)
-                .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             
             VStack(alignment: .leading, spacing: 4) {
-                Text(name)
-                    .font(.system(size: 16, weight: .black, design: .rounded))
-                    .foregroundStyle(.white)
-                Text(target)
-                    .font(.system(size: 10, weight: .bold, design: .rounded))
-                    .foregroundStyle(AppTheme.secondaryAccent)
+                Text(name).font(.system(size: 16, weight: .black, design: .rounded)).foregroundStyle(.white)
+                Text(target).font(.system(size: 10, weight: .bold, design: .rounded)).foregroundStyle(.white.opacity(0.7))
             }
             
             Spacer()
             
             Button {
-                guard !patchOperationBusy else { return }
-                let newValue = !state.wrappedValue
-                state.wrappedValue = newValue
-                togglePatch(packageFilename: package, state: state, isEnabling: newValue)
+                guard let item = item, !patchStore.isBusy else { return }
+                if isEnabled {
+                    patchStore.restorePatch(item)
+                } else {
+                    patchStore.applyPatch(item)
+                }
             } label: {
                 ZStack {
-                    Capsule()
-                        .fill(state.wrappedValue ? AppTheme.accent : Color.white.opacity(0.15))
-                        .frame(width: 50, height: 30)
-                    
-                    Circle()
-                        .fill(Color.white)
-                        .frame(width: 24, height: 24)
-                        .offset(x: state.wrappedValue ? 10 : -10)
-                        .shadow(radius: 2)
+                    Capsule().fill(isEnabled ? Color.white : Color.white.opacity(0.2)).frame(width: 50, height: 30)
+                    Circle().fill(isEnabled ? Color.black : Color.white).frame(width: 24, height: 24)
+                        .offset(x: isEnabled ? 10 : -10).shadow(radius: 2)
                 }
             }
             .buttonStyle(.plain)
-            .disabled(patchOperationBusy)
+            .disabled(patchStore.isBusy || item == nil)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
-        .background(Color.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(AppTheme.accent.opacity(0.3), lineWidth: 0.5))
-        .opacity(patchOperationBusy ? 0.5 : 1)
+        .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.white.opacity(0.3), lineWidth: 0.5))
+        .opacity(patchStore.isBusy ? 0.5 : 1)
     }
+}
 
-    private func syncPatchStates() {
-        p1 = isPatchActive("Aim Drag.3105"); p2 = isPatchActive("Aim Neck.3105")
-        p3 = isPatchActive("Aim Body.3105"); p4 = isPatchActive("Nhẹ Tâm.3105")
-        p5 = isPatchActive("Aim Chest.3105"); p6 = isPatchActive("Aim R8.3105")
-        p7 = isPatchActive("Aim Magic.3105"); p8 = isPatchActive("Neck+Anten.3105")
-        p9 = isPatchActive("Nhẹ + Anten.3105"); p10 = isPatchActive("Mod Sonic Dimitri.3105")
-        p11 = isPatchActive("Mod Thỏ Dimitri.3105"); p12 = isPatchActive("Mod Roblox Dimitri.3105")
-        p13 = isPatchActive("Mod Báo Hồng Dimitri.3105"); p14 = isPatchActive("Mod Baki Alock.3105")
-    }
-
-    private func isPatchActive(_ packageFilename: String) -> Bool {
-        let target = normalize(packageFilename)
-        return patchStore.items.first(where: {
-            normalize($0.packageURL.lastPathComponent) == target
-        }).flatMap { DevicePatchService.latestReceipt(projectID: $0.id) } != nil
-    }
-
-    private func setPatchState(for packageFilename: String, enabled: Bool) {
-        switch packageFilename {
-        case "Aim Drag.3105": p1 = enabled
-        case "Aim Neck.3105": p2 = enabled
-        case "Aim Body.3105": p3 = enabled
-        case "Nhẹ Tâm.3105": p4 = enabled
-        case "Aim Chest.3105": p5 = enabled
-        case "Aim R8.3105": p6 = enabled
-        case "Aim Magic.3105": p7 = enabled
-        case "Neck+Anten.3105": p8 = enabled
-        case "Nhẹ + Anten.3105": p9 = enabled
-        case "Mod Sonic Dimitri.3105": p10 = enabled
-        case "Mod Thỏ Dimitri.3105": p11 = enabled
-        case "Mod Roblox Dimitri.3105": p12 = enabled
-        case "Mod Báo Hồng Dimitri.3105": p13 = enabled
-        case "Mod Baki Alock.3105": p14 = enabled
-        default: break
-        }
-    }
-
-    private func togglePatch(packageFilename: String, state: Binding<Bool>, isEnabling: Bool) {
-        guard !patchOperationBusy else { return }
-        
-        let target = normalize(packageFilename)
-        guard let item = patchStore.items.first(where: {
-            normalize($0.packageURL.lastPathComponent) == target
-        }) else {
-            patchMessage = "ERROR -- PACKAGE NOT FOUND (\(patchStore.items.count) items loaded)"
-            state.wrappedValue = !isEnabling // Revert
-            return
-        }
-
-        patchOperationBusy = true
-        patchMessage = "PROCESSING -- \(packageFilename)"
-        let project = item.project
-        let projectID = item.id
-
-        DispatchQueue.global(qos: .userInitiated).async {
-            var resultMessage = ""
+// MARK: - CÀI ĐẶT (SETTINGS VIEW)
+struct SettingsView: View {
+    @ObservedObject private var audioManager = AudioManager.shared
+    
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
             
-            do {
-                if !isEnabling {
-                    guard let receipt = DevicePatchService.latestReceipt(projectID: projectID) else {
-                        DispatchQueue.main.async {
-                            self.setPatchState(for: packageFilename, enabled: false)
-                            self.patchMessage = "OFF -- NO ACTIVE PATCH FOUND"
-                            self.patchOperationBusy = false
+            GeometryReader { proxy in
+                loadImageFromBundle(named: "background_settings")
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+                    .clipped()
+            }
+            .ignoresSafeArea()
+            .overlay(Color.black.opacity(0.5))
+            
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 24) {
+                    HStack(spacing: 16) {
+                        Image(systemName: "app.fill")
+                            .font(.system(size: 30))
+                            .foregroundStyle(.white)
+                            .frame(width: 60, height: 60)
+                            .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 16))
+                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.3), lineWidth: 0.5))
+                        
+                        VStack(alignment: .leading) {
+                            Text("TienDat IPA").font(.title3.bold()).foregroundStyle(.white)
+                            Text("Phiên bản 2.0").font(.subheadline).foregroundStyle(.white.opacity(0.7))
                         }
-                        return
+                        Spacer()
                     }
-                    try DevicePatchService.restore(receipt: receipt)
-                    resultMessage = "Restore Successful -- \(packageFilename)"
-                } else {
-                    guard let project else {
-                        DispatchQueue.main.async {
-                            self.patchStore.requestUnlock(for: item)
-                            self.patchMessage = "PASSWORD REQUIRED -- ENTER PACKAGE PASSWORD"
-                            self.setPatchState(for: packageFilename, enabled: false)
-                            self.patchOperationBusy = false
+                    .padding(.top, 20)
+                    
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("ÂM THANH").font(.caption).foregroundStyle(.white.opacity(0.5))
+                        HStack {
+                            Text("Nhạc Nền").foregroundStyle(.white)
+                            Spacer()
+                            Toggle("", isOn: $audioManager.isPlaying).tint(.white)
                         }
-                        return
+                        .padding()
+                        .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 16))
+                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.3), lineWidth: 0.5))
                     }
-                    _ = try DevicePatchService.apply(project: project)
-                    resultMessage = "Inject Successful -- \(packageFilename)"
+                    
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("GIAO DIỆN").font(.caption).foregroundStyle(.white.opacity(0.5))
+                        HStack(spacing: 0) {
+                            Text("Sáng").frame(maxWidth: .infinity).padding(.vertical, 10)
+                            Text("Tối").frame(maxWidth: .infinity).padding(.vertical, 10).background(Color.white.opacity(0.2)).cornerRadius(8)
+                            Text("Theo hệ thống").frame(maxWidth: .infinity).padding(.vertical, 10)
+                        }
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.white)
+                        .padding(4)
+                        .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.3), lineWidth: 0.5))
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("THIẾT BỊ").font(.caption).foregroundStyle(.white.opacity(0.5))
+                        VStack(spacing: 0) {
+                            HStack {
+                                Text("Model phần cứng").foregroundStyle(.white)
+                                Spacer()
+                                Text(AppInfo.displayMachineName).foregroundStyle(.white.opacity(0.7))
+                            }
+                            .padding()
+                            Divider().background(Color.white.opacity(0.2))
+                            HStack {
+                                Text("Phiên bản iOS").foregroundStyle(.white)
+                                Spacer()
+                                Text(AppInfo.osVersion).foregroundStyle(.white.opacity(0.7))
+                            }
+                            .padding()
+                        }
+                        .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 16))
+                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.3), lineWidth: 0.5))
+                    }
+                    
+                    Spacer()
                 }
-            } catch {
-                let detailError = UserDefaults.standard.string(forKey: "debug_bootstrap_error") ?? String(describing: error)
-                resultMessage = "FAILED -- \(detailError)"
-                
-                DispatchQueue.main.async {
-                    self.setPatchState(for: packageFilename, enabled: !isEnabling)
-                }
-            }
-
-            DispatchQueue.main.async {
-                if resultMessage.contains("Successful") {
-                    self.patchMessage = resultMessage
-                    if isEnabling { PatchAudioFeedback.bypassActivated() } else { PatchAudioFeedback.originalRestored() }
-                } else {
-                    self.patchMessage = resultMessage
-                }
-                self.patchOperationBusy = false
+                .padding(.horizontal, 20)
             }
         }
     }
 }
 
-// MARK: - HELPER VIEWS & COMPONENTS
-struct AnimatedHyperBackdrop: View {
-    @State private var animate = false
-    var body: some View {
-        GeometryReader { proxy in
-            ZStack {
-                AppTheme.pageBackground
-                Circle()
-                    .fill(AppTheme.accent.opacity(0.12))
-                    .frame(width: 280, height: 280)
-                    .blur(radius: 70)
-                    .offset(x: animate ? 120 : -120, y: -proxy.size.height * 0.23)
-                Circle()
-                    .fill(AppTheme.secondaryAccent.opacity(0.08))
-                    .frame(width: 260, height: 260)
-                    .blur(radius: 80)
-                    .offset(x: animate ? -100 : 100, y: proxy.size.height * 0.22)
-                GridOverlay()
-            }
-            .onAppear {
-                withAnimation(.easeInOut(duration: 7).repeatForever(autoreverses: true)) { animate = true }
-            }
-        }
-    }
-}
-
-private struct GridOverlay: View {
-    var body: some View {
-        Canvas { context, size in
-            var path = Path()
-            let spacing: CGFloat = 44
-            stride(from: CGFloat(0), through: size.width, by: spacing).forEach { x in
-                path.move(to: CGPoint(x: x, y: 0)); path.addLine(to: CGPoint(x: x, y: size.height))
-            }
-            stride(from: CGFloat(0), through: size.height, by: spacing).forEach { y in
-                path.move(to: CGPoint(x: 0, y: y)); path.addLine(to: CGPoint(x: size.width, y: y))
-            }
-            context.stroke(path, with: .color(AppTheme.accent.opacity(0.055)), lineWidth: 1)
-        }
-    }
-}
-
+// MARK: - HELPER VIEWS
 enum PatchAudioFeedback {
     private static let synthesizer = AVSpeechSynthesizer()
     static func bypassActivated() { speak("Bypass ativado") }
@@ -686,8 +686,8 @@ struct SetupView: View {
         NavigationStack {
             VStack(spacing: 24) {
                 HStack(spacing: 8) {
-                    Capsule().fill(AppTheme.accent).frame(height: 4)
-                    Capsule().fill(step == 2 ? AppTheme.accent : Color.gray.opacity(0.3)).frame(height: 4)
+                    Capsule().fill(Color.white).frame(height: 4)
+                    Capsule().fill(step == 2 ? Color.white : Color.gray.opacity(0.3)).frame(height: 4)
                 }
                 .padding(.horizontal, 40)
                 .padding(.top, 20)
@@ -713,9 +713,9 @@ struct SetupView: View {
         VStack(spacing: 20) {
             Image(systemName: "link.badge.plus")
                 .font(.system(size: 40))
-                .foregroundStyle(.orange)
+                .foregroundStyle(.white)
                 .padding()
-                .background(Color.orange.opacity(0.1), in: RoundedRectangle(cornerRadius: 16))
+                .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 16))
             
             Text("Thiết lập Pairing")
                 .font(.title2.bold())
@@ -728,40 +728,27 @@ struct SetupView: View {
             
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    Image(systemName: "iphone.gen3")
-                        .foregroundStyle(.orange)
+                    Image(systemName: "iphone.gen3").foregroundStyle(.white)
                     VStack(alignment: .leading) {
-                        Text("Pair trực tiếp trên máy")
-                            .font(.headline)
+                        Text("Pair trực tiếp trên máy").font(.headline)
                         Text(isPaired ? "Thiết bị: 3105 (Đã pair)" : "Cần hoàn tất pairing để tiếp tục")
-                            .font(.caption)
-                            .foregroundStyle(isPaired ? .green : .gray)
+                            .font(.caption).foregroundStyle(isPaired ? .green : .gray)
                     }
                     Spacer()
-                    if isPaired {
-                        Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-                    }
+                    if isPaired { Image(systemName: "checkmark.circle.fill").foregroundStyle(.green) }
                 }
                 .padding()
-                .background(Color.gray.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
+                .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
                 
                 if !isPaired {
-                    Button(action: startPairing) {
-                        Text("Pair trực tiếp trên iPhone")
-                            .font(.headline)
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.orange, in: Capsule())
+                    Button(action: { isPaired = true }) {
+                        Text("Pair trực tiếp trên iPhone").font(.headline).foregroundStyle(.black)
+                            .frame(maxWidth: .infinity).padding().background(Color.white, in: Capsule())
                     }
                 } else {
                     Button(action: { step = 2 }) {
-                        Text("Tiếp tục bước 2")
-                            .font(.headline)
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.orange, in: Capsule())
+                        Text("Tiếp tục bước 2").font(.headline).foregroundStyle(.black)
+                            .frame(maxWidth: .infinity).padding().background(Color.white, in: Capsule())
                     }
                 }
             }
@@ -772,19 +759,14 @@ struct SetupView: View {
     private var vpnStep: some View {
         VStack(spacing: 20) {
             Image(systemName: "lock.shield.fill")
-                .font(.system(size: 40))
-                .foregroundStyle(.orange)
-                .padding()
-                .background(Color.orange.opacity(0.1), in: RoundedRectangle(cornerRadius: 16))
+                .font(.system(size: 40)).foregroundStyle(.white)
+                .padding().background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 16))
             
-            Text("Chuẩn bị kết nối AirLift")
-                .font(.title2.bold())
+            Text("Chuẩn bị kết nối AirLift").font(.title2.bold())
             
             Text("Cài LocalDevVPN, bật VPN và kết nối Wi-Fi. 3102 sẽ kiểm tra tunnel thật trước khi cho phép sử dụng.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
+                .font(.subheadline).foregroundStyle(.secondary)
+                .multilineTextAlignment(.center).padding(.horizontal)
             
             VStack(spacing: 0) {
                 HStack {
@@ -795,22 +777,19 @@ struct SetupView: View {
                     Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
                 }
                 .padding()
-                
                 Divider()
-                
                 HStack {
-                    Image(systemName: "network").foregroundStyle(.orange)
+                    Image(systemName: "network").foregroundStyle(.white)
                     VStack(alignment: .leading) {
                         Text("LocalDevVPN").font(.headline)
                         Text(isVPNConnected ? "VPN đã bật" : "Cần bật LocalDevVPN để tiếp tục").font(.caption).foregroundStyle(isVPNConnected ? .green : .gray)
                     }
                     Spacer()
-                    Image(systemName: isVPNConnected ? "checkmark.circle.fill" : "circle")
-                        .foregroundStyle(isVPNConnected ? .green : .gray)
+                    Image(systemName: isVPNConnected ? "checkmark.circle.fill" : "circle").foregroundStyle(isVPNConnected ? .green : .gray)
                 }
                 .padding()
             }
-            .background(Color.gray.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
+            .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
             .padding(.horizontal)
             
             Button(action: { UIApplication.shared.open(URL(string: "https://apps.apple.com/vn/app/localdevvpn/id6755608044?l=vi")!) }) {
@@ -818,46 +797,25 @@ struct SetupView: View {
                     Image(systemName: "arrow.up.forward.app")
                     Text("Tải LocalDevVPN từ App Store")
                 }
-                .font(.headline)
-                .foregroundStyle(.orange)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.orange.opacity(0.1), in: Capsule())
+                .font(.headline).foregroundStyle(.white)
+                .frame(maxWidth: .infinity).padding().background(Color.white.opacity(0.1), in: Capsule())
             }
             .padding(.horizontal)
             
             Button(action: checkVPNConnection) {
                 if isChecking {
-                    ProgressView().tint(.white)
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.orange, in: Capsule())
+                    ProgressView().tint(.black).font(.headline).frame(maxWidth: .infinity).padding().background(Color.white, in: Capsule())
                 } else {
-                    Text("Kiểm tra kết nối AirLift")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.orange, in: Capsule())
+                    Text("Kiểm tra kết nối AirLift").font(.headline).foregroundStyle(.black).frame(maxWidth: .infinity).padding().background(Color.white, in: Capsule())
                 }
             }
-            .padding(.horizontal)
-            .disabled(isChecking)
+            .padding(.horizontal).disabled(isChecking)
             
-            // Nút bỏ qua nếu kẹt
             Button(action: { hasCompletedSetup = true }) {
                 Text("Bỏ qua (Chỉ dùng cho iOS < 26.6.2)")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 10)
+                    .font(.footnote).foregroundStyle(.secondary).padding(.top, 10)
             }
         }
-    }
-    
-    // MARK: - Logic
-    private func startPairing() {
-        isPaired = true
     }
     
     private func checkVPNConnection() {
@@ -871,7 +829,6 @@ struct SetupView: View {
                 if isVPNConnected {
                     hasCompletedSetup = true
                 } else {
-                    // Cảnh báo nếu chưa bật VPN
                     let alert = UIAlertController(
                         title: "Không tìm thấy VPN",
                         message: "Vui lòng bật LocalDevVPN trong Cài đặt > VPN trước khi bấm kiểm tra.",
