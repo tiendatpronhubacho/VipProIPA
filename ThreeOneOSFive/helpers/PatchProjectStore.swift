@@ -28,7 +28,6 @@ final class PatchProjectStore: ObservableObject {
     @Published var alert: PatchStoreAlert?
     @Published var unlockErrorKey: String?
     
-    // Lưu trạng thái các patch đang bật
     @Published var activePatchIDs: Set<UUID> = [] {
         didSet {
             let ids = activePatchIDs.map { $0.uuidString }
@@ -52,12 +51,11 @@ final class PatchProjectStore: ObservableObject {
         }
         
         isBusy = true
-        PatchProjectLibrary.bootstrap() // Gọi hàm copy file nếu có
+        PatchProjectLibrary.bootstrap()
         
         Task {      
             await downloadPatchesFromGithub()
-            let loadedItems = PatchProjectLibrary.load()
-            self.items = loadedItems
+            self.items = PatchProjectLibrary.load()
             self.isBusy = false
         }
     }
@@ -97,7 +95,7 @@ final class PatchProjectStore: ObservableObject {
         items = PatchProjectLibrary.load()
     }
 
-    // MARK: - Apply & Restore (SỬ DỤNG DEVICEPATCHSERVICE)
+    // MARK: - Apply & Restore
 
     func applyPatch(_ item: PatchLibraryItem) {
         guard !isBusy else { return }
@@ -109,27 +107,24 @@ final class PatchProjectStore: ObservableObject {
         isBusy = true
         let itemID = item.id
         
-        Task.detached(priority: .userInitiated) { [weak self] in
+        Task { @MainActor [weak self] in
             do {
-                _ = try DevicePatchService.apply(project: project)
-                await MainActor.run {
-                    guard let self = self else { return }
-                    self.activePatchIDs.insert(itemID)
-                    self.isBusy = false
-                    self.alert = PatchStoreAlert(titleKey: "common.done", messageKey: "patch.applied_message")
-                }
+                _ = try await Task.detached(priority: .userInitiated) {
+                    try DevicePatchService.apply(project: project)
+                }.value
+                
+                guard let self = self else { return }
+                self.activePatchIDs.insert(itemID)
+                self.isBusy = false
+                self.alert = PatchStoreAlert(titleKey: "common.done", messageKey: "patch.applied_message")
             } catch let error as PatchPackageError {
-                await MainActor.run {
-                    guard let self = self else { return }
-                    self.isBusy = false
-                    self.present(error)
-                }
+                guard let self = self else { return }
+                self.isBusy = false
+                self.present(error)
             } catch {
-                await MainActor.run {
-                    guard let self = self else { return }
-                    self.isBusy = false
-                    self.present(.applyFailed)
-                }
+                guard let self = self else { return }
+                self.isBusy = false
+                self.present(.applyFailed)
             }
         }
     }
@@ -145,33 +140,29 @@ final class PatchProjectStore: ObservableObject {
         
         isBusy = true
         
-        Task.detached(priority: .userInitiated) { [weak self] in
+        Task { @MainActor [weak self] in
             do {
-                try DevicePatchService.restore(receipt: receipt)
-                await MainActor.run {
-                    guard let self = self else { return }
-                    self.activePatchIDs.remove(itemID)
-                    self.isBusy = false
-                    self.alert = PatchStoreAlert(titleKey: "common.done", messageKey: "patch.restored_message")
-                }
+                try await Task.detached(priority: .userInitiated) {
+                    try DevicePatchService.restore(receipt: receipt)
+                }.value
+                
+                guard let self = self else { return }
+                self.activePatchIDs.remove(itemID)
+                self.isBusy = false
+                self.alert = PatchStoreAlert(titleKey: "common.done", messageKey: "patch.restored_message")
             } catch let error as PatchPackageError {
-                await MainActor.run {
-                    guard let self = self else { return }
-                    self.isBusy = false
-                    self.present(error)
-                }
+                guard let self = self else { return }
+                self.isBusy = false
+                self.present(error)
             } catch {
-                await MainActor.run {
-                    guard let self = self else { return }
-                    self.isBusy = false
-                    self.present(.restoreFailed)
-                }
+                guard let self = self else { return }
+                self.isBusy = false
+                self.present(.restoreFailed)
             }
         }
     }
 
-    // MARK: - CRUD (Giữ nguyên như file gốc của bạn)
-
+    // MARK: - CRUD
     func create(project: PatchProject, password: String?) {
         runOperation(successMessageKey: "patch.created_message") {
             let encoded = try PatchPackageCodec.encodeNew(project: project, password: password)
@@ -224,27 +215,34 @@ final class PatchProjectStore: ObservableObject {
         guard !isBusy else { return }
         isBusy = true
         let hasAccess = sourceURL.startAccessingSecurityScopedResource()
-        Task.detached(priority: .userInitiated) { [weak self] in
+        
+        Task { @MainActor [weak self] in
             defer {
                 if hasAccess { sourceURL.stopAccessingSecurityScopedResource() }
             }
             do {
                 let data = try PatchProjectLibrary.readPackage(at: sourceURL)
                 let summary = try PatchPackageCodec.inspect(data)
-                let existingURL = await self?.existingPackageURL(for: summary.packageID)
-                if let pending = try Self.persistImportedPackage(
+                let existingURL = self?.existingPackageURL(for: summary.packageID)
+                
+                let pending = try Self.persistImportedPackage(
                     data: data,
                     summary: summary,
                     existingURL: existingURL
-                ) {
-                    await self?.requestPassword(pending: pending)
+                )
+                
+                guard let self = self else { return }
+                if let pending {
+                    self.requestPassword(pending: pending)
                 } else {
-                    await self?.finishOperation(successMessageKey: "patch.imported_message")
+                    self.finishOperation(successMessageKey: "patch.imported_message")
                 }
             } catch let error as PatchPackageError {
-                await self?.failOperation(error)
+                guard let self = self else { return }
+                self.failOperation(error)
             } catch {
-                await self?.failOperation(.unsupportedFormat)
+                guard let self = self else { return }
+                self.failOperation(.unsupportedFormat)
             }
         }
     }
@@ -257,25 +255,32 @@ final class PatchProjectStore: ObservableObject {
     ) -> Bool {
         guard !isBusy else { return false }
         isBusy = true
-        Task.detached(priority: .userInitiated) { [weak self] in
+        
+        Task { @MainActor [weak self] in
             do {
                 let summary = try PatchPackageCodec.inspect(data)
-                let existingURL = await self?.existingPackageURL(for: summary.packageID)
-                if let pending = try Self.persistImportedPackage(
+                let existingURL = self?.existingPackageURL(for: summary.packageID)
+                
+                let pending = try Self.persistImportedPackage(
                     data: data,
                     summary: summary,
                     existingURL: existingURL,
                     password: password,
                     origin: origin
-                ) {
-                    await self?.requestPassword(pending: pending)
+                )
+                
+                guard let self = self else { return }
+                if let pending {
+                    self.requestPassword(pending: pending)
                 } else {
-                    await self?.finishOperation(successMessageKey: "patch.imported_message")
+                    self.finishOperation(successMessageKey: "patch.imported_message")
                 }
             } catch let error as PatchPackageError {
-                await self?.failOperation(error)
+                guard let self = self else { return }
+                self.failOperation(error)
             } catch {
-                await self?.failOperation(.unsupportedFormat)
+                guard let self = self else { return }
+                self.failOperation(.unsupportedFormat)
             }
         }
         return true
@@ -299,7 +304,8 @@ final class PatchProjectStore: ObservableObject {
             return
         }
         isBusy = true
-        Task.detached(priority: .userInitiated) { [weak self] in
+        
+        Task { @MainActor [weak self] in
             do {
                 let configuration = URLSessionConfiguration.ephemeral
                 configuration.timeoutIntervalForRequest = 60
@@ -309,6 +315,7 @@ final class PatchProjectStore: ObservableObject {
 
                 let (temporaryURL, response) = try await session.download(from: remoteURL)
                 defer { try? FileManager.default.removeItem(at: temporaryURL) }
+                
                 guard let response = response as? HTTPURLResponse,
                       (200..<300).contains(response.statusCode),
                       let finalURL = response.url,
@@ -318,20 +325,26 @@ final class PatchProjectStore: ObservableObject {
 
                 let data = try PatchProjectLibrary.readPackage(at: temporaryURL)
                 let summary = try PatchPackageCodec.inspect(data)
-                let existingURL = await self?.existingPackageURL(for: summary.packageID)
-                if let pending = try Self.persistImportedPackage(
+                let existingURL = self?.existingPackageURL(for: summary.packageID)
+                
+                let pending = try Self.persistImportedPackage(
                     data: data,
                     summary: summary,
                     existingURL: existingURL
-                ) {
-                    await self?.requestPassword(pending: pending)
+                )
+                
+                guard let self = self else { return }
+                if let pending {
+                    self.requestPassword(pending: pending)
                 } else {
-                    await self?.finishOperation(successMessageKey: "patch.imported_message")
+                    self.finishOperation(successMessageKey: "patch.imported_message")
                 }
             } catch let error as PatchPackageError {
-                await self?.failOperation(error)
+                guard let self = self else { return }
+                self.failOperation(error)
             } catch {
-                await self?.failOperation(.remoteImportFailed)
+                guard let self = self else { return }
+                self.failOperation(.remoteImportFailed)
             }
         }
     }
@@ -361,7 +374,8 @@ final class PatchProjectStore: ObservableObject {
         guard let pending = pendingUnlock, !isBusy else { return }
         isBusy = true
         unlockErrorKey = nil
-        Task.detached(priority: .userInitiated) { [weak self] in
+        
+        Task { @MainActor [weak self] in
             do {
                 let decoded = try PatchPackageCodec.decode(pending.data, password: password)
                 try PatchKeyStore.store(decoded.contentKey, for: pending.summary)
@@ -377,12 +391,16 @@ final class PatchProjectStore: ObservableObject {
                     try? PatchKeyStore.delete(for: pending.summary)
                     throw error
                 }
-                await self?.clearPendingUnlock()
-                await self?.finishOperation(successMessageKey: "patch.unlocked_message")
+                
+                guard let self = self else { return }
+                self.clearPendingUnlock()
+                self.finishOperation(successMessageKey: "patch.unlocked_message")
             } catch let error as PatchPackageError {
-                await self?.failUnlock(error)
+                guard let self = self else { return }
+                self.failUnlock(error)
             } catch {
-                await self?.failUnlock(.invalidPasswordOrCorruptedPackage)
+                guard let self = self else { return }
+                self.failUnlock(.invalidPasswordOrCorruptedPackage)
             }
         }
     }
@@ -412,14 +430,20 @@ final class PatchProjectStore: ObservableObject {
               item.summary.schemaVersion >= 2,
               !isBusy else { return }
         isBusy = true
-        Task.detached(priority: .userInitiated) { [weak self] in
+        
+        Task { @MainActor [weak self] in
             do {
-                _ = try PatchProjectLibrary.synchronizeWorkspace(item: item)
-                await self?.finishWorkspaceSynchronization(reportsSuccess: reportsSuccess)
+                _ = try await Task.detached(priority: .userInitiated) {
+                    try PatchProjectLibrary.synchronizeWorkspace(item: item)
+                }.value
+                guard let self = self else { return }
+                self.finishWorkspaceSynchronization(reportsSuccess: reportsSuccess)
             } catch let error as PatchPackageError {
-                await self?.failOperation(error)
+                guard let self = self else { return }
+                self.failOperation(error)
             } catch {
-                await self?.failOperation(.invalidProject)
+                guard let self = self else { return }
+                self.failOperation(.invalidProject)
             }
         }
     }
@@ -441,14 +465,20 @@ final class PatchProjectStore: ObservableObject {
     ) {
         guard !isBusy else { return }
         isBusy = true
-        Task.detached(priority: .userInitiated) { [weak self] in
+        
+        Task { @MainActor [weak self] in
             do {
-                try operation()
-                await self?.finishOperation(successMessageKey: successMessageKey)
+                try await Task.detached(priority: .userInitiated) {
+                    try operation()
+                }.value
+                guard let self = self else { return }
+                self.finishOperation(successMessageKey: successMessageKey)
             } catch let error as PatchPackageError {
-                await self?.failOperation(error)
+                guard let self = self else { return }
+                self.failOperation(error)
             } catch {
-                await self?.failOperation(.invalidProject)
+                guard let self = self else { return }
+                self.failOperation(.invalidProject)
             }
         }
     }

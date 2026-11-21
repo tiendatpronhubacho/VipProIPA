@@ -56,6 +56,7 @@ struct ThreeOneOSSixApp: App {
                     LicenseActivationView(manager: licenseManager)
                         .environment(\.appLanguage, language)
                         .environment(\.locale, language.locale)
+                        .transition(.opacity)
                 }
             }
             .animation(.easeInOut(duration: 0.3), value: hasCompletedSetup)

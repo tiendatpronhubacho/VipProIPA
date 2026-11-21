@@ -14,7 +14,8 @@ class PatchEngine {
         }
         
         var errorText: NSString? = nil
-        guard let uuids = wq_list(parentDir, &errorText) as? [String] else {
+        // Bỏ "as? [String]" vì hàm đã trả về [String]
+        guard let uuids = wq_list(parentDir, &errorText) else {
             UserDefaults.standard.set("Lỗi: Không thể đọc danh sách thư mục.", forKey: "debug_bootstrap_error")
             return nil
         }
@@ -81,7 +82,7 @@ enum DevicePatchService {
         operation: ([String: URL]) throws -> T
     ) throws -> T {
         var roots: [String: URL] = [:]
-        var grants: [Int64] = []
+        let grants: [Int64] = [] // Sửa var thành let
         defer {
             for grant in grants { SandboxAccess.release(grant) }
         }
