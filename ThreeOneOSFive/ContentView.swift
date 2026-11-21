@@ -102,7 +102,7 @@ struct HomeView: View {
             .ignoresSafeArea()
             
             // Lớp phủ đen
-            Color.black.opacity(0.3).ignoresSafeArea()
+            Color.black.opacity(0.1).ignoresSafeArea()
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 18) {
@@ -146,7 +146,7 @@ struct HomeView: View {
             statusRow(icon: "checkmark.seal.fill", title: "Support", value: appState.isSupported ? "SUPPORTED" : "UNSUPPORTED", color: appState.isSupported ? .green : .red)
         }
         .padding(16)
-        .background(Color.black.opacity(0.65), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .background(Color.black.opacity(0.2), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(AppTheme.accent.opacity(0.4), lineWidth: 0.5))
     }
 
@@ -185,7 +185,7 @@ struct HomeView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 13)
-        .background(Color.black.opacity(0.65), in: Capsule())
+        .background(Color.black.opacity(0.2), in: Capsule())
         .overlay(Capsule().stroke(AppTheme.accent.opacity(0.3), lineWidth: 0.5))
     }
 
@@ -322,7 +322,7 @@ private func normalize(_ s: String) -> String {
                     .clipped()
             }
             .ignoresSafeArea()
-            .overlay(Color.black.opacity(0.65))
+            .overlay(Color.black.opacity(0.2))
 
             VStack(spacing: 16) {
                 // Custom Tab Bar (AIM / MOD)
