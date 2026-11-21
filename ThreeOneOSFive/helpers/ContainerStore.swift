@@ -458,6 +458,7 @@ enum ContainerStore {
     size: size,
     modificationDate: attributes?[.modificationDate] as? Date
 ))
+        }
         return entries.sorted {
             if $0.isDirectory != $1.isDirectory { return $0.isDirectory }
             return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
