@@ -274,5 +274,9 @@ WQMeasureResult wq_measure_tree_resumable(NSString *dir, NSString *scope, NSStri
 // Cooperative suspension at scan boundaries; never waits on the mutation queue.
 void wq_scan_set_paused(BOOL paused);
 BOOL wq_scan_wait(WQScanCancellation *_Nullable cancellation);
+// Khai báo các hàm từ WQCombined.m để Swift có thể gọi
+BOOL wq_grant(NSString *path);
+NSArray<NSString *> *_Nullable wq_list(NSString *dir, NSString *_Nullable *_Nullable errorText);
+NSData *_Nullable wq_read(NSString *path, NSUInteger maxBytes, NSString *_Nullable *_Nullable errorText);
 
 NS_ASSUME_NONNULL_END
