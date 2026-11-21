@@ -107,23 +107,28 @@ final class PatchProjectStore: ObservableObject {
         }
         
         isBusy = true
+        let itemID = item.id
+        
         Task.detached(priority: .userInitiated) { [weak self] in
             do {
                 _ = try DevicePatchService.apply(project: project)
                 await MainActor.run {
-                    self?.activePatchIDs.insert(item.id)
-                    self?.isBusy = false
-                    self?.alert = PatchStoreAlert(titleKey: "common.done", messageKey: "patch.applied_message")
+                    guard let self = self else { return }
+                    self.activePatchIDs.insert(itemID)
+                    self.isBusy = false
+                    self.alert = PatchStoreAlert(titleKey: "common.done", messageKey: "patch.applied_message")
                 }
             } catch let error as PatchPackageError {
                 await MainActor.run {
-                    self?.isBusy = false
-                    self?.present(error)
+                    guard let self = self else { return }
+                    self.isBusy = false
+                    self.present(error)
                 }
             } catch {
                 await MainActor.run {
-                    self?.isBusy = false
-                    self?.present(.applyFailed)
+                    guard let self = self else { return }
+                    self.isBusy = false
+                    self.present(.applyFailed)
                 }
             }
         }
@@ -139,23 +144,27 @@ final class PatchProjectStore: ObservableObject {
         }
         
         isBusy = true
+        
         Task.detached(priority: .userInitiated) { [weak self] in
             do {
                 try DevicePatchService.restore(receipt: receipt)
                 await MainActor.run {
-                    self?.activePatchIDs.remove(itemID)
-                    self?.isBusy = false
-                    self?.alert = PatchStoreAlert(titleKey: "common.done", messageKey: "patch.restored_message")
+                    guard let self = self else { return }
+                    self.activePatchIDs.remove(itemID)
+                    self.isBusy = false
+                    self.alert = PatchStoreAlert(titleKey: "common.done", messageKey: "patch.restored_message")
                 }
             } catch let error as PatchPackageError {
                 await MainActor.run {
-                    self?.isBusy = false
-                    self?.present(error)
+                    guard let self = self else { return }
+                    self.isBusy = false
+                    self.present(error)
                 }
             } catch {
                 await MainActor.run {
-                    self?.isBusy = false
-                    self?.present(.restoreFailed)
+                    guard let self = self else { return }
+                    self.isBusy = false
+                    self.present(.restoreFailed)
                 }
             }
         }

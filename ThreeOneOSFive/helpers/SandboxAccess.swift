@@ -118,12 +118,15 @@ enum SandboxAccess {
             if handle >= 0 { release(handle); return true }
             return false
         case .worseQuery:
-            // Phải có App Group
-            guard let group = appGroup,
-                  let groupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group) else {
-                log("sandbox: no App Group entitlement")
-                return false
-            }
+                // Phải có App Group
+                guard let group = appGroup,
+                      let groupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group) else {
+                    log("sandbox: no App Group entitlement")
+                    return false
+                }
+                
+                // THÊM DÒNG NÀY (Nằm ngoài guard, không có dấu } thừa)
+                log("sandbox: App Group URL is \(groupURL.path)")
             
             // Ép cấp quyền cho thư mục Application (để đọc được game)
             let targetPath = "/var/mobile/Containers/Data/Application"

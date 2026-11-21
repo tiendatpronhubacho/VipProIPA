@@ -707,7 +707,7 @@ workflows:
       - name: Fix build script scheme name
         script: |
           if [ -f "build_unsigned.sh" ]; then
-            sed -i '' 's/-scheme TienDat/-scheme OGIOS/g' build_unsigned.sh
+            sed -i '' 's/-scheme TienDat/-scheme ThreeOneOSFive/g' build_unsigned.sh
           fi
           
       - name: Build App
