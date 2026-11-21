@@ -1,6 +1,5 @@
 import Foundation
 import UIKit
-import NetworkExtension
 
 struct InstalledApp: Identifiable, Hashable {
     var id: String { bundleID }
@@ -17,54 +16,70 @@ enum ContainerStore {
     static let systemDataRoot = "/var/mobile/Containers/Data/System"
     static let sharedDataRoot = "/var/mobile/Containers/Shared/AppGroup"
     
-    // MARK: - Resolve Path
+    // MARK: - Resolve Path (Đồng bộ 3105 và 3106)
     static func resolveAppContainerPath(bundleID: String) -> String? {
-        // Nếu là kernel backend, không cần xin quyền, đọc trực tiếp
-        if SandboxAccess.backend == .kernel {
+        // 1. Thử MCMActivateContainerPath của 3105 (hoạt động tốt trên bad_query và kernel)
+        var lookupError: NSString?
+        if let path = MCMActivateContainerPath(2, bundleID, false, &lookupError),
+           isApplicationContainerPath(path) {
+            log("patch: MCM resolved \(bundleID)")
+            return path
+        }
+        
+        // 2. Fallback: Quét thư mục (dùng cho worse_query hoặc nếu MCM bị từ chối)
+        if let scanned = resolveAppContainerPathByMetadataScan(bundleID: bundleID) {
+            log("patch: Metadata scan resolved \(bundleID)")
+            return scanned
+        }
+        
+        // 3. Fallback cuối cùng: Dùng SandboxAccess grant thư mục cha rồi đọc metadata
+        let handle = SandboxAccess.grant(path: appDataRoot, writable: false)
+        if handle >= 0 {
+            defer { SandboxAccess.release(handle) }
             let fm = FileManager.default
-            guard let uuids = try? fm.contentsOfDirectory(atPath: appDataRoot) else {
-                UserDefaults.standard.set("Lỗi: Không đọc được Application (kernel)", forKey: "debug_bootstrap_error")
-                return nil
-            }
-            
-            for uuid in uuids {
-                let metaPath = "\(appDataRoot)/\(uuid)/.com.apple.mobile_container_manager.metadata.plist"
-                if let data = try? Data(contentsOf: URL(fileURLWithPath: metaPath)),
-                   let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
-                   let id = plist["MCMMetadataIdentifier"] as? String,
-                   id == bundleID {
-                    return "\(appDataRoot)/\(uuid)"
+            if let uuids = try? fm.contentsOfDirectory(atPath: appDataRoot) {
+                for uuid in uuids {
+                    let metaPath = "\(appDataRoot)/\(uuid)/.com.apple.mobile_container_manager.metadata.plist"
+                    if let data = try? Data(contentsOf: URL(fileURLWithPath: metaPath)),
+                       let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
+                       let id = plist["MCMMetadataIdentifier"] as? String,
+                       id == bundleID {
+                        return "\(appDataRoot)/\(uuid)"
+                    }
                 }
             }
-            return nil
         }
         
-        // Logic cũ cho badQuery / worseQuery
-        let handle = SandboxAccess.grant(path: appDataRoot, writable: false)
-        guard handle >= 0 else {
-            UserDefaults.standard.set("Lỗi: Không xin được quyền đọc Application", forKey: "debug_bootstrap_error")
-            return nil
-        }
-        
-        let fm = FileManager.default
-        guard let uuids = try? fm.contentsOfDirectory(atPath: appDataRoot) else {
-            UserDefaults.standard.set("Lỗi: Không đọc được thư mục Application (Quyền bị từ chối)!", forKey: "debug_bootstrap_error")
-            return nil
-        }
-        
-        for uuid in uuids {
-            let metaPath = "\(appDataRoot)/\(uuid)/.com.apple.mobile_container_manager.metadata.plist"
+        return nil
+    }
+    
+    static func resolveAppContainerPathByMetadataScan(bundleID: String) -> String? {
+        let dirs = enumerateDirectories(path: appDataRoot)
+        guard !dirs.isEmpty else { return nil }
+        for dir in dirs {
+            guard UUID(uuidString: (dir as NSString).lastPathComponent) != nil else { continue }
+            let metaPath = "\(dir)/.com.apple.mobile_container_manager.metadata.plist"
             if let data = try? Data(contentsOf: URL(fileURLWithPath: metaPath)),
                let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
                let id = plist["MCMMetadataIdentifier"] as? String,
                id == bundleID {
-                return "\(appDataRoot)/\(uuid)"
+                return dir
             }
         }
-        
-        UserDefaults.standard.set("Lỗi: Không tìm thấy \(bundleID)", forKey: "debug_bootstrap_error")
         return nil
     }
+    
+    static func enumerateDirectories(path: String, maxInode: Int64 = 2_000_000) -> [String] {
+        let clean = path.hasSuffix("/") ? String(path.dropLast()) : path
+        if let names = try? FileManager.default.contentsOfDirectory(atPath: clean), !names.isEmpty {
+            return names.map { (clean as NSString).appendingPathComponent($0) }
+        }
+        var pathC = clean.utf8CString.map { Int8($0) }
+        guard let result = bad_query_list(&pathC, maxInode) else { return [] }
+        defer { free(result) }
+        return String(cString: result).components(separatedBy: "\n").filter { !$0.isEmpty }
+    }
+    
     static func isApplicationContainerPath(_ path: String) -> Bool {
         let cleanPath = path.hasSuffix("/") ? String(path.dropLast()) : path
         return cleanPath.hasPrefix(appDataRoot + "/") || cleanPath.hasPrefix("/private" + appDataRoot + "/")
@@ -99,40 +114,57 @@ enum ContainerStore {
         return nil
     }
     
-    // Các hàm giả lập
-    static func dynamicAppIdentifiers() -> [String] { return [] }
-    static func installedAppsFromAPI() -> [InstalledApp] { return [] }
-    static func installedAppsFromMCM(identifiers: [String]) -> [InstalledApp] { return [] }
+    static func dynamicAppIdentifiers() -> [String] {
+        let identifiers = MCMEnumerateIdentifiersForClass(2, 1024, nil)
+        return identifiers
+    }
     
-    static func listFiles(in directory: String) -> [String] {
-        guard let contents = try? FileManager.default.contentsOfDirectory(atPath: directory) else { return [] }
+    static func installedAppsFromAPI() -> [InstalledApp] {
+        let raw = installedAppInfo() as? [String: [String: Any]] ?? [:]
+        var apps: [InstalledApp] = []
+        for (bundleID, info) in raw {
+            var containerPath = info["container"] as? String ?? ""
+            if containerPath.isEmpty {
+                var lookupError: NSString?
+                if let resolved = MCMActivateContainerPath(2, bundleID, false, &lookupError),
+                   isApplicationContainerPath(resolved) {
+                    containerPath = resolved
+                }
+            }
+            guard !containerPath.isEmpty else { continue }
+            apps.append(InstalledApp(
+                bundleID: bundleID,
+                name: info["name"] as? String ?? "",
+                version: info["version"] as? String ?? "",
+                containerPath: containerPath
+            ))
+        }
+        return apps
+    }
+    
+    static func installedAppsFromMCM(identifiers: [String]) -> [InstalledApp] {
+        var apps: [InstalledApp] = []
+        for bundleID in identifiers {
+            var lookupError: NSString?
+            guard let containerPath = MCMActivateContainerPath(2, bundleID, false, &lookupError) else { continue }
+            let rawInfo = appInfoForBundleID(bundleID) as? [String: Any] ?? [:]
+            apps.append(InstalledApp(
+                bundleID: bundleID,
+                name: rawInfo["name"] as? String ?? bundleID,
+                version: rawInfo["version"] as? String ?? "",
+                containerPath: containerPath
+            ))
+        }
+        return apps
+    }
+    
+    static func listFiles(at path: String) -> [String] {
+        guard let contents = try? FileManager.default.contentsOfDirectory(atPath: path) else { return [] }
         return contents.sorted()
     }
     
-    static func listFiles(at directory: String) -> [String] {
-        return listFiles(in: directory)
-    }
-    
-    static func containerIdentity(for path: String) -> String? {
-        let components = path.components(separatedBy: "/")
-        guard let last = components.last, !last.isEmpty else { return nil }
-        return last
-    }
-    
-    static func isRootPath(_ path: String) -> Bool {
-        return path == appDataRoot || path == "/private" + appDataRoot ||
-               path == systemDataRoot || path == "/private" + systemDataRoot ||
-               path == sharedDataRoot || path == "/private" + sharedDataRoot
-    }
-    
-    static func parentPath(of path: String) -> String? {
-        let url = URL(fileURLWithPath: path)
-        let parent = url.deletingLastPathComponent().path
-        return parent.isEmpty ? nil : parent
-    }
-    
-    static func appDataRoots() -> [String] {
-        return [appDataRoot, "/private" + appDataRoot]
+    static func listFiles(in directory: String) -> [String] {
+        return listFiles(at: directory)
     }
     
     static func containerType(for path: String) -> String {
@@ -141,9 +173,4 @@ enum ContainerStore {
         if isSharedContainerPath(path) { return "App Group" }
         return "Unknown"
     }
-    
-    static func launchServicesStoreIdentifiers() -> [String] { return [] }
-    static var researchAppIdentifiers: [String] { return [] }
-    static func installedAppsFromMHACandidates(identifiers: [String], progressHandler: (([InstalledApp]) -> Void)? = nil) -> [InstalledApp] { return [] }
-    static func inferUnidentifiedApps(in filesystemApps: [InstalledApp], knownApps: [InstalledApp], launchServicesIdentifiers: Set<String>) -> [InstalledApp] { return [] }
 }
