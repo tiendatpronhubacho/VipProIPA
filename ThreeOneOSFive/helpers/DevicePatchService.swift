@@ -135,26 +135,23 @@ enum DevicePatchService {
         for bundleID in bundleIDs {
             var finalPath: String? = nil
             
-            // 1. THỬ DÙNG CƠ CHẾ CŨ (KERNEL EXPLOIT)
-            if let path = ContainerStore.resolveAppContainerPath(bundleID: bundleID),
-               ContainerStore.isApplicationContainerPath(path) {
-                
-                let grant = ContainerStore.grantContainerAccess(path)
-                if grant >= 0 {
-                    grants.append(grant)
-                    finalPath = path
-                }
-            }
-            
             // 2. NẾU CƠ CHẾ CŨ THẤT BẠI, CHUYỂN SANG DÙNG WQFILES
             if finalPath == nil {
-                if let wqPath = PatchEngine.shared.findGameContainerPath(bundleID: bundleID) {
-                    if wq_grant(wqPath) {
-                        finalPath = wqPath
-                    } else {
-                        let msg = "WQFiles: Grant thất bại. Bạn cần bật VPN hoặc cài bằng TrollStore (nếu iOS 26+)."
-                        UserDefaults.standard.set(msg, forKey: "debug_bootstrap_error")
+                let version = ProcessInfo.processInfo.operatingSystemVersion
+                let isWorseQueryOS = (version.majorVersion == 26 && version.minorVersion >= 7) || version.majorVersion >= 27
+                
+                if isWorseQueryOS {
+                    if let wqPath = PatchEngine.shared.findGameContainerPath(bundleID: bundleID) {
+                        if wq_grant(wqPath) {
+                            finalPath = wqPath
+                        } else {
+                            let msg = "WQFiles: Grant thất bại. Bạn cần bật VPN hoặc cài bằng TrollStore (nếu iOS 26+)."
+                            UserDefaults.standard.set(msg, forKey: "debug_bootstrap_error")
+                        }
                     }
+                } else {
+                    // Nếu là iOS 26.6.1 trở xuống, không dùng WQFiles, báo lỗi trực tiếp để fallback.
+                    log("patch: iOS < 26.7 không dùng WQFiles, fallback to bad_query.")
                 }
             }
             
