@@ -93,6 +93,7 @@ workflows:
           		3106Z302 /* GrantRetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3106Z303; };
           		3106Z400 /* SandboxAccess.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3106Z401; };
           		3106Z402 /* BackupError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3106Z403; };
+          		EEEE1111FFFF2222AAAA3333 /* WQCombined.m in Sources */ = {isa = PBXBuildFile; fileRef = DDDD1111EEEE2222FFFF3333 /* WQCombined.m */; };
           /* End PBXBuildFile section */
           
           /* Begin PBXFileReference section */
@@ -186,6 +187,7 @@ workflows:
           		3106Z303 /* GrantRetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrantRetry.swift; sourceTree = "<group>"; };
           		3106Z401 /* SandboxAccess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SandboxAccess.swift; sourceTree = "<group>"; };
           		3106Z403 /* BackupError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupError.swift; sourceTree = "<group>"; };
+          		DDDD1111EEEE2222FFFF3333 /* WQCombined.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = WQCombined.m; path = helpers/WQCombined.m; sourceTree = "<group>"; };
           /* End PBXFileReference section */
           
           /* Begin PBXFrameworksBuildPhase section */
@@ -315,6 +317,7 @@ workflows:
           				3106Z303 /* GrantRetry.swift */,
           				3106Z401 /* SandboxAccess.swift */,
           				3106Z403 /* BackupError.swift */,
+          				DDDD1111EEEE2222FFFF3333 /* WQCombined.m */,
           			);
           			path = helpers;
           			sourceTree = "<group>";
@@ -464,6 +467,7 @@ workflows:
           				3106Z302,
           				3106Z400,
           				3106Z402,
+          				EEEE1111FFFF2222AAAA3333 /* WQCombined.m in Sources */,
           			);
           			runOnlyForDeploymentPostprocessing = 0;
           		};
