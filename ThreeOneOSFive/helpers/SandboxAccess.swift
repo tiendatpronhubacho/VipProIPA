@@ -26,16 +26,26 @@ enum SandboxBackend: String {
 enum SandboxAccess {
     static var backend: SandboxBackend {
         let v = AppInfo.versionTuple
-        if ExploitSupportPolicy.supportsKernelExploit(major: v.major, minor: v.minor, patch: v.patch) {
-            return .kernel
+        
+        // 1. iOS 17.0 -> 18.7.1: Dùng Kernel Exploit (Khai thác nhân)
+        if v.major == 17 || v.major == 18 {
+            if ExploitSupportPolicy.supportsKernelExploit(major: v.major, minor: v.minor, patch: v.patch) {
+                return .kernel
+            }
+            return .unsupported
         }
-        if ExploitSupportPolicy.supportsWorseQuery(major: v.major, minor: v.minor, patch: v.patch) ||
-            ExploitSupportPolicy.isExperimental(major: v.major, minor: v.minor) {
-            return .worseQuery
-        }
-        if ExploitSupportPolicy.supportsBadQuery(major: v.major, minor: v.minor, patch: v.patch) {
+        
+        // 2. iOS 26.0 -> 26.6.1: Dùng bad_query (Không cần App Group)
+        if v.major == 26 && (v.minor < 6 || (v.minor == 6 && v.patch <= 1)) {
             return .badQuery
         }
+        
+        // 3. iOS 26.6.2 -> 27.2.1: Dùng worse_query (Bắt buộc App Group)
+        if (v.major == 26 && v.minor >= 6 && v.patch >= 2) || (v.major == 27 && (v.minor < 2 || (v.minor == 2 && v.patch <= 1))) {
+            return .worseQuery
+        }
+        
+        // 4. Các bản iOS khác -> Không hỗ trợ
         return .unsupported
     }
 
@@ -99,7 +109,7 @@ enum SandboxAccess {
     /// A lightweight activation probe used by the UI. It verifies the App Group
     /// exists for worse_query, and that the previous grant path is usable for
     /// bad_query.
-        static func probe() -> Bool {
+    static func probe() -> Bool {
         switch backend {
         case .kernel:
             return KernelExploit.hasKernelSandboxAccess()

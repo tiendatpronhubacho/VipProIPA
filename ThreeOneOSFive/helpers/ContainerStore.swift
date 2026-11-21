@@ -17,73 +17,18 @@ enum ContainerStore {
     static let sharedDataRoot = "/var/mobile/Containers/Shared/AppGroup"
     
     // MARK: - Resolve Path
-            static func resolveAppContainerPath(bundleID: String) -> String? {
+           static func resolveAppContainerPath(bundleID: String) -> String? {
         let appDataRoot = "/var/mobile/Containers/Data/Application"
         
-        // 1. Lấy thông tin phiên bản iOS
-        let v = ProcessInfo.processInfo.operatingSystemVersion
-        
-        // 2. KIỂM TRA IOS 17/18 (Dùng Kernel Exploit)
-        if v.majorVersion < 26 {
-            log("container: iOS \(v.majorVersion) - Dùng kernel exploit...")
-            
-            // Thử đọc trực tiếp (nếu đã có root)
-            if let uuids = try? FileManager.default.contentsOfDirectory(atPath: appDataRoot) {
-                for uuid in uuids {
-                    let metaPath = "\(appDataRoot)/\(uuid)/.com.apple.mobile_container_manager.metadata.plist"
-                    if let data = try? Data(contentsOf: URL(fileURLWithPath: metaPath)),
-                       let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
-                       let id = plist["MCMMetadataIdentifier"] as? String,
-                       id == bundleID {
-                        return "\(appDataRoot)/\(uuid)"
-                    }
-                }
-            } else {
-                // Nếu không đọc được, dùng sandbox_escape (nếu có)
-                log("container: Không đọc được thư mục. Thử escape bằng kernel...")
-                let selfProc = proc_self()
-                if selfProc != 0 {
-                    _ = sandbox_escape(selfProc)
-                }
-                
-                // Thử đọc lại sau khi escape
-                if let uuids = try? FileManager.default.contentsOfDirectory(atPath: appDataRoot) {
-                    for uuid in uuids {
-                        let metaPath = "\(appDataRoot)/\(uuid)/.com.apple.mobile_container_manager.metadata.plist"
-                        if let data = try? Data(contentsOf: URL(fileURLWithPath: metaPath)),
-                           let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
-                           let id = plist["MCMMetadataIdentifier"] as? String,
-                           id == bundleID {
-                            return "\(appDataRoot)/\(uuid)"
-                        }
-                    }
-                }
-            }
-            return nil
-        }
-        
-        // 3. KIỂM TRA IOS 26/27 (Dùng Sandbox Escape WQFiles)
-        log("container: iOS \(v.majorVersion) - Dùng Sandbox Escape...")
-        
-        // Ép cấp quyền bằng MCM (MobileContainerManager)
-        var activationError: NSString?
-        let mcmHandle = MCMActivateContainer(2, bundleID, false, &activationError)
-        if mcmHandle >= 0 {
-            SandboxAccess.release(mcmHandle)
-        }
-        
-        // Ép cấp quyền bằng WQFiles
+        // Ép cấp quyền (Tự động chọn bad_query hoặc worse_query dựa trên SandboxAccess)
         let grantHandle = SandboxAccess.grant(path: appDataRoot, writable: true)
         if grantHandle >= 0 {
             SandboxAccess.release(grantHandle)
         }
         
-        // Quét thư mục
         let fm = FileManager.default
         guard let uuids = try? fm.contentsOfDirectory(atPath: appDataRoot) else {
-            let err = "Không thể đọc thư mục Application! (Sandbox chưa escape hoặc chứng chỉ không có App Group)."
-            UserDefaults.standard.set(err, forKey: "debug_bootstrap_error")
-            log("container: \(err)")
+            UserDefaults.standard.set("Lỗi: Không đọc được thư mục Application!", forKey: "debug_bootstrap_error")
             return nil
         }
         
@@ -93,14 +38,11 @@ enum ContainerStore {
                let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
                let id = plist["MCMMetadataIdentifier"] as? String,
                id == bundleID {
-                log("container: Tìm thấy \(bundleID) tại \(uuid)")
                 return "\(appDataRoot)/\(uuid)"
             }
         }
         
-        let err = "Không tìm thấy \(bundleID) trong \(uuids.count) thư mục. (Có thể Free Fire chưa cài hoặc sai Bundle ID)"
-        UserDefaults.standard.set(err, forKey: "debug_bootstrap_error")
-        log("container: \(err)")
+        UserDefaults.standard.set("Lỗi: Không tìm thấy \(bundleID)", forKey: "debug_bootstrap_error")
         return nil
     }
     static func isApplicationContainerPath(_ path: String) -> Bool {
