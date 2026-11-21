@@ -158,7 +158,6 @@
 		99887766554433221100AABB /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
 		AAAA1111BBBB2222CCCC3333 /* PatchEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PatchEngine.swift; path = helpers/PatchEngine.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
-
 /* Begin PBXFrameworksBuildPhase section */
 		3105A300 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
