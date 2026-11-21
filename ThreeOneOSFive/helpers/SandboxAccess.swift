@@ -242,7 +242,16 @@ enum SandboxAccess {
         case .kernel:
             return try body()
         case .badQuery:
-            _ = grant(path: directory)
+            // SỬA: Kiểm tra kết quả grant trước khi chạy tiếp
+            let handle = grant(path: directory)
+            guard handle >= 0 else {
+                throw GrantFailure.denied(
+                    code: handle,
+                    path: directory,
+                    backend: backend.displayName
+                )
+            }
+            defer { release(handle) }
             return try body()
         case .worseQuery:
 #if os(iOS)
@@ -254,7 +263,15 @@ enum SandboxAccess {
                 body: body
             )
 #else
-            _ = grant(path: directory, writable: writable)
+            let handle = grant(path: directory, writable: writable)
+            guard handle >= 0 else {
+                throw GrantFailure.denied(
+                    code: handle,
+                    path: directory,
+                    backend: backend.displayName
+                )
+            }
+            defer { release(handle) }
             return try body()
 #endif
         case .unsupported:

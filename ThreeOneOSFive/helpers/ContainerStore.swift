@@ -19,15 +19,15 @@ enum ContainerStore {
     
     // MARK: - Resolve Path
     static func resolveAppContainerPath(bundleID: String) -> String? {
-        let appDataRoot = "/var/mobile/Containers/Data/Application"
-        
-        // 1. Xin quyền và GIỮ LẠI handle
-        let grantHandle = SandboxAccess.grant(path: appDataRoot, writable: true)
-        
-        defer {
-            // Chỉ release khi đã chạy xong toàn bộ hàm
-            if grantHandle >= 0 { SandboxAccess.release(grantHandle) }
+        // 1. Xin quyền đọc thư mục Application
+        let handle = SandboxAccess.grant(path: appDataRoot, writable: false)
+        guard handle >= 0 else {
+            UserDefaults.standard.set("Lỗi: Không xin được quyền đọc Application", forKey: "debug_bootstrap_error")
+            return nil
         }
+        
+        // Không release handle ở đây, để nó mở cho các thao tác sau
+        // (Handle này sẽ được DevicePatchService quản lý và release sau)
         
         let fm = FileManager.default
         guard let uuids = try? fm.contentsOfDirectory(atPath: appDataRoot) else {
@@ -41,7 +41,6 @@ enum ContainerStore {
                let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
                let id = plist["MCMMetadataIdentifier"] as? String,
                id == bundleID {
-                // 2. Trả về path khi quyền vẫn đang mở
                 return "\(appDataRoot)/\(uuid)"
             }
         }

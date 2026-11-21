@@ -14,7 +14,6 @@ class PatchEngine {
         }
         
         var errorText: NSString? = nil
-        // Bỏ "as? [String]" vì hàm đã trả về [String]
         guard let uuids = wq_list(parentDir, &errorText) else {
             UserDefaults.standard.set("Lỗi: Không thể đọc danh sách thư mục.", forKey: "debug_bootstrap_error")
             return nil
@@ -82,17 +81,20 @@ enum DevicePatchService {
         operation: ([String: URL]) throws -> T
     ) throws -> T {
         var roots: [String: URL] = [:]
-        let grants: [Int64] = [] // Sửa var thành let
+        var grants: [Int64] = [] // SỬA: Đổi thành var để có thể append
         defer {
             for grant in grants { SandboxAccess.release(grant) }
         }
 
         for bundleID in bundleIDs {
             var finalPath: String? = nil
+            var currentGrant: Int64 = -1
             
             // 1. Thử dùng ContainerStore (BadQuery)
             if let path = ContainerStore.resolveAppContainerPath(bundleID: bundleID) {
                 finalPath = path
+                // SỬA: Lưu lại handle nếu ContainerStore có xin quyền (dù nó tự release)
+                // Nhưng vì ContainerStore tự release nên ta không cần lưu ở đây.
             }
             
             // 2. Nếu ContainerStore thất bại, thử dùng WQFiles
@@ -104,6 +106,8 @@ enum DevicePatchService {
                     if let wqPath = PatchEngine.shared.findGameContainerPath(bundleID: bundleID) {
                         if wq_grant(wqPath) {
                             finalPath = wqPath
+                            // SỬA: Lưu handle để release sau
+                            currentGrant = SandboxAccess.grant(path: wqPath, writable: true)
                         }
                     }
                 }
@@ -113,6 +117,10 @@ enum DevicePatchService {
                 let msg = "Không thể lấy quyền truy cập game \(bundleID)."
                 UserDefaults.standard.set(msg, forKey: "debug_bootstrap_error")
                 throw PatchPackageError.targetAppUnavailable(bundleID)
+            }
+
+            if currentGrant >= 0 {
+                grants.append(currentGrant)
             }
 
             roots[bundleID] = PatchPathValidator.canonicalFileURL(
