@@ -1,8 +1,6 @@
 import SwiftUI
 import UIKit
 import AVFoundation
-import NetworkExtension
-import CFNetwork // Thêm thư viện này để check VPN chuẩn hơn
 
 // MARK: - QUẢN LÝ NHẠC NỀN
 class AudioManager: ObservableObject {
@@ -738,7 +736,7 @@ struct SetupView: View {
             Text("Thiết lập Pairing")
                 .font(.title2.bold())
             
-            Text("iOS 26.6.2 trở lên có thể pair trực tiếp trên thiết bị. Hãy làm theo hướng dẫn và nhập mã PIN khi hệ thống yêu cầu.")
+            Text("Trên iOS 26.6.2 trở lên, hãy hoàn tất pairing bằng công cụ Apple trên máy tính trước khi tiếp tục. Ứng dụng này không tự tạo Pairing PIN.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -759,8 +757,8 @@ struct SetupView: View {
                 .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
                 
                 if !isPaired {
-                    Button(action: { isPaired = true }) {
-                        Text("Pair trực tiếp trên iPhone").font(.headline).foregroundStyle(.black)
+                    Button(action: confirmPairingCompleted) {
+                        Text("Xác nhận đã hoàn tất Pairing").font(.headline).foregroundStyle(.black)
                             .frame(maxWidth: .infinity).padding().background(Color.white, in: Capsule())
                     }
                 } else {
@@ -782,7 +780,7 @@ struct SetupView: View {
             
             Text("Chuẩn bị kết nối AirLift").font(.title2.bold())
             
-            Text("Cài LocalDevVPN, bật VPN và kết nối Wi-Fi. 3102 sẽ kiểm tra tunnel thật trước khi cho phép sử dụng.")
+            Text("Cài LocalDevVPN, bật VPN trong Cài đặt > VPN và kết nối Wi-Fi. Sau đó xác nhận để tiếp tục; iOS không cho ứng dụng này đọc trạng thái VPN của ứng dụng khác.")
                 .font(.subheadline).foregroundStyle(.secondary)
                 .multilineTextAlignment(.center).padding(.horizontal)
             
@@ -824,62 +822,67 @@ struct SetupView: View {
                 if isChecking {
                     ProgressView().tint(.black).font(.headline).frame(maxWidth: .infinity).padding().background(Color.white, in: Capsule())
                 } else {
-                    Text("Kiểm tra kết nối AirLift").font(.headline).foregroundStyle(.black).frame(maxWidth: .infinity).padding().background(Color.white, in: Capsule())
+                    Text("Tôi đã bật LocalDevVPN – Tiếp tục").font(.headline).foregroundStyle(.black).frame(maxWidth: .infinity).padding().background(Color.white, in: Capsule())
                 }
             }
             .padding(.horizontal).disabled(isChecking)
             
-            // Nút Bỏ qua CHỈ hiển thị khi dùng bad_query hoặc kernel (dưới 26.6.2)
-            if SandboxAccess.backend != .worseQuery {
+            // Chỉ cho bỏ qua trên các phiên bản thấp hơn iOS 26.6.1.
+            if isBelowIOS2661 {
                 Button(action: { hasCompletedSetup = true }) {
-                    Text("Bỏ qua (Chỉ dùng cho iOS < 26.6.2)")
+                    Text("Bỏ qua (iOS dưới 26.6.1)")
                         .font(.footnote).foregroundStyle(.secondary).padding(.top, 10)
                 }
             }
         }
     }
     
+    // iOS does not expose a public API for checking another app's VPN tunnel.
+    // Ask the user to confirm LocalDevVPN is enabled instead of rejecting a valid VPN.
     private func checkVPNConnection() {
-        isChecking = true
-        
-        // Sử dụng CFNetwork thay vì NEVPNManager để nhận diện LocalDevVPN chuẩn xác
-        let isProxyConnected = checkSystemProxyForTunnel()
-        
-        // Delay 0.5s để tạo cảm giác đang quét
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            self.isChecking = false
-            self.isVPNConnected = isProxyConnected
-            
-            if isProxyConnected {
-                self.hasCompletedSetup = true
-            } else {
-                let alert = UIAlertController(
-                    title: "Không tìm thấy VPN",
-                    message: "Vui lòng bật LocalDevVPN trong Cài đặt > VPN trước khi bấm kiểm tra.",
-                    preferredStyle: .alert
-                )
-                alert.addAction(UIAlertAction(title: "OK", style: .default))
-                
-                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                   let rootVC = windowScene.windows.first?.rootViewController {
-                    rootVC.present(alert, animated: true)
-                }
-            }
+        let alert = UIAlertController(
+            title: "Xác nhận LocalDevVPN",
+            message: "iOS không cho ứng dụng này kiểm tra trạng thái VPN do ứng dụng khác cài đặt. Hãy bật LocalDevVPN trong Cài đặt > VPN, sau đó chọn Tiếp tục.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "Chưa bật", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Đã bật – Tiếp tục", style: .default) { _ in
+            self.isVPNConnected = true
+            self.hasCompletedSetup = true
+        })
+
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let rootVC = windowScene.windows.first?.rootViewController {
+            rootVC.present(alert, animated: true)
         }
     }
-    
-    private func checkSystemProxyForTunnel() -> Bool {
-        guard let cfDict = CFNetworkCopySystemProxySettings() else { return false }
-        let nsDict = cfDict.takeRetainedValue() as NSDictionary
-        guard let keys = nsDict["__SCOPED__"] as? NSDictionary else { return false }
-        
-        for key in keys.allKeys {
-            if let keyString = key as? String {
-                if keyString.contains("tap") || keyString.contains("tun") || keyString.contains("ppp") || keyString.contains("ipsec") || keyString.contains("utun") {
-                    return true
-                }
-            }
+
+    private var isBelowIOS2661: Bool {
+        let v = ProcessInfo.processInfo.operatingSystemVersion
+        if v.majorVersion < 26 { return true }
+        if v.majorVersion > 26 { return false }
+        if v.minorVersion < 6 { return true }
+        if v.minorVersion > 6 { return false }
+        return v.patchVersion < 1
+    }
+
+    // Pairing must be performed by an Apple-supported pairing tool.
+    // This confirmation records the user's acknowledgement; it does not create a pairing.
+    private func confirmPairingCompleted() {
+        let alert = UIAlertController(
+            title: "Xác nhận Pairing",
+            message: "Hãy chỉ tiếp tục nếu bạn đã hoàn tất pairing thiết bị bằng công cụ Apple trên máy tính. Ứng dụng không thể tự tạo Pairing PIN hoặc xác minh pairing qua API công khai.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "Chưa hoàn tất", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Đã hoàn tất", style: .default) { _ in
+            self.isPaired = true
+            self.step = 2
+        })
+
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let rootVC = windowScene.windows.first?.rootViewController {
+            rootVC.present(alert, animated: true)
         }
-        return false
     }
 }

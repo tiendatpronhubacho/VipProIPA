@@ -15,15 +15,15 @@ struct ThreeOneOSSixApp: App {
     @State private var updateOffer: AppUpdateChecker.Offer?
     @Environment(\.scenePhase) private var scenePhase
 
-    // Hàm kiểm tra iOS có cần Setup (Pair + VPN) không
+    // Setup is required from iOS 26.6.1 onward.
+    // Versions below 26.6.1 continue directly without the VPN setup screen.
     private var needsSetup: Bool {
         let v = ProcessInfo.processInfo.operatingSystemVersion
         if v.majorVersion > 26 { return true }
-        if v.majorVersion == 26 {
-            if v.minorVersion > 6 { return true }
-            if v.minorVersion == 6 && v.patchVersion >= 2 { return true }
-        }
-        return false
+        if v.majorVersion < 26 { return false }
+        if v.minorVersion > 6 { return true }
+        if v.minorVersion < 6 { return false }
+        return v.patchVersion >= 1
     }
 
     init() {
@@ -49,7 +49,7 @@ struct ThreeOneOSSixApp: App {
     var body: some Scene {
         WindowGroup {
             ZStack {
-                // CHỈ GỌI SETUP NẾU THỎA MÃN ĐIỀU KIỆN VÀ CHƯA SETUP XONG
+                // CHá» Gá»I SETUP Náº¾U THá»A MÃN ÄIá»U KIá»N VÃ CHÆ¯A SETUP XONG
                 if needsSetup && !hasCompletedSetup {
                     SetupView()
                         .environment(\.appLanguage, language)
@@ -148,7 +148,7 @@ class AppState: ObservableObject {
             return
         }
 
-        // Nếu là iOS 17/18 (kernel backend), phải chạy exploit ngay
+        // Náº¿u lÃ  iOS 17/18 (kernel backend), pháº£i cháº¡y exploit ngay
         if SandboxAccess.backend == .kernel {
             if !KernelExploit.hasKernelSandboxAccess() {
                 runKernelExploitIfNeeded()
@@ -158,7 +158,7 @@ class AppState: ObservableObject {
             return
         }
 
-        // Với bad_query hoặc worse_query, kiểm tra probe
+        // Vá»i bad_query hoáº·c worse_query, kiá»m tra probe
         if KernelExploit.isApplicable(major: v.major, minor: v.minor, patch: v.patch, build: AppInfo.osBuild) {
             refreshKernelExploitStatus()
             maybeAutoRunKernelExploit()

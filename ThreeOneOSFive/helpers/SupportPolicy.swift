@@ -5,7 +5,7 @@ enum ExploitSupportPolicy {
     static let verifiedIOS18Range = "18.0–18.7.1"
     static let verifiedIOS26BadQueryRange = "26.0–26.6.1"
     static let verifiedIOS26WorseQueryRange = "26.6.2–26.7.2"
-    static let verifiedIOS27Range = "27.0–27.3"
+    static let verifiedIOS27Range = "27.0–27.2.1"
     
     static let verifiedIOS27Builds: [(beta: Int, publicBeta: Int?, build: String)] = [
         (1, nil, "24A5355q"),
@@ -40,7 +40,7 @@ enum ExploitSupportPolicy {
             return (minor == 6 && patch >= 2) || (minor == 7 && patch <= 2)
         }
         if major == 27 {
-            return minor <= 3
+            return minor < 2 || (minor == 2 && patch <= 1)
         }
         return false
     }
