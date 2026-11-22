@@ -36,15 +36,18 @@ enum SandboxAccess {
         }
         
         // 2. iOS 26.0 -> 26.6.1: Dùng bad_query
-        if v.major == 26 && v.minor < 7 {
+        if v.major == 26 && (v.minor < 6 || (v.minor == 6 && v.patch <= 1)) {
             return .badQuery
         }
         
-        // 3. iOS 26.7 -> 27.3: Dùng worse_query
-        if (v.major == 26 && v.minor >= 7) || v.major == 27 {
+        // 3. iOS 26.6.2 -> 27.x: Dùng worse_query (Bắt buộc App Group)
+        if (v.major == 26 && v.minor == 6 && v.patch >= 2) || 
+           (v.major == 26 && v.minor >= 7) || 
+           (v.major == 27) {
             return .worseQuery
         }
         
+        // 4. Các bản iOS khác -> Không hỗ trợ
         return .unsupported
     }
 
@@ -113,20 +116,30 @@ enum SandboxAccess {
         case .kernel:
             return KernelExploit.hasKernelSandboxAccess()
         case .badQuery:
+            // Kiểm tra grant vào appDataRoot
             let handle = grant(path: ContainerStore.appDataRoot)
-            if handle >= 0 { release(handle); return true }
+            if handle >= 0 { 
+                release(handle)
+                return true 
+            }
+            // Fallback cho iOS 26.5.x: thử grant vào systemDataRoot
+            let sysHandle = grant(path: ContainerStore.systemDataRoot)
+            if sysHandle >= 0 {
+                release(sysHandle)
+                return true
+            }
             return false
         case .worseQuery:
-                // Phải có App Group
-                guard let group = appGroup,
-                      let groupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group) else {
-                    log("sandbox: no App Group entitlement")
-                    return false
-                }
-                
-                // THÊM DÒNG NÀY (Nằm ngoài guard, không có dấu } thừa)
-                log("sandbox: App Group URL is \(groupURL.path)")
+            // Phải có App Group
+            guard let group = appGroup,
+                  let groupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group) else {
+                log("sandbox: no App Group entitlement")
+                return false
+            }
             
+            // Log đường dẫn App Group ra để debug
+            log("sandbox: App Group URL is \(groupURL.path)")
+        
             // Ép cấp quyền cho thư mục Application (để đọc được game)
             let targetPath = "/var/mobile/Containers/Data/Application"
             let handle = grant(path: targetPath, writable: true)
