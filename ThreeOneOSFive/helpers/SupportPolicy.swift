@@ -3,10 +3,9 @@ import Foundation
 enum ExploitSupportPolicy {
     static let verifiedIOS17Range = "17.0–17.7.x"
     static let verifiedIOS18Range = "18.0–18.7.1"
-    static let verifiedIOS26Range = "26.0–26.7.2"
     static let verifiedIOS26BadQueryRange = "26.0–26.6.1"
-    static let verifiedIOS26WorseQueryRange = "26.7–26.7.2"
-    static let verifiedIOS27Range = "27.0–27.2.1"
+    static let verifiedIOS26WorseQueryRange = "26.6.2–26.7.2"
+    static let verifiedIOS27Range = "27.0–27.3"
     
     static let verifiedIOS27Builds: [(beta: Int, publicBeta: Int?, build: String)] = [
         (1, nil, "24A5355q"),
@@ -18,12 +17,10 @@ enum ExploitSupportPolicy {
     static func supportsKernelExploit(major: Int, minor: Int, patch: Int) -> Bool {
         guard minor >= 0, patch >= 0 else { return false }
 
-        // iOS 17.0 -> 17.7
         if major == 17 {
             return minor <= 7
         }
 
-        // iOS 18.0 -> 18.7.1
         if major == 18 {
             return minor < 7 || (minor == 7 && patch <= 1)
         }
@@ -39,7 +36,8 @@ enum ExploitSupportPolicy {
     static func supportsWorseQuery(major: Int, minor: Int, patch: Int) -> Bool {
         guard minor >= 0, patch >= 0 else { return false }
         if major == 26 {
-            return minor == 7 && patch <= 2
+            // HỖ TRỢ CẢ 26.6.2 VÀ 26.7.x
+            return (minor == 6 && patch >= 2) || (minor == 7 && patch <= 2)
         }
         if major == 27 {
             return minor <= 3

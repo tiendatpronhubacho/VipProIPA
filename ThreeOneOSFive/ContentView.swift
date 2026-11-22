@@ -2,6 +2,7 @@ import SwiftUI
 import UIKit
 import AVFoundation
 import NetworkExtension
+import CFNetwork // Thêm thư viện này để check VPN chuẩn hơn
 
 // MARK: - QUẢN LÝ NHẠC NỀN
 class AudioManager: ObservableObject {
@@ -828,37 +829,57 @@ struct SetupView: View {
             }
             .padding(.horizontal).disabled(isChecking)
             
-            Button(action: { hasCompletedSetup = true }) {
-                Text("Bỏ qua (Chỉ dùng cho iOS < 26.6.2)")
-                    .font(.footnote).foregroundStyle(.secondary).padding(.top, 10)
+            // Nút Bỏ qua CHỈ hiển thị khi dùng bad_query hoặc kernel (dưới 26.6.2)
+            if SandboxAccess.backend != .worseQuery {
+                Button(action: { hasCompletedSetup = true }) {
+                    Text("Bỏ qua (Chỉ dùng cho iOS < 26.6.2)")
+                        .font(.footnote).foregroundStyle(.secondary).padding(.top, 10)
+                }
             }
         }
     }
     
     private func checkVPNConnection() {
         isChecking = true
-        NEVPNManager.shared().loadFromPreferences { error in
-            DispatchQueue.main.async {
-                isChecking = false
-                let connection = NEVPNManager.shared().connection
-                isVPNConnected = (connection.status == .connected || connection.status == .connecting)
+        
+        // Sử dụng CFNetwork thay vì NEVPNManager để nhận diện LocalDevVPN chuẩn xác
+        let isProxyConnected = checkSystemProxyForTunnel()
+        
+        // Delay 0.5s để tạo cảm giác đang quét
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            self.isChecking = false
+            self.isVPNConnected = isProxyConnected
+            
+            if isProxyConnected {
+                self.hasCompletedSetup = true
+            } else {
+                let alert = UIAlertController(
+                    title: "Không tìm thấy VPN",
+                    message: "Vui lòng bật LocalDevVPN trong Cài đặt > VPN trước khi bấm kiểm tra.",
+                    preferredStyle: .alert
+                )
+                alert.addAction(UIAlertAction(title: "OK", style: .default))
                 
-                if isVPNConnected {
-                    hasCompletedSetup = true
-                } else {
-                    let alert = UIAlertController(
-                        title: "Không tìm thấy VPN",
-                        message: "Vui lòng bật LocalDevVPN trong Cài đặt > VPN trước khi bấm kiểm tra.",
-                        preferredStyle: .alert
-                    )
-                    alert.addAction(UIAlertAction(title: "OK", style: .default))
-                    
-                    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                       let rootVC = windowScene.windows.first?.rootViewController {
-                        rootVC.present(alert, animated: true)
-                    }
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                   let rootVC = windowScene.windows.first?.rootViewController {
+                    rootVC.present(alert, animated: true)
                 }
             }
         }
+    }
+    
+    private func checkSystemProxyForTunnel() -> Bool {
+        guard let cfDict = CFNetworkCopySystemProxySettings() else { return false }
+        let nsDict = cfDict.takeRetainedValue() as NSDictionary
+        guard let keys = nsDict["__SCOPED__"] as? NSDictionary else { return false }
+        
+        for key in keys.allKeys {
+            if let keyString = key as? String {
+                if keyString.contains("tap") || keyString.contains("tun") || keyString.contains("ppp") || keyString.contains("ipsec") || keyString.contains("utun") {
+                    return true
+                }
+            }
+        }
+        return false
     }
 }
