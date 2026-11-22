@@ -27,7 +27,7 @@ enum SandboxAccess {
     static var backend: SandboxBackend {
         let v = AppInfo.versionTuple
         
-        // 1. iOS 17.0 -> 18.7.1: Dùng Kernel Exploit (Khai thác nhân)
+        // 1. iOS 17.0 -> 18.7.1: Dùng Kernel Exploit
         if v.major == 17 || v.major == 18 {
             if ExploitSupportPolicy.supportsKernelExploit(major: v.major, minor: v.minor, patch: v.patch) {
                 return .kernel
@@ -35,17 +35,16 @@ enum SandboxAccess {
             return .unsupported
         }
         
-        // 2. iOS 26.0 -> 26.6.1: Dùng bad_query (Không cần App Group)
-        if v.major == 26 && (v.minor < 6 || (v.minor == 6 && v.patch <= 1)) {
+        // 2. iOS 26.0 -> 26.6.1: Dùng bad_query
+        if v.major == 26 && v.minor < 7 {
             return .badQuery
         }
         
-        // 3. iOS 26.6.2 -> 27.2.1: Dùng worse_query (Bắt buộc App Group)
-        if (v.major == 26 && v.minor >= 6 && v.patch >= 2) || (v.major == 27 && (v.minor < 2 || (v.minor == 2 && v.patch <= 1))) {
+        // 3. iOS 26.7 -> 27.3: Dùng worse_query
+        if (v.major == 26 && v.minor >= 7) || v.major == 27 {
             return .worseQuery
         }
         
-        // 4. Các bản iOS khác -> Không hỗ trợ
         return .unsupported
     }
 
