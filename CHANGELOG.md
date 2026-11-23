@@ -1,5 +1,11 @@
 # Changelog
 
+## Tiến Đạt patch-data integration (2026-11-23)
+
+- Kept the 3106 Xcode project, target, app UI, app logic, exploit backends, and entitlements as the integration base.
+- Bundled the 23 `.3105` patch files supplied by the Tiến Đạt source and added one-time, package-ID-aware seeding into the 3106 patch library. Existing user packages are not overwritten; duplicate package IDs are imported once.
+- Added a shared `3106` Xcode scheme and Codemagic unsigned/signed build workflows. The old Tiến Đạt workflow that rewrites the project as target `TienDat` is not reused.
+
 All notable user-facing changes are documented in this file.
 
 ## [3.2.8] - 2026-11-20

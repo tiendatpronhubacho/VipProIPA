@@ -179,22 +179,7 @@
 		3105A234 /* AppDataBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3105A105; };
 		3105A228 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 3105A120; };
 		3105A211 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3105A031; };
-		31DA0001 /* TienDatExperience.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31DA0101; };
-		31DA0002 /* LicenseActivationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31DA0102; };
-		31DA0003 /* LicenseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31DA0103; };
-		31DA07D1 /* background_home.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 31DA03E9; };
-		31DA07D2 /* background_features.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 31DA03EA; };
-		31DA07D3 /* background_settings.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 31DA03EB; };
-		31DA07D4 /* background_music.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 31DA03EC; };
-		31DA07D5 /* Aim Body.3105 in Resources */ = {isa = PBXBuildFile; fileRef = 31DA03ED; };
-		31DA07D6 /* Aim Chest.3105 in Resources */ = {isa = PBXBuildFile; fileRef = 31DA03EE; };
-		31DA07D7 /* Aim Drag.3105 in Resources */ = {isa = PBXBuildFile; fileRef = 31DA03EF; };
-		31DA07D8 /* Aim Magic.3105 in Resources */ = {isa = PBXBuildFile; fileRef = 31DA03F0; };
-		31DA07D9 /* Aim Neck.3105 in Resources */ = {isa = PBXBuildFile; fileRef = 31DA03F1; };
-		31DA07DA /* Aim R8.3105 in Resources */ = {isa = PBXBuildFile; fileRef = 31DA03F2; };
-		31DA07DB /* Neck Anten.3105 in Resources */ = {isa = PBXBuildFile; fileRef = 31DA03F3; };
-		31DA07DC /* Nhe Anten.3105 in Resources */ = {isa = PBXBuildFile; fileRef = 31DA03F4; };
-		31DA07DD /* Nhe Tam.3105 in Resources */ = {isa = PBXBuildFile; fileRef = 31DA03F5; };
+		D06A6467314047A1A6F854FA /* Patches folder in Resources */ = {isa = PBXBuildFile; fileRef = 5ABDDF664AFB46B6B91DCF6C; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -392,22 +377,7 @@
 		3106S101 /* HexViewerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HexViewerView.swift; sourceTree = "<group>"; };
 		3106S102 /* PlistEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlistEditorView.swift; sourceTree = "<group>"; };
 		3106S103 /* FileInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileInfoView.swift; sourceTree = "<group>"; };
-		31DA0101 /* TienDatExperience.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TienDatExperience.swift; sourceTree = "<group>"; };
-		31DA0102 /* LicenseActivationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseActivationView.swift; sourceTree = "<group>"; };
-		31DA0103 /* LicenseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LicenseManager.swift; sourceTree = "<group>"; };
-		31DA03E9 /* background_home.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = "background_home.jpg"; sourceTree = "<group>"; };
-		31DA03EA /* background_features.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = "background_features.jpg"; sourceTree = "<group>"; };
-		31DA03EB /* background_settings.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = "background_settings.jpg"; sourceTree = "<group>"; };
-		31DA03EC /* background_music.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "background_music.mp3"; sourceTree = "<group>"; };
-		31DA03ED /* Aim Body.3105 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Aim Body.3105"; sourceTree = "<group>"; };
-		31DA03EE /* Aim Chest.3105 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Aim Chest.3105"; sourceTree = "<group>"; };
-		31DA03EF /* Aim Drag.3105 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Aim Drag.3105"; sourceTree = "<group>"; };
-		31DA03F0 /* Aim Magic.3105 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Aim Magic.3105"; sourceTree = "<group>"; };
-		31DA03F1 /* Aim Neck.3105 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Aim Neck.3105"; sourceTree = "<group>"; };
-		31DA03F2 /* Aim R8.3105 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Aim R8.3105"; sourceTree = "<group>"; };
-		31DA03F3 /* Neck Anten.3105 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Neck Anten.3105"; sourceTree = "<group>"; };
-		31DA03F4 /* Nhe Anten.3105 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Nhe Anten.3105"; sourceTree = "<group>"; };
-		31DA03F5 /* Nhe Tam.3105 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Nhe Tam.3105"; sourceTree = "<group>"; };
+		5ABDDF664AFB46B6B91DCF6C /* Patches */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Patches; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -436,22 +406,6 @@
 				3105A060 /* Info.plist */,
 				3105A020 /* App.swift */,
 				3105A021 /* ContentView.swift */,
-				31DA0101 /* TienDatExperience.swift */ ,
-				31DA0102 /* LicenseActivationView.swift */ ,
-				31DA0103 /* LicenseManager.swift */ ,
-				31DA03E9 /* background_home.jpg */ ,
-				31DA03EA /* background_features.jpg */ ,
-				31DA03EB /* background_settings.jpg */ ,
-				31DA03EC /* background_music.mp3 */ ,
-				31DA03ED /* Aim Body.3105 */ ,
-				31DA03EE /* Aim Chest.3105 */ ,
-				31DA03EF /* Aim Drag.3105 */ ,
-				31DA03F0 /* Aim Magic.3105 */ ,
-				31DA03F1 /* Aim Neck.3105 */ ,
-				31DA03F2 /* Aim R8.3105 */ ,
-				31DA03F3 /* Neck Anten.3105 */ ,
-				31DA03F4 /* Nhe Anten.3105 */ ,
-				31DA03F5 /* Nhe Tam.3105 */ ,
 				3105A403 /* exploit */,
 				3105A404 /* views */,
 				3105A405 /* helpers */,
@@ -459,6 +413,7 @@
 				3106W032 /* ThreeOneOSSix.entitlements */,
 				3105A120 /* Localizable.strings */,
 				3105A031 /* Assets.xcassets */,
+				5ABDDF664AFB46B6B91DCF6C /* Patches */,
 			);
 			path = ThreeOneOSSix;
 			sourceTree = "<group>";
@@ -740,19 +695,7 @@
 			files = (
 				3105A211,
 				3105A228,
-				31DA07D1,
-				31DA07D2,
-				31DA07D3,
-				31DA07D4,
-				31DA07D5,
-				31DA07D6,
-				31DA07D7,
-				31DA07D8,
-				31DA07D9,
-				31DA07DA,
-				31DA07DB,
-				31DA07DC,
-				31DA07DD,
+				D06A6467314047A1A6F854FA,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -764,9 +707,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				3105A200, 3105A201, 3105A203, 3105A204,
-				31DA0001,
-				31DA0002,
-				31DA0003,
 				3105A205, 3105A206, 3105A207, 3105A209,
 				3106W200,
 				3106W201,

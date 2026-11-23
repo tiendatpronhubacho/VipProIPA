@@ -8,7 +8,6 @@ enum AppTheme {
                 : UIColor(red: 0.85, green: 0.42, blue: 0.20, alpha: 1.00)
         }
     )
-    static let secondaryAccent = Color(red: 0.42, green: 0.78, blue: 1.00)
     static let pageBackground = Color(uiColor: .systemBackground)
     static let consoleBackground = Color(uiColor: .secondarySystemBackground)
     static let pageInset: CGFloat = 16

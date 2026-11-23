@@ -4,14 +4,13 @@ import UIKit
 @main
 struct ThreeOneOSSixApp: App {
     @StateObject private var appState = AppState()
-    @StateObject private var licenseManager = LicenseManager()
     @StateObject private var patchDraftCoordinator = PatchDraftCoordinator()
     @StateObject private var fileOperationCoordinator = FileOperationCoordinator()
     @StateObject private var patchStore = PatchProjectStore()
     @StateObject private var repositoryStore = PackageRepositoryStore()
     @StateObject private var migrationTaskCenter = MigrationTaskCenter()
     @AppStorage(AppLanguage.storageKey) private var languageCode = AppLanguage.english.rawValue
-    @State private var showOnboarding = false
+    @State private var showOnboarding = OnboardingStore.shouldShow()
     @State private var showAttribution = false
     @State private var updateOffer: AppUpdateChecker.Offer?
     @State private var configImportError: String?
@@ -28,33 +27,8 @@ struct ThreeOneOSSixApp: App {
         let appBuild = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?"
         let cpu = DeviceCPU.cpuFamily.map { String(format: "0x%X", $0) } ?? "unknown"
         log("app: 3106 \(appVersion) (\(appBuild)) launching — iOS \(AppInfo.osVersion) (\(AppInfo.osBuild)) \(AppInfo.machineName) cpu=\(cpu)")
-        Self.seedTienDatPatchPackages()
         SandboxAccess.prepare()
         TempSpaceRegistry.purgeExpired()
-    }
-
-    /// Copies the nine bundled legacy .3105 patch packages into 3106's package library.
-    /// PatchProjectLibrary performs the actual format validation when it loads them.
-    private static func seedTienDatPatchPackages() {
-        let names = [
-            "Aim Body", "Aim Chest", "Aim Drag", "Aim Magic", "Aim Neck", "Aim R8",
-            "Neck Anten", "Nhe Anten", "Nhe Tam"
-        ]
-        guard let destination = try? PatchProjectLibrary.packageRootURL() else { return }
-        for name in names {
-            guard let source = Bundle.main.url(forResource: name, withExtension: "3105") else {
-                log("tiendat: bundled patch missing — \(name).3105")
-                continue
-            }
-            let target = destination.appendingPathComponent(source.lastPathComponent)
-            guard !FileManager.default.fileExists(atPath: target.path) else { continue }
-            do {
-                try FileManager.default.copyItem(at: source, to: target)
-                log("tiendat: imported bundled patch — \(source.lastPathComponent)")
-            } catch {
-                log("tiendat: patch seed failed — \(source.lastPathComponent): \(error)")
-            }
-        }
     }
 
     private var language: AppLanguage {
@@ -112,26 +86,19 @@ struct ThreeOneOSSixApp: App {
     var body: some Scene {
         WindowGroup {
             ZStack {
-                Group {
-                    if licenseManager.isActive {
-                        TienDatContentView()
-                            .environmentObject(appState)
-                            .environmentObject(patchDraftCoordinator)
-                            .environmentObject(fileOperationCoordinator)
-                            .environmentObject(patchStore)
-                            .environmentObject(repositoryStore)
-                            .environmentObject(migrationTaskCenter)
-                            .environment(\.appLanguage, language)
-                            .environment(\.locale, language.locale)
-                            .opacity(showOnboarding ? 0 : 1)
-                            .allowsHitTesting(!showOnboarding)
-                    } else {
-                        LicenseActivationView(manager: licenseManager)
-                            .transition(.opacity)
-                    }
-                }
+                ContentView()
+                    .environmentObject(appState)
+                    .environmentObject(patchDraftCoordinator)
+                    .environmentObject(fileOperationCoordinator)
+                    .environmentObject(patchStore)
+                    .environmentObject(repositoryStore)
+                    .environmentObject(migrationTaskCenter)
+                    .environment(\.appLanguage, language)
+                    .environment(\.locale, language.locale)
+                    .opacity(showOnboarding ? 0 : 1)
+                    .allowsHitTesting(!showOnboarding)
 
-                if showOnboarding && licenseManager.isActive {
+                if showOnboarding {
                     OnboardingView {
                         OnboardingStore.markCompleted()
                         withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.24)) {
@@ -150,7 +117,7 @@ struct ThreeOneOSSixApp: App {
                     .zIndex(1)
                 }
             }
-            .displayIdentityAttribution(isPresented: $showAttribution, enabled: licenseManager.isActive)
+            .displayIdentityAttribution(isPresented: $showAttribution, enabled: !showOnboarding)
             .sheet(isPresented: $showAttribution) {
                 DisplayAttributionSheet()
             }
@@ -178,20 +145,15 @@ struct ThreeOneOSSixApp: App {
                 )
             }
             .onAppear {
-                if licenseManager.isActive {
+                if !showOnboarding {
                     appState.detectSupport()
                     checkForUpdate()
                 }
                 migrationTaskCenter.refreshPendingResumes()
                 importSharedConfigPackages()
             }
-            .onChange(of: licenseManager.isActive) { active in
-                guard active else { return }
-                appState.detectSupport()
-                checkForUpdate()
-            }
             .onChange(of: scenePhase) { phase in
-                guard phase == .active, licenseManager.isActive, !showOnboarding else { return }
+                guard phase == .active, !showOnboarding else { return }
                 appState.detectSupport()
                 // 3.2.4: also probe for updates on foreground switches —
                 // the cold-start check alone misses releases published

@@ -1,37 +1,57 @@
 workflows:
-  tiendat-ios:
-    name: TIENDAT iOS (3106 base)
+  ios-3106-unsigned:
+    name: 3106 - Unsigned IPA
     max_build_duration: 120
     instance_type: mac_mini_m2
-
     environment:
-      ios_signing:
-        distribution_type: ad_hoc
-        bundle_identifier: com.qingtang.3106
-      vars:
-        XCODE_PROJECT: "ThreeOneOSSix.xcodeproj"
-        XCODE_SCHEME: "3106"
-        BUNDLE_ID: "com.qingtang.3106"
       xcode: latest
-
     scripts:
-      - name: Select signing profiles
+      - name: Build 3106 for iOS
         script: |
-          xcode-project use-profiles
-
-      - name: Show Xcode project configuration
+          set -euo pipefail
+          xcodebuild \
+            -project ThreeOneOSSix.xcodeproj \
+            -scheme 3106 \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+      - name: Package unsigned IPA
         script: |
-          xcodebuild -list -project "$XCODE_PROJECT"
-
-      - name: Build and export IPA
-        script: |
-          xcode-project build-ipa \
-            --project "$XCODE_PROJECT" \
-            --scheme "$XCODE_SCHEME" \
-            --config Release
-
+          set -euo pipefail
+          APP_PATH="build/DerivedData/Build/Products/Release-iphoneos/3106.app"
+          test -d "$APP_PATH"
+          mkdir -p build/ios/ipa/Payload
+          rm -rf build/ios/ipa/Payload/3106.app
+          ditto "$APP_PATH" build/ios/ipa/Payload/3106.app
+          (cd build/ios/ipa && /usr/bin/zip -qry 3106-unsigned.ipa Payload)
     artifacts:
       - build/ios/ipa/*.ipa
-      - /tmp/xcodebuild_logs/*.log
-      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
+      - build/DerivedData/Build/Products/Release-iphoneos/*.app
+      - build/DerivedData/Build/Products/Release-iphoneos/*.dSYM
 
+  ios-3106-signed:
+    name: 3106 - Signed IPA (Development)
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    environment:
+      xcode: latest
+      ios_signing:
+        distribution_type: development
+        bundle_identifier: com.qingtang.3106
+    scripts:
+      - name: Apply Codemagic provisioning profiles
+        script: xcode-project use-profiles
+      - name: Build signed IPA
+        script: |
+          xcode-project build-ipa \
+            --project ThreeOneOSSix.xcodeproj \
+            --scheme 3106 \
+            --config Release
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - build/ios/archive/*.xcarchive
+      - /tmp/xcodebuild_logs/*.log

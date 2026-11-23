@@ -58,12 +58,13 @@ enum PatchProjectLibrary {
     }
 
     static func load(fileManager: FileManager = .default) -> [PatchLibraryItem] {
-        guard let root = try? packageRootURL(fileManager: fileManager),
-              let urls = try? fileManager.contentsOfDirectory(
-                at: root,
-                includingPropertiesForKeys: [.contentModificationDateKey, .fileSizeKey],
-                options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants]
-              ) else { return [] }
+        guard let root = try? packageRootURL(fileManager: fileManager) else { return [] }
+        seedBundledPackages(into: root, fileManager: fileManager)
+        guard let urls = try? fileManager.contentsOfDirectory(
+            at: root,
+            includingPropertiesForKeys: [.contentModificationDateKey, .fileSizeKey],
+            options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants]
+        ) else { return [] }
 
         var byID: [UUID: PatchLibraryItem] = [:]
         for url in urls where ["3106", "3105"].contains(url.pathExtension.lowercased()) {
@@ -117,6 +118,59 @@ enum PatchProjectLibrary {
         }
         return byID.values.sorted {
             ($0.project?.updatedAt ?? .distantPast) > ($1.project?.updatedAt ?? .distantPast)
+        }
+    }
+
+    /// Copies bundled Tiến Đạt patch packages into the user's patch library once.
+    /// Existing packages are never overwritten; package IDs, not filenames, define identity.
+    private static func seedBundledPackages(
+        into root: URL,
+        fileManager: FileManager
+    ) {
+        guard let bundleRoot = Bundle.main.resourceURL?.appendingPathComponent(
+            "Patches",
+            isDirectory: true
+        ), let bundledURLs = try? fileManager.contentsOfDirectory(
+            at: bundleRoot,
+            includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey],
+            options: [.skipsHiddenFiles]
+        ) else { return }
+
+        var knownPackageIDs = Set<UUID>()
+        if let localURLs = try? fileManager.contentsOfDirectory(
+            at: root,
+            includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey],
+            options: [.skipsHiddenFiles]
+        ) {
+            for url in localURLs where ["3105", "3106"].contains(url.pathExtension.lowercased()) {
+                guard let data = try? readPackage(at: url),
+                      let summary = try? PatchPackageCodec.inspect(data) else { continue }
+                knownPackageIDs.insert(summary.packageID)
+            }
+        }
+
+        for sourceURL in bundledURLs.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) {
+            guard ["3105", "3106"].contains(sourceURL.pathExtension.lowercased()),
+                  let data = try? readPackage(at: sourceURL),
+                  let summary = try? PatchPackageCodec.inspect(data),
+                  !knownPackageIDs.contains(summary.packageID) else { continue }
+
+            let baseName = sanitizedFilename(sourceURL.deletingPathExtension().lastPathComponent)
+            var destination = root.appendingPathComponent(baseName).appendingPathExtension(
+                sourceURL.pathExtension.lowercased()
+            )
+            var suffix = 2
+            while fileManager.fileExists(atPath: destination.path) {
+                destination = root.appendingPathComponent("\\(baseName)-\\(suffix)")
+                    .appendingPathExtension(sourceURL.pathExtension.lowercased())
+                suffix += 1
+            }
+            do {
+                try data.write(to: destination, options: [.atomic, .completeFileProtection])
+                knownPackageIDs.insert(summary.packageID)
+            } catch {
+                log("patch: bundled package copy failed for \\(sourceURL.lastPathComponent)")
+            }
         }
     }
 
