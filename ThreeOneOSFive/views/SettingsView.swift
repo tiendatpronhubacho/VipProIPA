@@ -1,1 +1,0 @@
-// File này để trống có chủ đích. Giao diện SettingsView thật đã được gộp vào ContentView.swift.
